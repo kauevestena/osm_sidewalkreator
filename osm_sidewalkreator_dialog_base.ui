@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>527</width>
-    <height>375</height>
+    <width>622</width>
+    <height>420</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">
     <rect>
-     <x>100</x>
+     <x>200</x>
      <y>10</y>
      <width>341</width>
      <height>32</height>
@@ -47,7 +47,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QRadioButton" name="radioButton_2">
+     <widget class="QRadioButton" name="opt_en">
       <property name="text">
        <string>en</string>
       </property>
@@ -57,7 +57,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QRadioButton" name="opt_eng">
+     <widget class="QRadioButton" name="opt_ptbr">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -73,7 +73,7 @@
     <rect>
      <x>0</x>
      <y>50</y>
-     <width>121</width>
+     <width>191</width>
      <height>31</height>
     </rect>
    </property>
@@ -87,7 +87,7 @@
   <widget class="QgsMapLayerComboBox" name="input_polygon">
    <property name="geometry">
     <rect>
-     <x>120</x>
+     <x>202</x>
      <y>50</y>
      <width>391</width>
      <height>31</height>
@@ -97,8 +97,8 @@
   <widget class="QgsFileWidget" name="output_file_selector">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>326</y>
+     <x>220</x>
+     <y>360</y>
      <width>391</width>
      <height>41</height>
     </rect>
@@ -110,8 +110,8 @@
   <widget class="QLabel" name="output_file_label">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>330</y>
+     <x>30</x>
+     <y>360</y>
      <width>131</width>
      <height>31</height>
     </rect>
@@ -126,7 +126,7 @@
   <widget class="QPushButton" name="datafetch">
    <property name="geometry">
     <rect>
-     <x>368</x>
+     <x>450</x>
      <y>90</y>
      <width>141</width>
      <height>25</height>
