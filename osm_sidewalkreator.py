@@ -26,6 +26,9 @@
 import os
 # from os import environ
 
+# standard libraries 
+import codecs # for osm2geojson
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
@@ -47,10 +50,16 @@ def install_pypi(packagename):
 # importing or installing third-party libraries
 try:
     import geopandas as gpd
+    import osm2geojson
 except:
-    install_pypi('geopandas')
+    pkg_to_be_installed = ['geopandas','osm2geojson']
+
+    for packagename in pkg_to_be_installed:
+        install_pypi(packagename)
 
 
+# internal dependencies:
+# from .osm_fetch import *
 
 
 
