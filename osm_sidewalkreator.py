@@ -265,6 +265,7 @@ class sidewalkreator:
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
             self.dlg.opt_en.clicked.connect(self.go_back_to_english)
+            self.dlg.input_polygon.layerChanged(self.get_input_layer)
 
 
             # # # handles and modifications/ors:
@@ -293,5 +294,9 @@ class sidewalkreator:
     def go_back_to_english(self):
         self.dlg.lang_label.setText("Language: ")
         self.dlg.input_pol_label.setText("Input Polygon: ")
+
+    def get_input_layer(self):
+        # self.input_layer = 
+        pass
 
 
