@@ -32,6 +32,9 @@ import codecs # for osm2geojson
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+# additional qgis/qt imports:
+from qgis.core import QgsMapLayerProxyModel
+
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -257,15 +260,17 @@ class sidewalkreator:
             self.dlg = sidewalkreatorDialog()
 
 
-            # THE FUNCTION CONNECTIONS
+            # # # THE FUNCTION CONNECTIONS
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
             self.dlg.opt_en.clicked.connect(self.go_back_to_english)
 
 
+            # # # handles and modifications/ors:
 
-        
+            self.dlg.input_polygon.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            # thx: https://github.com/qgis/QGIS/issues/38472 
 
         # show the dialog
         self.dlg.show()
