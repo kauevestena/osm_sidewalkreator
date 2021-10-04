@@ -84,7 +84,7 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QgsMapLayerComboBox" name="input_polygon">
+  <widget class="QgsMapLayerComboBox" name="input_layer_selector">
    <property name="geometry">
     <rect>
      <x>202</x>
@@ -124,6 +124,9 @@
    </property>
   </widget>
   <widget class="QPushButton" name="datafetch">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>450</x>
@@ -150,6 +153,22 @@
    </property>
    <property name="textFormat">
     <enum>Qt::PlainText</enum>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="input_status">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>90</y>
+     <width>231</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>waiting a valid for input...</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>

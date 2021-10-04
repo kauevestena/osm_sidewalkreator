@@ -34,7 +34,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.gui import QgsMapLayerComboBox
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
-from qgis.core import QgsMapLayerProxyModel
+from qgis.core import QgsMapLayerProxyModel, QgsFeature
 
 
 # Initialize Qt resources from file resources.py
@@ -91,6 +91,8 @@ class sidewalkreator:
     # to control current language:
     current_lang = 'en'
 
+    # just for debugging events
+    global_counter = 0
 
 
     def __init__(self, iface):
@@ -271,12 +273,15 @@ class sidewalkreator:
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
             self.dlg.opt_en.clicked.connect(self.go_back_to_english)
-            self.dlg.input_polygon.layerChanged.connect(self.get_input_layer)
+            self.dlg.input_layer_selector.layerChanged.connect(self.get_input_layer)
 
 
             # # # handles and modifications/ors:
 
-            self.dlg.input_polygon.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+
+            self.dlg.input_layer_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            self.dlg.input_layer_selector.setAllowEmptyLayer(True)
+            self.dlg.input_layer_selector.setLayer(None)
             # thx: https://github.com/qgis/QGIS/issues/38472
 
         # show the dialog
@@ -307,9 +312,40 @@ class sidewalkreator:
 
     def get_input_layer(self):
         # self.input_layer = QgsMapLayerComboBox.currentLayer()
-        self.input_layer = self.dlg.input_polygon.currentLayer()
+        self.input_layer = self.dlg.input_layer_selector.currentLayer()
+
+        # .next()
+
+        if self.input_layer:
+
+            input_feature = QgsFeature()
+
+        
+
+            iterat = self.input_layer.getFeatures()
+
+            iterat.nextFeature(input_feature)
+
+            if input_feature.hasGeometry():
+                if input_feature.isValid():
+                    self.input_polygon = input_feature.geometry()
+
+                    if self.input_polygon.isGeosValid():
+                        self.dlg.datafetch.setEnabled(True)
+                        self.dlg.input_status.setText('Valid Input!')
+        else:
+
+            self.dlg.input_status.setText('waiting a valid for input...')
+            self.dlg.datafetch.setEnabled(False)
 
 
-        self.dlg.for_tests.setText(str(type(self.input_layer)))
+            
+            self.dlg.for_tests.setText(str(self.global_counter))
+
+            self.global_counter += 1
+
+        # self.input_polygon_wkt = self.input_polygon.asWkt()
+
+        # self.dlg.for_tests.setText(str())
 
 
