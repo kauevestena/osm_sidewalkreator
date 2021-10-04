@@ -136,9 +136,9 @@ class sidewalkreator:
         # self.dlg.opt_ptbr.checked.connect(self.change_language)
 
 
-        session_debugpath = os.path.join(reports_path,'session_debug.txt')
+        self.session_debugpath = os.path.join(reports_path,'session_debug.txt')
 
-        with open(session_debugpath,'w+') as session_report:
+        with open(self.session_debugpath,'w+') as session_report:
             session_report.write('session_report:\n')
             # session_report.write(session_debugpath+'\n')
             # session_report.write(homepath)
@@ -320,19 +320,33 @@ class sidewalkreator:
 
             input_feature = QgsFeature()
 
-        
 
             iterat = self.input_layer.getFeatures()
 
             iterat.nextFeature(input_feature)
 
             if input_feature.hasGeometry():
+                # TODO: check/translate input CRS in the feature level
+                
+
                 if input_feature.isValid():
                     self.input_polygon = input_feature.geometry()
 
                     if self.input_polygon.isGeosValid():
                         self.dlg.datafetch.setEnabled(True)
                         self.dlg.input_status.setText('Valid Input!')
+
+                        bbox_text = self.input_polygon.boundingBox().asPolygon()
+
+                        # writing the bounding box in the session report:
+                        with open(self.session_debugpath,'a+') as session_report:
+                            session_report.write(bbox_text+'\n')
+
+
+                        bbox_pts = bbox_text.split(',')
+
+                        # lats = [pt_txt.split(' ')[1] for pt_txt in ]
+
         else:
 
             self.dlg.input_status.setText('waiting a valid for input...')
@@ -347,5 +361,7 @@ class sidewalkreator:
         # self.input_polygon_wkt = self.input_polygon.asWkt()
 
         # self.dlg.for_tests.setText(str())
+
+    
 
 
