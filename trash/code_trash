@@ -1,0 +1,34 @@
+
+                        bbox_text = self.input_polygon.boundingBox().asPolygon()
+
+                        # writing the bounding box in the session report:
+                        bbox_pts = bbox_text.split(',')
+
+                        self.dlg.for_tests.setText(bbox_pts[0])
+
+
+
+                        lats = [(pt_txt.split(' ')[1]) for pt_txt in bbox_pts]
+                        lgts = [(pt_txt.split(' ')[0]) for pt_txt in bbox_pts]
+
+                        # minLat = min(lats)
+                        # maxLat = max(lats)
+
+                        # minLgt = min(lgts)
+                        # maxLgt = max(lgts)
+
+
+                                                    session_report.write(bbox_text+'\n')
+                            session_report.write(' '.join(lats)+'\n')
+                            session_report.write(' '.join(lgts)+'\n')
+                            # session_report.write(minLat+'\n')
+                            # session_report.write(maxLat+'\n')
+                            # session_report.write(minLgt+'\n')
+                            # session_report.write(maxLgt+'\n')
+
+
+                        with open(self.session_debugpath,'a+') as session_report:
+                            session_report.write(str(minLgt)+'\n')
+                            session_report.write(str(minLat)+'\n')
+                            session_report.write(str(maxLgt)+'\n')
+                            session_report.write(str(maxLat)+'\n')

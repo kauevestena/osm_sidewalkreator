@@ -34,7 +34,8 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.gui import QgsMapLayerComboBox
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
-from qgis.core import QgsMapLayerProxyModel, QgsFeature
+from qgis import processing
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem
 
 
 # Initialize Qt resources from file resources.py
@@ -83,6 +84,17 @@ basepathp2 = 'python/plugins/osm_sidewalkreator'
 basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
 print(basepath)
 reports_path = os.path.join(basepath,'reports')
+
+crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
+
+
+def reproject_layer(inputlayer,destination_crs='EPSG:4326'):
+    parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,
+                 'OUTPUT': 'memory:Reprojected'}
+
+    return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
+
+
 
 
 class sidewalkreator:
@@ -318,34 +330,48 @@ class sidewalkreator:
 
         if self.input_layer:
 
+            # assuring 4326 as EPSG code for layer
+            layer_4326 = reproject_layer(self.input_layer)
+
+            
+
             input_feature = QgsFeature()
 
 
-            iterat = self.input_layer.getFeatures()
+            iterat = layer_4326.getFeatures()
 
             iterat.nextFeature(input_feature)
 
             if input_feature.hasGeometry():
-                # TODO: check/translate input CRS in the feature level
+                # TODO: beware of qgis bugs...
                 
 
                 if input_feature.isValid():
                     self.input_polygon = input_feature.geometry()
 
+                    # self.write_to_debug(self.input_polygon.toWkt())
+
+                    bbox = self.input_polygon.boundingBox()
+
+                    # in order to create a local custom projection
+                    self.bbox_center = bbox.center()
+
+                    minLgt = bbox.xMinimum()
+                    minLat = bbox.yMinimum()
+                    maxLgt = bbox.xMaximum()
+                    maxLat = bbox.yMaximum()
+
+
                     if self.input_polygon.isGeosValid():
                         self.dlg.datafetch.setEnabled(True)
                         self.dlg.input_status.setText('Valid Input!')
 
-                        bbox_text = self.input_polygon.boundingBox().asPolygon()
 
-                        # writing the bounding box in the session report:
-                        with open(self.session_debugpath,'a+') as session_report:
-                            session_report.write(bbox_text+'\n')
+                        for item in (minLgt,minLat,maxLgt,maxLat):
+                            self.write_to_debug(item)
 
 
-                        bbox_pts = bbox_text.split(',')
 
-                        # lats = [pt_txt.split(' ')[1] for pt_txt in ]
 
         else:
 
@@ -354,7 +380,7 @@ class sidewalkreator:
 
 
             
-            self.dlg.for_tests.setText(str(self.global_counter))
+            # self.dlg.for_tests.setText(str(self.global_counter))
 
             self.global_counter += 1
 
@@ -362,6 +388,10 @@ class sidewalkreator:
 
         # self.dlg.for_tests.setText(str())
 
-    
+    def write_to_debug(self,input_stringable,add_newline=True):
+        with open(self.session_debugpath,'a+') as session_report:
+            session_report.write(str(input_stringable))
+            if add_newline:
+                session_report.write('\n')
 
 

@@ -142,10 +142,10 @@
   <widget class="QLabel" name="for_tests">
    <property name="geometry">
     <rect>
-     <x>70</x>
-     <y>180</y>
-     <width>241</width>
-     <height>111</height>
+     <x>40</x>
+     <y>140</y>
+     <width>511</width>
+     <height>201</height>
     </rect>
    </property>
    <property name="text">
