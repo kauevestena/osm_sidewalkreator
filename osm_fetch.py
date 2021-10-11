@@ -1,5 +1,6 @@
-import requests, os
-import geopandas as gpd
+import requests, os, codecs, time
+# import geopandas as gpd
+from geopandas import read_file
 import osm2geojson
 
 # doing some stuff again to avoid circular imports:
@@ -22,18 +23,60 @@ def join_to_default_outfolder(filename):
 
     return os.path.join(outfolder,filename)
 
-def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files=False,interest_geom_type='Polygon'):
+
+
+def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highway",node=False,way=True,relation=False,print_querystring=False):
+
+    node_part = way_part = relation_part = ''
+
+    query_bbox = f'{min_lat},{min_lgt},{max_lat},{max_lgt}'
+
+    if node:
+        node_part = f'node["{interest_tag}"]({query_bbox});'
+    if way:
+        way_part = f'way["{interest_tag}"]({query_bbox});'
+    if relation:
+        relation_part = f'relation["{interest_tag}"]({query_bbox});'
+
+    overpass_query = f"""
+    (  
+        {node_part}
+        {way_part}
+        {relation_part}
+    );
+    /*added by auto repair*/
+    (._;>;);
+    /*end of auto repair*/
+    out;
+    """
+
+    if print_querystring:
+        print(overpass_query)
+
+    return overpass_query
+
+
+def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files=False,interest_geom_type='LineString'):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
 
     # the requests part:
     overpass_url = "http://overpass-api.de/api/interpreter" # there are also other options
-    response = requests.get(overpass_url,params={'data':querystring})
+
+
+    while True:
+        response = requests.get(overpass_url,params={'data':querystring})
+
+        if response.status_code == 200:
+            break
+
+        time.sleep(5)
 
     # TODO check the response, beyond terminal printing
     if print_response:
         print(response)
+
 
     # the outpaths for temporary files
     xmlfilepath = join_to_default_outfolder(tempfilesname+'_osm.xml')
@@ -78,3 +121,8 @@ def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files
         return new_gdf
     else:
         return as_gdf
+
+
+default_widths = {
+    
+}

@@ -23,11 +23,11 @@
 """
 
 # import os.path
-import os
+import os, requests, codecs, time
 # from os import environ
 
-# standard libraries 
-import codecs # for osm2geojson
+# standard libraries
+# import codecs # for osm2geojson
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
@@ -48,23 +48,28 @@ from .osm_sidewalkreator_dialog import sidewalkreatorDialog
 import subprocess
 import sys
 
+
 def install_pypi(packagename):
     subprocess.check_call([sys.executable, "-m", "pip", "install", packagename])
 
 
-# importing or installing third-party libraries
-try:
-    import geopandas as gpd
-    import osm2geojson
-except:
-    pkg_to_be_installed = ['geopandas','osm2geojson']
+# # importing or installing third-party libraries
+# try:
+#     import geopandas as gpd
+#     import osm2geojson
+# except:
+#     pkg_to_be_installed = ['geopandas','osm2geojson']
 
-    for packagename in pkg_to_be_installed:
-        install_pypi(packagename)
+#     for packagename in pkg_to_be_installed:
+#         install_pypi(packagename)
 
 
-# internal dependencies:
-# from .osm_fetch import *
+# # then again, because its best to raise an error
+# import geopandas as gpd
+# import osm2geojson
+
+# # internal dependencies:
+from .osm_fetch import *
 
 
 
@@ -84,6 +89,7 @@ basepathp2 = 'python/plugins/osm_sidewalkreator'
 basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
 print(basepath)
 reports_path = os.path.join(basepath,'reports')
+
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
@@ -281,6 +287,7 @@ class sidewalkreator:
 
 
             # # # THE FUNCTION CONNECTIONS
+            self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -333,7 +340,7 @@ class sidewalkreator:
             # assuring 4326 as EPSG code for layer
             layer_4326 = reproject_layer(self.input_layer)
 
-            
+
 
             input_feature = QgsFeature()
 
@@ -344,7 +351,7 @@ class sidewalkreator:
 
             if input_feature.hasGeometry():
                 # TODO: beware of qgis bugs...
-                
+
 
                 if input_feature.isValid():
                     self.input_polygon = input_feature.geometry()
@@ -356,10 +363,10 @@ class sidewalkreator:
                     # in order to create a local custom projection
                     self.bbox_center = bbox.center()
 
-                    minLgt = bbox.xMinimum()
-                    minLat = bbox.yMinimum()
-                    maxLgt = bbox.xMaximum()
-                    maxLat = bbox.yMaximum()
+                    self.minLgt = bbox.xMinimum()
+                    self.minLat = bbox.yMinimum()
+                    self.maxLgt = bbox.xMaximum()
+                    self.maxLat = bbox.yMaximum()
 
 
                     if self.input_polygon.isGeosValid():
@@ -367,19 +374,18 @@ class sidewalkreator:
                         self.dlg.input_status.setText('Valid Input!')
 
 
-                        for item in (minLgt,minLat,maxLgt,maxLat):
+                        for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
                             self.write_to_debug(item)
-
-
-
-
+            else:
+                self.dlg.input_status.setText('no geometries on input!!')
+                self.dlg.datafetch.setEnabled(False)
         else:
 
             self.dlg.input_status.setText('waiting a valid for input...')
             self.dlg.datafetch.setEnabled(False)
 
 
-            
+
             # self.dlg.for_tests.setText(str(self.global_counter))
 
             self.global_counter += 1
@@ -387,6 +393,17 @@ class sidewalkreator:
         # self.input_polygon_wkt = self.input_polygon.asWkt()
 
         # self.dlg.for_tests.setText(str())
+
+    def call_get_osm_data(self):
+        """
+        Function to call the functions from "osm fetch" module
+        """
+
+        query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
+
+
+        self.data_gdf = get_osm_data(query_string,'osm_download_data')
+
 
     def write_to_debug(self,input_stringable,add_newline=True):
         with open(self.session_debugpath,'a+') as session_report:
