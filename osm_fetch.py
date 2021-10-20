@@ -1,4 +1,5 @@
-import requests, os, codecs, time, json
+import requests, os, time, json
+# import codecs
 # import geopandas as gpd
 # from geopandas import read_file
 import osm2geojson
@@ -55,8 +56,40 @@ def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highw
 
     return overpass_query
 
+def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features'):
+    '''
+        Flexible function that can receives either a path to geojson file or geojson as a dictionary
+    '''
 
-def get_osm_data(querystring,tempfilesname,print_response=False):
+    if type(geojson) == 'string':
+        with open(geojson) as reader:
+            data = reader.read()
+
+        # print(data)
+        as_dict = json.loads(data)
+    else:
+        as_dict = geojson
+
+    feat_list =  as_dict[lvl1]
+
+    new_list = []
+
+    for entry in feat_list:
+        if entry['geometry']['type'] == geomtype:
+            # fixing tags not appearing as fields
+            tags_dict = entry['properties']['tags']
+
+            for key in tags_dict:
+                entry['properties'][key] = entry['properties']['tags'][key]
+
+            del entry['properties']['tags']
+            new_list.append(entry)
+
+    as_dict[lvl1] = new_list
+
+    return as_dict
+
+def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
@@ -97,14 +130,17 @@ def get_osm_data(querystring,tempfilesname,print_response=False):
     # # # # out = subprocess.run(runstring,shell=True)
 
     # # new method : osm2geojson library
-    with codecs.open(xmlfilepath, 'r', encoding='utf-8') as data:
+    # codecs.
+    with open(xmlfilepath, 'r', encoding='utf-8') as data:
         xml_filecontent = data.read()
 
     geojson_datadict = osm2geojson.xml2geojson(xml_filecontent, filter_used_refs=False, log_level='INFO')
 
+    filtered_geojson_dict = filter_gjsonfeats_bygeomtype(geojson_datadict)
+
     # dumping geojson file:
     with open(geojsonfilepath,'w+') as geojson_handle:
-        json.dump(geojson_datadict,geojson_handle)
+        json.dump(filtered_geojson_dict,geojson_handle)
 
 
     print('conversion sucessfull!!')
