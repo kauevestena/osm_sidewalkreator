@@ -31,11 +31,11 @@ import os, requests, codecs, time
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.gui import QgsMapLayerComboBox
+from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from qgis import processing
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject
 
 
 # Initialize Qt resources from file resources.py
@@ -53,20 +53,20 @@ def install_pypi(packagename):
     subprocess.check_call([sys.executable, "-m", "pip", "install", packagename])
 
 
-# # importing or installing third-party libraries
-# try:
-#     import geopandas as gpd
-#     import osm2geojson
-# except:
-#     pkg_to_be_installed = ['geopandas','osm2geojson']
+# importing or installing third-party libraries
+try:
+    # import geopandas as gpd
+    import osm2geojson
+except:
+    pkg_to_be_installed = ['osm2geojson'] #'geopandas'
 
-#     for packagename in pkg_to_be_installed:
-#         install_pypi(packagename)
+    for packagename in pkg_to_be_installed:
+        install_pypi(packagename)
 
 
 # # then again, because its best to raise an error
 # import geopandas as gpd
-# import osm2geojson
+import osm2geojson
 
 # # internal dependencies:
 from .osm_fetch import *
@@ -317,6 +317,12 @@ class sidewalkreator:
     ##### THE CLASS SCOPE
     ##################################
 
+    def add_layer_canvas(self,layer):
+        # canvas = QgsMapCanvas()
+        QgsProject.instance().addMapLayer(layer)
+        QgsMapCanvas().setExtent(layer.extent())
+        # canvas.setLayerSet([QgsMapCanvasLayer(layer)])
+
     def change_language_ptbr(self):
         self.current_lang = 'ptbr'
 
@@ -399,10 +405,22 @@ class sidewalkreator:
         Function to call the functions from "osm fetch" module
         """
 
+        self.dlg.datafetch.setEnabled(False)
+
+
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
 
 
-        self.data_gdf = get_osm_data(query_string,'osm_download_data')
+        self.data_geojsonpath = get_osm_data(query_string,'osm_download_data')
+
+        self.dlg.input_status_of_data.setText('data acquired!')
+
+        self.osm_data_layer = QgsVectorLayer(self.data_geojsonpath,"osm_road_data","ogr")
+        
+        # adding to canvas
+        # TODO: first, we will need to clip it
+        self.add_layer_canvas(self.osm_data_layer)
+
 
 
     def write_to_debug(self,input_stringable,add_newline=True):

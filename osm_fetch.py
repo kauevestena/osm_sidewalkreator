@@ -1,6 +1,6 @@
-import requests, os, codecs, time
+import requests, os, codecs, time, json
 # import geopandas as gpd
-from geopandas import read_file
+# from geopandas import read_file
 import osm2geojson
 
 # doing some stuff again to avoid circular imports:
@@ -56,7 +56,7 @@ def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highw
     return overpass_query
 
 
-def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files=False,interest_geom_type='LineString'):
+def get_osm_data(querystring,tempfilesname,print_response=False):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
@@ -66,6 +66,7 @@ def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files
 
 
     while True:
+        # TODO: ensure sucess
         response = requests.get(overpass_url,params={'data':querystring})
 
         if response.status_code == 200:
@@ -97,30 +98,37 @@ def get_osm_data(querystring,tempfilesname,print_response=True,delete_temp_files
 
     # # new method : osm2geojson library
     with codecs.open(xmlfilepath, 'r', encoding='utf-8') as data:
-        xml = data.read()
+        xml_filecontent = data.read()
 
-    geojson = osm2geojson.xml2geojson(xml, filter_used_refs=False, log_level='INFO')
+    geojson_datadict = osm2geojson.xml2geojson(xml_filecontent, filter_used_refs=False, log_level='INFO')
+
+    # dumping geojson file:
+    with open(geojsonfilepath,'w+') as geojson_handle:
+        json.dump(geojson_datadict,geojson_handle)
+
 
     print('conversion sucessfull!!')
     # reading as a geodataframe
-    as_gdf = gpd.read_file(geojsonfilepath)
+    # as_gdf = gpd.read_file(geojsonfilepath)
 
     # cleaning up, if wanted
-    if delete_temp_files:
-        delete_filelist_that_exists([xmlfilepath,geojsonfilepath])
+    # if delete_temp_files:
+    #     delete_filelist_that_exists([xmlfilepath,geojsonfilepath])
 
-    # return only polygons, we have no interest on broken features
-    if interest_geom_type:
-        new_gdf = as_gdf[as_gdf['geometry'].geom_type == interest_geom_type]
+    return geojsonfilepath
 
-        #overwrite file with only selected features
+    # # return only polygons, we have no interest on broken features
+    # if interest_geom_type:
+    #     new_gdf = as_gdf[as_gdf['geometry'].geom_type == interest_geom_type]
 
-        print('saving subset with only ',interest_geom_type)
-        new_gdf.to_file(geojsonfilepath,driver='GeoJSON')
+    #     #overwrite file with only selected features
 
-        return new_gdf
-    else:
-        return as_gdf
+    #     print('saving subset with only ',interest_geom_type)
+    #     new_gdf.to_file(geojsonfilepath,driver='GeoJSON')
+
+    #     return new_gdf
+    # else:
+    #     return as_gdf
 
 
 default_widths = {
