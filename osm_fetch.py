@@ -19,8 +19,8 @@ def delete_filelist_that_exists(filepathlist):
         if os.path.exists(filepath):
             os.remove(filepath)
 
-def join_to_default_outfolder(filename):
-    outfolder = os.path.join(basepath,'temporary')
+def join_to_a_outfolder(filename,foldername='temporary'):
+    outfolder = os.path.join(basepath,foldername)
 
     return os.path.join(outfolder,filename)
 
@@ -113,8 +113,8 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
 
 
     # the outpaths for temporary files
-    xmlfilepath = join_to_default_outfolder(tempfilesname+'_osm.xml')
-    geojsonfilepath = join_to_default_outfolder(tempfilesname+'_osm.geojson')
+    xmlfilepath = join_to_a_outfolder(tempfilesname+'_osm.xml')
+    geojsonfilepath = join_to_a_outfolder(tempfilesname+'_osm.geojson')
 
     print('xml will be written to: ',xmlfilepath)
 

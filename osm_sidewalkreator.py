@@ -101,7 +101,22 @@ def reproject_layer(inputlayer,destination_crs='EPSG:4326'):
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
 
+def cliplayer(inlayerpath,cliplayerpath,outputpath):
+    '''
+        clip a layer
 
+        all inputs are paths!!!
+
+        will be generated clipped layer as a file in outputpath
+
+        source: https://opensourceoptions.com/blog/pyqgis-clip-vector-layers/ (thx!!)
+    '''
+    #run the clip tool
+    processing.run("native:clip", {'INPUT':inlayerpath,'OVERLAY':cliplayerpath,'OUTPUT':outputpath})
+
+
+def path_from_layer(inputlayer,splitcharacter='|',splitposition=0):
+    return inputlayer.dataProvider().dataSourceUri().split(splitcharacter)[splitposition]
 
 class sidewalkreator:
     """QGIS Plugin Implementation."""
@@ -342,6 +357,8 @@ class sidewalkreator:
         # .next()
 
         if self.input_layer:
+            self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
+
 
             # assuring 4326 as EPSG code for layer
             layer_4326 = reproject_layer(self.input_layer)
@@ -411,11 +428,20 @@ class sidewalkreator:
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
 
 
-        self.data_geojsonpath = get_osm_data(query_string,'osm_download_data')
+        data_geojsonpath = get_osm_data(query_string,'osm_download_data')
 
         self.dlg.input_status_of_data.setText('data acquired!')
 
-        self.osm_data_layer = QgsVectorLayer(self.data_geojsonpath,"osm_road_data","ogr")
+        clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
+
+        clip_polygon_path = path_from_layer(self.input_layer)
+
+        self.write_to_debug(clip_polygon_path)
+
+        cliplayer(data_geojsonpath,clip_polygon_path,clipped_path)
+
+        # addinf as layer
+        self.osm_data_layer = QgsVectorLayer('',"osm_road_data","ogr")
         
         # adding to canvas
         # TODO: first, we will need to clip it
