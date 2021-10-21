@@ -94,9 +94,9 @@ reports_path = os.path.join(basepath,'reports')
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
 
-def reproject_layer(inputlayer,destination_crs='EPSG:4326'):
+def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:Reprojected'):
     parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,
-                 'OUTPUT': 'memory:Reprojected'}
+                 'OUTPUT': output_mode}
 
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
@@ -117,6 +117,58 @@ def cliplayer(inlayerpath,cliplayerpath,outputpath):
 
 def path_from_layer(inputlayer,splitcharacter='|',splitposition=0):
     return inputlayer.dataProvider().dataSourceUri().split(splitcharacter)[splitposition]
+
+def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
+
+    as_wkt = f"""PROJCRS["unknown",
+    BASEGEOGCRS["unknown",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]],
+            ID["EPSG",6326]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8901]]],
+    CONVERSION["unknown",
+        METHOD["Transverse Mercator",
+            ID["EPSG",9807]],
+        PARAMETER["Latitude of natural origin",{lat_0},
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",{lgt_0},
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["Scale factor at natural origin",1,
+            SCALEUNIT["unity",1],
+            ID["EPSG",8805]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1,
+                ID["EPSG",9001]]]]
+    """
+
+    # TODO: if mode != 'TM' and lat_0 != 0:
+    # define as_wkt as a stereographic projection
+
+    custom_crs = QgsCoordinateReferenceSystem()
+
+    custom_crs.createFromWkt(as_wkt)
+
+    if return_wkt:
+        return as_wkt
+    else:
+        return custom_crs
 
 class sidewalkreator:
     """QGIS Plugin Implementation."""
@@ -444,11 +496,18 @@ class sidewalkreator:
         cliplayer(osm_data_layer,self.input_layer,clipped_path)
 
 
-        self.clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
+        clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
+
+        # Custom CRS, to use metric stuff with minimal distortion
+        local_crs = custom_local_projection(self.bbox_center.x(),return_wkt=True)
+
+        print(local_crs)
+
+        self.clipped_reproj_datalayer = reproject_layer(clipped_datalayer,local_crs)
 
         # adding to canvas
         # TODO: first, we will need to clip it
-        self.add_layer_canvas(self.clipped_datalayer)
+        self.add_layer_canvas(self.clipped_reproj_datalayer)
 
 
 
