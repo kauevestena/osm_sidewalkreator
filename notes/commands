@@ -1,0 +1,3 @@
+ ogr2ogr -clipsrc clip_polygon.shp output.shp input.shp
+
+  ogr2ogr -clipsrc 

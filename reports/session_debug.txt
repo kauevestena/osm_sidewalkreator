@@ -1,7 +1,7 @@
 session_report:
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson|layername=test_polygon1
+/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/polygon_utm22s2.geojson|layername=polygon_utm22s2
 -49.26601838639036
--25.463808414130494
+-25.4638084141305
 -49.26001057009556
--25.459173303635996
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson
+-25.45917330363599
+/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/polygon_utm22s2.geojson

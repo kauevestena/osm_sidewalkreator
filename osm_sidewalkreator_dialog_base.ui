@@ -67,6 +67,9 @@
       <property name="enabled">
        <bool>true</bool>
       </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
       <property name="text">
        <string>pt-br</string>
       </property>

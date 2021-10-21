@@ -438,14 +438,17 @@ class sidewalkreator:
 
         self.write_to_debug(clip_polygon_path)
 
-        cliplayer(data_geojsonpath,clip_polygon_path,clipped_path)
-
         # addinf as layer
-        self.osm_data_layer = QgsVectorLayer('',"osm_road_data","ogr")
-        
+        osm_data_layer = QgsVectorLayer(data_geojsonpath,"osm_road_data","ogr")
+
+        cliplayer(osm_data_layer,self.input_layer,clipped_path)
+
+
+        self.clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
+
         # adding to canvas
         # TODO: first, we will need to clip it
-        self.add_layer_canvas(self.osm_data_layer)
+        self.add_layer_canvas(self.clipped_datalayer)
 
 
 
