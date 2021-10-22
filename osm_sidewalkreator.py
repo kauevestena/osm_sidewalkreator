@@ -101,6 +101,7 @@ def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:R
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
 
+
 def cliplayer(inlayerpath,cliplayerpath,outputpath):
     '''
         clip a layer
@@ -121,7 +122,7 @@ def path_from_layer(inputlayer,splitcharacter='|',splitposition=0):
 def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
 
     as_wkt = f"""PROJCRS["unknown",
-    BASEGEOGCRS["unknown",
+    BASEGEOGCRS["WGS 84",
         DATUM["World Geodetic System 1984",
             ELLIPSOID["WGS 84",6378137,298.257223563,
                 LENGTHUNIT["metre",1]],
@@ -169,6 +170,34 @@ def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
         return as_wkt
     else:
         return custom_crs
+
+def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
+
+    # https://docs.qgis.org/3.16/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
+
+    operation = f'+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=tmerc +lat_0=0 +lon_0={lgt_0} +k=1 +x_0=0 +y_0=0 +ellps=WGS84'
+
+
+    parameter_dict = { 'INPUT' : inputlayer, 'OPERATION' : operation, 'OUTPUT' : outputpath }
+
+    # option 1: creating from wkt
+    # proj_wkt = custom_local_projection(lgt_0,return_wkt=True)
+    # parameter_dict['TARGET_CRS'] = QgsCoordinateReferenceSystem(proj_wkt)
+
+    # option 2: as a crs object, directly
+    new_crs = custom_local_projection(lgt_0)
+    parameter_dict['TARGET_CRS'] = new_crs
+
+
+    processing.run('native:reprojectlayer', parameter_dict)
+
+    # fixing no set layer crs:
+
+    ret_lyr = QgsVectorLayer(outputpath,layername,'ogr')
+
+    ret_lyr.setCrs(new_crs)
+
+    return ret_lyr, new_crs
 
 class sidewalkreator:
     """QGIS Plugin Implementation."""
@@ -447,6 +476,7 @@ class sidewalkreator:
                     if self.input_polygon.isGeosValid():
                         self.dlg.datafetch.setEnabled(True)
                         self.dlg.input_status.setText('Valid Input!')
+                        self.dlg.input_status_of_data.setText('waiting for data...')
 
 
                         for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
@@ -484,6 +514,10 @@ class sidewalkreator:
 
         self.dlg.input_status_of_data.setText('data acquired!')
 
+        # to prevent user to loop
+        self.dlg.input_layer_selector.setEnabled(False)
+
+
         clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
 
         clip_polygon_path = path_from_layer(self.input_layer)
@@ -498,16 +532,28 @@ class sidewalkreator:
 
         clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
 
-        # Custom CRS, to use metric stuff with minimal distortion
-        local_crs = custom_local_projection(self.bbox_center.x(),return_wkt=True)
+        # # Custom CRS, to use metric stuff with minimal distortion
+        # local_crs = custom_local_projection(self.bbox_center.x(),return_wkt=True)
 
-        print(local_crs)
+        # creating as a temporary file
+        clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
 
-        self.clipped_reproj_datalayer = reproject_layer(clipped_datalayer,local_crs)
+
+        # reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,lgt_0=self.bbox_center.x())
+
+        # self.clipped_reproj_datalayer = reproject_layer(clipped_datalayer,local_crs)
+
+        # self.clipped_reproj_datalayer = QgsVectorLayer(clipped_reproj_path,'osm_clipped_roads','ogr')
+
+        # both the layer in the new "local" projection system and the "local" projection system
+        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,'osm_clipped_roads',lgt_0=self.bbox_center.x())
 
         # adding to canvas
         # TODO: first, we will need to clip it
         self.add_layer_canvas(self.clipped_reproj_datalayer)
+
+        # # testing if inverse transformation is working: 
+        # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
 
 
