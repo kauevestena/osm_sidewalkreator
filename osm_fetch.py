@@ -79,8 +79,15 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features'):
 
     new_list = []
 
+    # in order to deal with relations
+    allowed_types = [geomtype]
+
+    if geomtype == 'Polygon':
+        allowed_types.append('MultiPolygon')
+
     for entry in feat_list:
-        if entry['geometry']['type'] == geomtype:
+        # if entry['geometry']['type'] == geomtype:
+        if any(entry['geometry']['type']==val for val in allowed_types):
             # fixing tags not appearing as fields
             tags_dict = entry['properties']['tags']
 
@@ -140,8 +147,10 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
         xml_filecontent = data.read()
 
     geojson_datadict = osm2geojson.xml2geojson(xml_filecontent, filter_used_refs=False, log_level='INFO')
+    with open(geojsonfilepath.replace('.geojson','_unfiltered.geojson'),'w+') as geojson_handle:
+        json.dump(geojson_datadict,geojson_handle)
 
-    filtered_geojson_dict = filter_gjsonfeats_bygeomtype(geojson_datadict)
+    filtered_geojson_dict = filter_gjsonfeats_bygeomtype(geojson_datadict,geomtype)
 
     # dumping geojson file:
     with open(geojsonfilepath,'w+') as geojson_handle:
@@ -172,6 +181,3 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
     #     return as_gdf
 
 
-default_widths = {
-    
-}

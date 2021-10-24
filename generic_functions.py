@@ -109,3 +109,42 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
     ret_lyr.setCrs(new_crs)
 
     return ret_lyr, new_crs
+
+# def retrieve_att(layer,att_id,row_id):
+#     iterr = layer.getFeatures()
+#     attrs = []
+#     for feature in iterr:
+#         attrs.append(feature.attributes())
+#     return attrs[row_id][att_id]
+
+# def retrieve_attrs(layer):
+#     iterr = layer.getFeatures()
+#     attrs = []
+#     for feature in iterr:
+#         attrs.append(feature.attributes())
+#     return attrs
+
+# def column(matrixList, i):
+#     return [row[i] for row in matrixList]
+
+def check_empty_layer(inputlayer):
+    feat_count = 0
+
+    for feature in inputlayer.getFeatures():
+        feat_count += 1
+
+    return (feat_count == 0)
+
+def get_column_names(inputlayer):
+    pass
+
+def get_layer_att_table(inputlayer):
+    att_lists = []
+
+    for feature in inputlayer.getFeatures():
+        
+        att_lists.append(feature.attributes())
+
+    return att_lists
+
+

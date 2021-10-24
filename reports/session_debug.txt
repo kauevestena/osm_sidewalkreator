@@ -1,7 +1,7 @@
 session_report:
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson|layername=test_polygon1
--49.26601838639036
--25.463808414130494
--49.26001057009556
--25.459173303635996
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson
+memory?geometry=Polygon&crs=EPSG:4326&field=aa:string(10,0)
+-49.23626291239904
+-25.454365783741164
+-49.22978098037649
+-25.449034747521615
+memory?geometry=Polygon&crs=EPSG:4326&field=aa:string(10,0)

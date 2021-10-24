@@ -71,6 +71,7 @@ import osm2geojson
 # # internal dependencies:
 from .osm_fetch import *
 from .generic_functions import *
+from .parameters import *
 
 
 
@@ -406,11 +407,10 @@ class sidewalkreator:
 
         self.dlg.datafetch.setEnabled(False)
 
-
+        # OSM query
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
-
-
-        data_geojsonpath = get_osm_data(query_string,'osm_download_data')
+        # acquired file
+        data_geojsonpath = get_osm_data(query_string,'osm_road_data')
 
         self.dlg.input_status_of_data.setText('data acquired!')
 
@@ -424,7 +424,7 @@ class sidewalkreator:
 
         self.write_to_debug(clip_polygon_path)
 
-        # addinf as layer
+        # adding as layer
         osm_data_layer = QgsVectorLayer(data_geojsonpath,"osm_road_data","ogr")
 
         cliplayer(osm_data_layer,self.input_layer,clipped_path)
@@ -433,29 +433,36 @@ class sidewalkreator:
         clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
 
         # # Custom CRS, to use metric stuff with minimal distortion
-        # local_crs = custom_local_projection(self.bbox_center.x(),return_wkt=True)
-
-        # creating as a temporary file
         clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
 
 
-        # reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,lgt_0=self.bbox_center.x())
-
-        # self.clipped_reproj_datalayer = reproject_layer(clipped_datalayer,local_crs)
-
-        # self.clipped_reproj_datalayer = QgsVectorLayer(clipped_reproj_path,'osm_clipped_roads','ogr')
-
-        # both the layer in the new "local" projection system and the "local" projection system
         self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,'osm_clipped_roads',lgt_0=self.bbox_center.x())
 
-        for feature in self.clipped_reproj_datalayer.getFeatures():
-            print(feature.attributes())
+
+        # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
+        # # no need for clipping the buildings layer 
+
+        if use_buildings:
+            query_string_buildings = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'building',relation=include_relations)
+            buildings_geojsonpath = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon')
+            buildings_brutelayer = QgsVectorLayer(buildings_geojsonpath,'brute_buildings','ogr')
+
+            self.no_buildings = check_empty_layer(buildings_brutelayer) # asserts if there are buildings in the area
+
+            # do not add buildings if there's no need
+            if not self.no_buildings:
+                reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
+                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,'osm_buildings',lgt_0=self.bbox_center.x())
+                if draw_buildings:
+                    self.add_layer_canvas(self.reproj_buildings)
+
+
 
         # adding to canvas
         # TODO: first, we will need to clip it
         self.add_layer_canvas(self.clipped_reproj_datalayer)
 
-        # # testing if inverse transformation is working: 
+        # # # testing if inverse transformation is working: 
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
 
