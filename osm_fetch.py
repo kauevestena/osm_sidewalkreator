@@ -3,15 +3,20 @@ import requests, os, time, json
 # import geopandas as gpd
 # from geopandas import read_file
 import osm2geojson
+from qgis.core import QgsApplication
 
 # doing some stuff again to avoid circular imports:
-homepath = os.path.expanduser('~')
+# homepath = os.path.expanduser('~')
 
-user_profile = 'default' #TODO: read from session
+# user_profile = 'default' #TODO: read from session
 
-basepathp1 = '.local/share/QGIS/QGIS3/profiles'
-basepathp2 = 'python/plugins/osm_sidewalkreator'
-basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
+# basepathp1 = '.local/share/QGIS/QGIS3/profiles'
+# basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
+
+profilepath = QgsApplication.qgisSettingsDirPath()
+base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
+basepath = os.path.join(profilepath,base_pluginpath_p2)
+
 
 
 def delete_filelist_that_exists(filepathlist):

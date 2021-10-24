@@ -202,23 +202,18 @@
   <widget class="QTableWidget" name="tableWidget">
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>130</y>
+     <x>20</x>
+     <y>140</y>
      <width>231</width>
      <height>192</height>
     </rect>
    </property>
    <property name="rowCount">
-    <number>3</number>
+    <number>0</number>
    </property>
    <property name="columnCount">
-    <number>2</number>
+    <number>0</number>
    </property>
-   <row/>
-   <row/>
-   <row/>
-   <column/>
-   <column/>
   </widget>
  </widget>
  <customwidgets>

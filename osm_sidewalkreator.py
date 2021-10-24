@@ -35,7 +35,7 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from qgis import processing
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication
 
 
 # Initialize Qt resources from file resources.py
@@ -81,13 +81,19 @@ from .generic_functions import *
 # to path stuff don't get messy:
 
 # homepath = os.environ['HOME']
-homepath = os.path.expanduser('~')
+# homepath = os.path.expanduser('~')
 
-user_profile = 'default' #TODO: read from session
+# user_profile = 'default' #TODO: read from session
 
-basepathp1 = '.local/share/QGIS/QGIS3/profiles'
-basepathp2 = 'python/plugins/osm_sidewalkreator'
-basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
+# TODO: adapt for windows aswell
+
+# basepathp1 = '.local/share/QGIS/QGIS3/profiles'
+# basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
+
+profilepath = QgsApplication.qgisSettingsDirPath()
+base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
+basepath = os.path.join(profilepath,base_pluginpath_p2)
+
 print(basepath)
 reports_path = os.path.join(basepath,'reports')
 
@@ -441,6 +447,9 @@ class sidewalkreator:
 
         # both the layer in the new "local" projection system and the "local" projection system
         self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,'osm_clipped_roads',lgt_0=self.bbox_center.x())
+
+        for feature in self.clipped_reproj_datalayer.getFeatures():
+            print(feature.attributes())
 
         # adding to canvas
         # TODO: first, we will need to clip it
