@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>622</width>
-    <height>420</height>
+    <height>454</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -107,7 +107,7 @@
    <property name="geometry">
     <rect>
      <x>220</x>
-     <y>360</y>
+     <y>400</y>
      <width>391</width>
      <height>41</height>
     </rect>
@@ -120,7 +120,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>360</y>
+     <y>400</y>
      <width>131</width>
      <height>31</height>
     </rect>
@@ -152,9 +152,9 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>140</y>
-     <width>511</width>
-     <height>201</height>
+     <y>330</y>
+     <width>541</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="text">
@@ -198,6 +198,27 @@
    <property name="alignment">
     <set>Qt::AlignCenter</set>
    </property>
+  </widget>
+  <widget class="QTableWidget" name="tableWidget">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>130</y>
+     <width>231</width>
+     <height>192</height>
+    </rect>
+   </property>
+   <property name="rowCount">
+    <number>3</number>
+   </property>
+   <property name="columnCount">
+    <number>2</number>
+   </property>
+   <row/>
+   <row/>
+   <row/>
+   <column/>
+   <column/>
   </widget>
  </widget>
  <customwidgets>
