@@ -1,5 +1,5 @@
-tlist = ['a','b']
+tlist = ['aaaaaaaaaaaaaaaaaaa','b']
 
-res = any('c'==val for val in tlist)
+res = any('c' in val for val in tlist)
 
 print(res)

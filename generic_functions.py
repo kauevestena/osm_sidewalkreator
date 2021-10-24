@@ -1,5 +1,6 @@
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject
+import os
 
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
@@ -86,7 +87,7 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
 
     # https://docs.qgis.org/3.16/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
 
-    operation = f'+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=tmerc +lat_0=0 +lon_0={lgt_0} +k=1 +x_0=0 +y_0=0 +ellps=WGS84'
+    operation = f'+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=tmerc +lat_0={lat_0} +lon_0={lgt_0} +k=1 +x_0=0 +y_0=0 +ellps=WGS84'
 
 
     parameter_dict = { 'INPUT' : inputlayer, 'OPERATION' : operation, 'OUTPUT' : outputpath }
@@ -96,7 +97,7 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
     # parameter_dict['TARGET_CRS'] = QgsCoordinateReferenceSystem(proj_wkt)
 
     # option 2: as a crs object, directly
-    new_crs = custom_local_projection(lgt_0)
+    new_crs = custom_local_projection(lgt_0,lat_0=lat_0)
     parameter_dict['TARGET_CRS'] = new_crs
 
 
@@ -148,3 +149,29 @@ def get_layer_att_table(inputlayer):
     return att_lists
 
 
+def wipe_folder_files(inputfolderpath):
+    for filename in os.listdir(inputfolderpath):
+        filepath = os.path.join(inputfolderpath,filename)
+
+        os.remove(filepath)
+
+# def remove_layer(layername):
+#     # thx https://gis.stackexchange.com/a/310590/49900
+#     # but deprecated
+#     layerinstance = QgsProject.instance()
+    
+#     lyref = layerinstance.mapLayersByName(layername)
+
+#     if lyref:
+#         layerinstance.removeMapLayer(lyref[0].id())
+
+def remove_layerlist(listoflayer_alias):
+    # thx https://gis.stackexchange.com/a/310590/49900
+
+    project_instance = QgsProject.instance()
+
+
+
+    for layerfullname in project_instance.mapLayers():
+        if any(alias in layerfullname for alias in listoflayer_alias):
+            project_instance.removeMapLayer(layerfullname)

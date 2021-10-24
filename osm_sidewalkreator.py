@@ -94,6 +94,7 @@ from .parameters import *
 profilepath = QgsApplication.qgisSettingsDirPath()
 base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
 basepath = os.path.join(profilepath,base_pluginpath_p2)
+temps_path = os.path.join(basepath,'temporary')
 
 print(basepath)
 reports_path = os.path.join(basepath,'reports')
@@ -399,18 +400,39 @@ class sidewalkreator:
         # self.input_polygon_wkt = self.input_polygon.asWkt()
 
         # self.dlg.for_tests.setText(str())
+        
+
+    def remove_layers_and_wipe_files(self,layernamelist,folderpath=None):
+        '''
+            one can also pass no folderpath to just remove layerlist
+        '''
+       
+        remove_layerlist(layernamelist)
+
+        if folderpath:
+            wipe_folder_files(folderpath)
+
 
     def call_get_osm_data(self):
         """
         Function to call the functions from "osm fetch" module
         """
 
+        osm_higway_layer_finalname = 'osm_clipped_highways'
+        buildings_layername = 'osm_buildings'
+
+        # firstly, delete files from previous session:
+        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+
+        # and remove layers from project
+
         self.dlg.datafetch.setEnabled(False)
 
         # OSM query
+        roads_layername = "osm_road_data"
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
         # acquired file
-        data_geojsonpath = get_osm_data(query_string,'osm_road_data')
+        data_geojsonpath = get_osm_data(query_string,roads_layername)
 
         self.dlg.input_status_of_data.setText('data acquired!')
 
@@ -425,18 +447,18 @@ class sidewalkreator:
         self.write_to_debug(clip_polygon_path)
 
         # adding as layer
-        osm_data_layer = QgsVectorLayer(data_geojsonpath,"osm_road_data","ogr")
+        osm_data_layer = QgsVectorLayer(data_geojsonpath,roads_layername,"ogr")
 
         cliplayer(osm_data_layer,self.input_layer,clipped_path)
 
 
-        clipped_datalayer = QgsVectorLayer(clipped_path,"osm_road_data","ogr")
+        clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
 
         # # Custom CRS, to use metric stuff with minimal distortion
         clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
 
 
-        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,'osm_clipped_roads',lgt_0=self.bbox_center.x())
+        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
 
 
         # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
@@ -452,7 +474,7 @@ class sidewalkreator:
             # do not add buildings if there's no need
             if not self.no_buildings:
                 reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
-                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,'osm_buildings',lgt_0=self.bbox_center.x())
+                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,buildings_layername,lgt_0=self.bbox_center.x())
                 if draw_buildings:
                     self.add_layer_canvas(self.reproj_buildings)
 
