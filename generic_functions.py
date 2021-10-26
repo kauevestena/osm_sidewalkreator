@@ -137,7 +137,15 @@ def check_empty_layer(inputlayer):
     return (feat_count == 0)
 
 def get_column_names(inputlayer):
-    pass
+    return inputlayer.fields().names()
+
+def get_layercolumn_byname(inputlayer,columname):
+
+    input_table = get_layer_att_table(inputlayer)
+
+    column_id = inputlayer.fields().lookupField(columname)
+
+    return [sublist[column_id] for sublist in input_table]
 
 def get_layer_att_table(inputlayer):
     att_lists = []

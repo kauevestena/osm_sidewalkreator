@@ -37,6 +37,9 @@ from qgis.PyQt.QtWidgets import QAction
 from qgis import processing
 from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication
 
+# pure Qt imports, keep at minumun =P
+from PyQt5.QtWidgets import QTableWidgetItem
+
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -107,8 +110,7 @@ class sidewalkreator:
     # to control current language:
     current_lang = 'en'
 
-    # just for debugging events
-    global_counter = 0
+
 
 
     def __init__(self, iface):
@@ -393,13 +395,9 @@ class sidewalkreator:
 
 
 
-            # self.dlg.for_tests.setText(str(self.global_counter))
 
-            self.global_counter += 1
 
-        # self.input_polygon_wkt = self.input_polygon.asWkt()
 
-        # self.dlg.for_tests.setText(str())
         
 
     def remove_layers_and_wipe_files(self,layernamelist,folderpath=None):
@@ -418,6 +416,7 @@ class sidewalkreator:
         Function to call the functions from "osm fetch" module
         """
 
+        # PART 1 : wiping old stuff
         osm_higway_layer_finalname = 'osm_clipped_highways'
         buildings_layername = 'osm_buildings'
 
@@ -425,6 +424,8 @@ class sidewalkreator:
         self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
 
         # and remove layers from project
+
+        # PART 2: Getting and transforming the data
 
         self.dlg.datafetch.setEnabled(False)
 
@@ -484,7 +485,28 @@ class sidewalkreator:
         # TODO: first, we will need to clip it
         self.add_layer_canvas(self.clipped_reproj_datalayer)
 
-        # # # testing if inverse transformation is working: 
+        # PART 3: Getting Attributes and drawing table:
+        higway_list = get_layercolumn_byname(self.clipped_reproj_datalayer,highway_tag)
+
+        self.unique_highway_values = list(set(higway_list))
+
+        self.dlg.higway_values_table.setRowCount(len(self.unique_highway_values))
+        self.dlg.higway_values_table.setColumnCount(2)
+
+        self.dlg.higway_values_table.setHorizontalHeaderLabels(['tag value','width'])
+
+        # filling first colum --> higway:values and second --> defalt_values
+        for i,item in enumerate(self.unique_highway_values):
+            vvalue = self.unique_highway_values[i]
+
+            self.dlg.higway_values_table.setItem(i,0,QTableWidgetItem(vvalue))
+
+            self.dlg.higway_values_table.setItem(i,1,QTableWidgetItem(str(default_widths[vvalue])))
+
+
+
+
+        # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
 
