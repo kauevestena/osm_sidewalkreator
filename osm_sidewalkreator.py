@@ -110,7 +110,8 @@ class sidewalkreator:
     # to control current language:
     current_lang = 'en'
 
-
+    # variables to control wheter change in language should change labels
+    change_input_labels = True
 
 
     def __init__(self, iface):
@@ -326,14 +327,38 @@ class sidewalkreator:
     def change_language_ptbr(self):
         self.current_lang = 'ptbr'
 
-        self.dlg.lang_label.setText("Idioma: ")
-        self.dlg.input_pol_label.setText("Polígono de Entrada")
+        # # frozing selection if you opt for ptbr:
+        # self.dlg.opt_ptbr.setEnabled(False)
+        # self.dlg.opt_en.setEnabled(False)
+
+        self.change_all_labels_bylang()
 
     def go_back_to_english(self):
         self.current_lang = 'en'
 
-        self.dlg.lang_label.setText("Language: ")
-        self.dlg.input_pol_label.setText("Input Polygon: ")
+        self.change_all_labels_bylang()
+
+    def change_all_labels_bylang(self):
+        info_tuples = (
+            # tuples: (qt-dlg_element,english_text,ptbr_text)
+            (self.dlg.lang_label,"Language: ","Idioma: "),
+            (self.dlg.input_pol_label,"Input Polygon: ","Polígono de Entrada" ),
+            (self.dlg.table_txt1,'default widths for tag values','larguras-padrão para valores'),
+            (self.dlg.table_txt2,'"0" means ignore feature','"0": ignorar feições'),
+            (self.dlg.output_file_label,'Output File:','Arquivo de Saída:'),
+            (self.dlg.datafetch,'Fetch Data','Obter Dados'),
+            (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels),
+            (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
+            # (self.dlg.,"",""),
+            # (self.dlg.,"",""),
+            # (self.dlg.,'',''),
+
+
+        )
+
+        for info_set in info_tuples:
+            # What an elegant solution!!! 
+            self.set_text_based_on_language(*info_set)
 
     def get_input_layer(self):
         # self.input_layer = QgsMapLayerComboBox.currentLayer()
@@ -379,18 +404,23 @@ class sidewalkreator:
 
                     if self.input_polygon.isGeosValid():
                         self.dlg.datafetch.setEnabled(True)
-                        self.dlg.input_status.setText('Valid Input!')
-                        self.dlg.input_status_of_data.setText('waiting for data...')
+                        # self.change_input_labels = False
+                        # self.dlg.input_status.setText('Valid Input!')
+                        self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
+                        # self.dlg.input_status_of_data.setText('waiting for data...')
+                        self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
 
 
                         for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
                             self.write_to_debug(item)
             else:
-                self.dlg.input_status.setText('no geometries on input!!')
+                # self.dlg.input_status.setText('no geometries on input!!')
+                self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
                 self.dlg.datafetch.setEnabled(False)
         else:
 
-            self.dlg.input_status.setText('waiting a valid for input...')
+            # self.dlg.input_status.setText('waiting a valid for input...')
+            self.set_text_based_on_language(self.dlg.input_status,'Waiting for a valid input...','Aguardando entrada válida...')
             self.dlg.datafetch.setEnabled(False)
 
 
@@ -435,7 +465,8 @@ class sidewalkreator:
         # acquired file
         data_geojsonpath = get_osm_data(query_string,roads_layername)
 
-        self.dlg.input_status_of_data.setText('data acquired!')
+        # self.dlg.input_status_of_data.setText('data acquired!')
+        self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
 
         # to prevent user to loop
         self.dlg.input_layer_selector.setEnabled(False)
@@ -488,12 +519,18 @@ class sidewalkreator:
         # PART 3: Getting Attributes and drawing table:
         higway_list = get_layercolumn_byname(self.clipped_reproj_datalayer,highway_tag)
 
+
+        # Table Filling
         self.unique_highway_values = list(set(higway_list))
 
         self.dlg.higway_values_table.setRowCount(len(self.unique_highway_values))
         self.dlg.higway_values_table.setColumnCount(2)
 
-        self.dlg.higway_values_table.setHorizontalHeaderLabels(['tag value','width'])
+        if self.current_lang == 'en':
+            self.dlg.higway_values_table.setHorizontalHeaderLabels(['tag value','width'])
+        else:
+            self.dlg.higway_values_table.setHorizontalHeaderLabels(['valor','largura'])
+
 
         # filling first colum --> higway:values and second --> defalt_values
         for i,item in enumerate(self.unique_highway_values):
@@ -509,6 +546,12 @@ class sidewalkreator:
         # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
+    def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
+        if extra_control_bool:
+            if self.current_lang == 'en':
+                qt_object.setText(en_txt)
+            else:
+                qt_object.setText(ptbr_txt)
 
 
     def write_to_debug(self,input_stringable,add_newline=True):

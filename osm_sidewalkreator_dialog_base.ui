@@ -47,6 +47,9 @@
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <widget class="QLabel" name="lang_label">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="text">
        <string>Language:</string>
       </property>
@@ -56,6 +59,9 @@
      <widget class="QRadioButton" name="opt_en">
       <property name="text">
        <string>en</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
       </property>
       <property name="checked">
        <bool>true</bool>
@@ -72,6 +78,9 @@
       </property>
       <property name="text">
        <string>pt-br</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -196,7 +205,7 @@
     <number>0</number>
    </property>
   </widget>
-  <widget class="QLabel" name="input_status_2">
+  <widget class="QLabel" name="table_txt1">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -212,7 +221,7 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QLabel" name="input_status_3">
+  <widget class="QLabel" name="table_txt2">
    <property name="geometry">
     <rect>
      <x>10</x>
