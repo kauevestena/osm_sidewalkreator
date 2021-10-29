@@ -111,13 +111,17 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
 
 
     while True:
-        # TODO: ensure sucess
-        response = requests.get(overpass_url,params={'data':querystring})
+        # TODO: ensure sucess 
+        #   (the try statement is an improvement already)
+        try:
+            response = requests.get(overpass_url,params={'data':querystring})
 
-        if response.status_code == 200:
-            break
+            if response.status_code == 200:
+                break
+        except:
+            time.sleep(5)
+            
 
-        time.sleep(5)
 
     # TODO check the response, beyond terminal printing
     if print_response:
