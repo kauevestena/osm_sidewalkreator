@@ -19,9 +19,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>320</x>
      <y>10</y>
-     <width>341</width>
+     <width>261</width>
      <height>32</height>
     </rect>
    </property>
@@ -29,7 +29,7 @@
     <enum>Qt::Horizontal</enum>
    </property>
    <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Reset</set>
    </property>
    <property name="centerButtons">
     <bool>true</bool>
@@ -254,9 +254,9 @@
  <connections>
   <connection>
    <sender>button_box</sender>
-   <signal>accepted()</signal>
+   <signal>rejected()</signal>
    <receiver>sidewalkreatorDialogBase</receiver>
-   <slot>accept()</slot>
+   <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>
@@ -270,9 +270,9 @@
   </connection>
   <connection>
    <sender>button_box</sender>
-   <signal>rejected()</signal>
+   <signal>accepted()</signal>
    <receiver>sidewalkreatorDialogBase</receiver>
-   <slot>reject()</slot>
+   <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>

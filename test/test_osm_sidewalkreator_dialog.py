@@ -33,6 +33,8 @@ class sidewalkreatorDialogTest(unittest.TestCase):
         """Runs after each test."""
         self.dialog = None
 
+    # QDialogButtonBox button_box
+
     def test_dialog_ok(self):
         """Test we can click OK."""
 

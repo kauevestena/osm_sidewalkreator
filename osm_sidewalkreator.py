@@ -37,8 +37,9 @@ from qgis.PyQt.QtWidgets import QAction
 from qgis import processing
 from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication
 
-# pure Qt imports, keep at minumun =P
+# pure Qt imports, keep at minimun =P
 from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtWidgets import QDialogButtonBox
 
 
 # Initialize Qt resources from file resources.py
@@ -289,6 +290,7 @@ class sidewalkreator:
 
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
+            self.dlg.datafetch.clean_data.connect(self.data_clean)
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -349,7 +351,7 @@ class sidewalkreator:
             (self.dlg.datafetch,'Fetch Data','Obter Dados'),
             (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels),
             (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
-            # (self.dlg.,"",""),
+            (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
             # (self.dlg.,"",""),
             # (self.dlg.,'',''),
 
@@ -359,6 +361,9 @@ class sidewalkreator:
         for info_set in info_tuples:
             # What an elegant solution!!! 
             self.set_text_based_on_language(*info_set)
+
+    def data_clean(self):
+        pass
 
     def get_input_layer(self):
         # self.input_layer = QgsMapLayerComboBox.currentLayer()
@@ -510,6 +515,8 @@ class sidewalkreator:
                 if draw_buildings:
                     self.add_layer_canvas(self.reproj_buildings)
 
+        # a little cleaning:
+        remove_unconnected_lines(self.clipped_reproj_datalayer)
 
 
         # adding to canvas
@@ -545,6 +552,7 @@ class sidewalkreator:
 
         # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
+
 
     def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
         if extra_control_bool:

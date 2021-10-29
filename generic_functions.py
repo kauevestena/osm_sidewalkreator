@@ -1,6 +1,7 @@
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit
 import os
+
 
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
@@ -183,3 +184,32 @@ def remove_layerlist(listoflayer_alias):
     for layerfullname in project_instance.mapLayers():
         if any(alias in layerfullname for alias in listoflayer_alias):
             project_instance.removeMapLayer(layerfullname)
+
+
+def remove_unconnected_lines(inputlayer):
+    #thx: https://gis.stackexchange.com/a/316058/49900
+    with edit(inputlayer):
+        for i,feature_A in enumerate(inputlayer.getFeatures()):
+            is_disjointed = True
+            # disjointed_features = 0
+            for j,feature_B in enumerate(inputlayer.getFeatures()):
+                if not i == j:
+                    if not feature_A.geometry().disjoint(feature_B.geometry()):
+                        print('not disjointed!!',i,j)
+                        is_disjointed=False
+
+            if is_disjointed:
+                print(is_disjointed)
+
+                inputlayer.deleteFeature(feature_A.id())
+
+    # # # # it works inplace =D ()
+    # # # # return inputlayer
+
+
+
+            
+
+
+
+
