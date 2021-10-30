@@ -13,6 +13,8 @@ draw_buildings = True
 include_relations = True
 
 
+osm_higway_layer_finalname = 'osm_clipped_highways'
+buildings_layername = 'osm_buildings'
 
 
 # for values that must be ignored one must use "0" as value

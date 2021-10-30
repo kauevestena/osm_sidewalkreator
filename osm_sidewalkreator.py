@@ -296,6 +296,10 @@ class sidewalkreator:
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
             self.dlg.clean_data.clicked.connect(self.data_clean)
+            # cancel means reset AND close
+            self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_fields)
+            self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.reset_fields)
+
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -357,8 +361,12 @@ class sidewalkreator:
             (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels),
             (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
+            (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
             (self.dlg.clean_data,'Clean OSM Data','Limp. dados OSM'),
-            # (self.dlg.,"",""),
+            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!"),
+            # (self.dlg.,'',''),
+            # (self.dlg.,'',''),
+            # (self.dlg.,'',''),
             # (self.dlg.,'',''),
 
 
@@ -396,6 +404,32 @@ class sidewalkreator:
         self.dlg.sidewalks_warning.setHidden(False)
         self.dlg.sidewalks_warning.setGeometry(270,180, 331, 281)
         # values from Qt Designer
+
+
+    def reset_fields(self):
+        # to be activated/deactivated/changed:
+        self.dlg.input_layer_selector.setLayer(None)
+        self.dlg.input_layer_selector.setEnabled(True)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+        self.dlg.datafetch.setEnabled(False)
+        self.dlg.higway_values_table.setEnabled(False)
+        self.dlg.clean_data.setEnabled(False)
+        self.dlg.sidewalks_warning.setHidden(True)
+        self.dlg.output_file_selector.setEnabled(False)
+
+        self.dlg.higway_values_table.setRowCount(0)
+        self.dlg.higway_values_table.setColumnCount(0)
+        
+
+        # texts, for appearance:
+        self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels)
+        self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels)
+
+        # also wipe data:
+        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+
+        # and refresh canvas:
+        self.iface.mapCanvas().refresh()
 
 
 
@@ -444,6 +478,12 @@ class sidewalkreator:
 
 
                     if self.input_polygon.isGeosValid():
+                        # zooming to inputlayer:
+                        self.iface.mapCanvas().setExtent(self.input_layer.extent())
+                        self.iface.mapCanvas().refresh()
+
+
+
                         self.dlg.datafetch.setEnabled(True)
                         # self.change_input_labels = False
                         # self.dlg.input_status.setText('Valid Input!')
@@ -488,8 +528,6 @@ class sidewalkreator:
         """
 
         # PART 1 : wiping old stuff
-        osm_higway_layer_finalname = 'osm_clipped_highways'
-        buildings_layername = 'osm_buildings'
 
         # firstly, delete files from previous session:
         self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
@@ -564,6 +602,8 @@ class sidewalkreator:
 
 
         # Table Filling
+        self.dlg.higway_values_table.setEnabled(True)
+
         self.unique_highway_values = list(set(higway_list))
 
         self.dlg.higway_values_table.setRowCount(len(self.unique_highway_values))
