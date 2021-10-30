@@ -4,6 +4,7 @@
 
 highway_tag = 'highway'
 
+sidewalk_tag_value = 'footway'
 
 # control
 use_buildings = True
@@ -45,5 +46,8 @@ default_widths = {
     'construction' : 0,
     'platform' : 0,
     'services' : 0,
-
+    'footway' : 0,
+    'track' : 0,
+    
+    # '' : ,
     }

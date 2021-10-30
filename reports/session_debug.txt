@@ -1,7 +1,7 @@
 session_report:
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson|layername=test_polygon1
--49.26601838639036
--25.463808414130494
--49.26001057009556
--25.459173303635996
-/home/kaue/Dropbox/DOUTORADO/plugin_calcadas/test_polygon1.geojson
+/home/kaue/.local/share/QGIS/QGIS3/profiles/default/python/plugins/osm_sidewalkreator/test/extra_tests/polygon01.geojson
+-49.231132508944455
+-25.457733899305445
+-49.226378855627736
+-25.453577024976543
+/home/kaue/.local/share/QGIS/QGIS3/profiles/default/python/plugins/osm_sidewalkreator/test/extra_tests/polygon01.geojson

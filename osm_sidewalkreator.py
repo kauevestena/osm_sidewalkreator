@@ -163,6 +163,8 @@ class sidewalkreator:
             # session_report.write(session_debugpath+'\n')
             # session_report.write(homepath)
 
+
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -287,10 +289,13 @@ class sidewalkreator:
             self.first_start = False
             self.dlg = sidewalkreatorDialog()
 
+            # setting items that should not be visible at beginning:
+            self.dlg.sidewalks_warning.setHidden(True)
+
 
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
-            self.dlg.datafetch.clean_data.connect(self.data_clean)
+            self.dlg.clean_data.clicked.connect(self.data_clean)
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -352,6 +357,7 @@ class sidewalkreator:
             (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels),
             (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
+            (self.dlg.clean_data,'Clean OSM Data','Limp. dados OSM'),
             # (self.dlg.,"",""),
             # (self.dlg.,'',''),
 
@@ -363,7 +369,37 @@ class sidewalkreator:
             self.set_text_based_on_language(*info_set)
 
     def data_clean(self):
-        pass
+        # disabling what should not be used before
+        self.dlg.clean_data.setEnabled(False)
+        self.dlg.higway_values_table.setEnabled(False)
+
+        # removing undesired tag values:
+        for i,value in enumerate(self.unique_highway_values):
+            # if a too small value is set, then also remove it
+            if float(self.dlg.higway_values_table.item(i,1).text()) < 0.5:
+                remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
+
+            # o 
+
+    def disable_all(self):
+        # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
+
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.dlg.datafetch.setEnabled(False)
+        self.dlg.input_layer_selector.setEnabled(False)
+        self.dlg.higway_values_table.setEnabled(False)
+        self.dlg.clean_data.setEnabled(False)
+        self.dlg.output_file_selector.setEnabled(False)
+        self.dlg.datafetch.setEnabled(False)
+
+        # but enable the warning:
+        self.dlg.sidewalks_warning.setHidden(False)
+        self.dlg.sidewalks_warning.setGeometry(270,180, 331, 281)
+        # values from Qt Designer
+
+
+
+
 
     def get_input_layer(self):
         # self.input_layer = QgsMapLayerComboBox.currentLayer()
@@ -548,6 +584,16 @@ class sidewalkreator:
             self.dlg.higway_values_table.setItem(i,1,QTableWidgetItem(str(default_widths[vvalue])))
 
 
+        
+
+
+        # Finally, enabling next button:
+        self.dlg.clean_data.setEnabled(True)
+
+        # BUT... if there are sidewalks already drawn, one must step back!!
+        if sidewalk_tag_value in self.unique_highway_values:
+            # DISABLING STUFF
+            self.disable_all()
 
 
         # # # testing if inverse transformation is working:

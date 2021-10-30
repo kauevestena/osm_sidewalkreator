@@ -113,6 +113,9 @@
    </property>
   </widget>
   <widget class="QgsFileWidget" name="output_file_selector">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>220</x>
@@ -190,6 +193,9 @@
    </property>
   </widget>
   <widget class="QTableWidget" name="higway_values_table">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -238,16 +244,19 @@
    </property>
   </widget>
   <widget class="QPushButton" name="clean_data">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>80</x>
+     <x>60</x>
      <y>460</y>
-     <width>89</width>
+     <width>131</width>
      <height>25</height>
     </rect>
    </property>
    <property name="text">
-    <string>Clean Data</string>
+    <string>Clean OSM Data</string>
    </property>
    <property name="checkable">
     <bool>false</bool>
@@ -260,6 +269,39 @@
    </property>
    <property name="flat">
     <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="sidewalks_warning">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>600</x>
+     <y>590</y>
+     <width>331</width>
+     <height>281</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>20</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Some Sidewalks are already drawn!!! You must reshape your input polygon!!!</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::PlainText</enum>
+   </property>
+   <property name="scaledContents">
+    <bool>false</bool>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

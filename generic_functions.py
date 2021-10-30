@@ -207,6 +207,16 @@ def remove_unconnected_lines(inputlayer):
     # # # # return inputlayer
 
 
+def remove_features_byattr(inputlayer,attrname,attrvalue):
+
+    column_values = get_layercolumn_byname(inputlayer,attrname)
+
+    with edit(inputlayer):
+        for i,feature in enumerate(inputlayer.getFeatures()):
+            if column_values[i] == attrvalue:
+                inputlayer.deleteFeature(feature.id())
+                
+
 
             
 
