@@ -1,3 +1,4 @@
+from typing import Protocol
 from qgis import processing
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit
 import os
@@ -13,6 +14,12 @@ def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:R
 
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
+
+def split_lines(inputlayer,splitterlayer,outputlayer):
+
+    parameter_dict = {'INPUT': inputlayer, 'LINES': splitterlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('qgis:splitwithlines',parameter_dict)['OUTPUT']
 
 
 def cliplayer(inlayerpath,cliplayerpath,outputpath):
@@ -180,7 +187,6 @@ def remove_layerlist(listoflayer_alias):
     project_instance = QgsProject.instance()
 
 
-
     for layerfullname in project_instance.mapLayers():
         if any(alias in layerfullname for alias in listoflayer_alias):
             project_instance.removeMapLayer(layerfullname)
@@ -195,11 +201,11 @@ def remove_unconnected_lines(inputlayer):
             for j,feature_B in enumerate(inputlayer.getFeatures()):
                 if not i == j:
                     if not feature_A.geometry().disjoint(feature_B.geometry()):
-                        print('not disjointed!!',i,j)
+                        # print('not disjointed!!',i,j)
                         is_disjointed=False
 
             if is_disjointed:
-                print(is_disjointed)
+                # print(is_disjointed)
 
                 inputlayer.deleteFeature(feature_A.id())
 

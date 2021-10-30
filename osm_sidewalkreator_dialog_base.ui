@@ -194,7 +194,7 @@
   </widget>
   <widget class="QTableWidget" name="higway_values_table">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="geometry">
     <rect>

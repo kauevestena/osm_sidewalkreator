@@ -35,7 +35,7 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from qgis import processing
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit
 
 # pure Qt imports, keep at minimun =P
 from PyQt5.QtWidgets import QTableWidgetItem
@@ -387,7 +387,45 @@ class sidewalkreator:
             if float(self.dlg.higway_values_table.item(i,1).text()) < 0.5:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
-            # o 
+        
+        outputpath_splitted = self.clipped_reproj_path.replace('.geojson','_splitted.geojson')
+
+        # splitting into segments:
+        splitted_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
+
+        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+splitted_name)
+
+        self.add_layer_canvas(self.splitted_lines)
+
+        # always cleaning stuff user does not need anymore
+        remove_layerlist([osm_higway_layer_finalname])
+
+
+        # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
+
+    def string_according_language(self,en_str,ptbr_str):
+        if self.current_lang == 'en':
+            return en_str
+        else:
+            return ptbr_str
+
+    def remove_temporary_layers(self):
+
+        is_temporary = [layer.isTemporary() for layer in QgsProject.instance().mapLayers().values()]
+
+        layer_fullnames = [layer for layer in QgsProject.instance().mapLayers()]
+
+        for i,status in enumerate(is_temporary):
+            if status:
+                QgsProject.instance().removeMapLayer(layer_fullnames[i])
+
+
+    def replace_vectorlayer(self,layername,newpath):
+        remove_layerlist([layername])
+
+        replaced =  QgsVectorLayer(newpath,layername,'ogr')
+
+        self.add_layer_canvas(replaced)
 
     def disable_all(self):
         # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
@@ -428,8 +466,12 @@ class sidewalkreator:
         # also wipe data:
         self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
 
+        # remove temporary layers:
+        self.remove_temporary_layers()
+
         # and refresh canvas:
         self.iface.mapCanvas().refresh()
+
 
 
 
@@ -530,9 +572,10 @@ class sidewalkreator:
         # PART 1 : wiping old stuff
 
         # firstly, delete files from previous session:
-        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+        #   and remove layers from project
 
-        # and remove layers from project
+        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+        self.remove_temporary_layers() # also temporary layers that can be around
 
         # PART 2: Getting and transforming the data
 
@@ -566,10 +609,10 @@ class sidewalkreator:
         clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
 
         # # Custom CRS, to use metric stuff with minimal distortion
-        clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
+        self.clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
 
 
-        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,clipped_reproj_path,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
+        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,self.clipped_reproj_path,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
 
 
         # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
