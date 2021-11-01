@@ -246,15 +246,17 @@ def remove_lines_from_no_block(inputlayer):
 
 
             for j,feature_B in enumerate(inputlayer.getFeatures()):
-                if not i == j:
-                    if P0.intersects(feature_B.geometry()):
-                        P0_count += 1
-                    if PF.intersects(feature_B.geometry()):
-                        PF_count += 1
+                # if not i == j:
+                if P0.intersects(feature_B.geometry()):
+                    P0_count += 1
+                if PF.intersects(feature_B.geometry()):
+                    PF_count += 1
                     
-        
+            
+            print(P0_count,PF_count)
 
-            if any(count == 0 for count in [P0_count,PF_count]):
+
+            if any(count == 1 for count in [P0_count,PF_count]):
                 feature_ids_to_be_removed.append(feature_A.id())
 
         for feature_id in feature_ids_to_be_removed:
