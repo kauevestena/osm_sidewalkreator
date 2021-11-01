@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="Overpass API 0.7.57 93a4d346">
+<note>The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.</note>
+<meta osm_base="2021-11-01T18:44:03Z"/>
+
+  <node id="266970994" lat="-25.4688522" lon="-49.2601332"/>
+  <node id="372403459" lat="-25.4607723" lon="-49.2671257">
+    <tag k="highway" v="traffic_signals"/>
+  </node>
+  <node id="372403460" lat="-25.4590199" lon="-49.2628144"/>
+  <node id="372406476" lat="-25.4572002" lon="-49.2660874"/>
+  <node id="372407124" lat="-25.4578836" lon="-49.2686303">
+    <tag k="highway" v="traffic_signals"/>
+  </node>
+  <node id="462008791" lat="-25.4582533" lon="-49.2609444">
+    <tag k="highway" v="traffic_signals"/>
+  </node>
+  <node id="462008792" lat="-25.4670448" lon="-49.2566590"/>
+  <node id="589104064" lat="-25.4617040" lon="-49.2666518"/>
+  <node id="589104145" lat="-25.4602032" lon="-49.2657497"/>
+  <node id="589104183" lat="-25.4611773" lon="-49.2652980"/>
+  <node id="589263163" lat="-25.4649594" lon="-49.2576065"/>
+  <node id="589263214" lat="-25.4640198" lon="-49.2580571"/>
+  <node id="589263267" lat="-25.4650505" lon="-49.2605890"/>
+  <node id="589263316" lat="-25.4630996" lon="-49.2585184"/>
+  <node id="589263342" lat="-25.4638071" lon="-49.2602296"/>
+  <node id="589263352" lat="-25.4641413" lon="-49.2610430"/>
+  <node id="589263389" lat="-25.4621600" lon="-49.2589905"/>
+  <node id="589263445" lat="-25.4658889" lon="-49.2571519"/>
+  <node id="589263541" lat="-25.4628535" lon="-49.2606737"/>
+  <node id="589263600" lat="-25.4588093" lon="-49.2594224"/>
+  <node id="589263668" lat="-25.4541264" lon="-49.2629044"/>
+  <node id="589263694" lat="-25.4556477" lon="-49.2622123">
+    <tag k="highway" v="traffic_signals"/>
+  </node>
+  <node id="589263720" lat="-25.4592286" lon="-49.2604750"/>
+  <node id="589263731" lat="-25.4611525" lon="-49.2594840"/>
+  <node id="589263827" lat="-25.4595903" lon="-49.2613789"/>
+  <node id="589263849" lat="-25.4600033" lon="-49.2623525"/>
+  <node id="589263862" lat="-25.4602856" lon="-49.2630998"/>
+  <node id="589263879" lat="-25.4607977" lon="-49.2643496"/>
+  <node id="589263946" lat="-25.4586388" lon="-49.2618444"/>
+  <node id="589263960" lat="-25.4615515" lon="-49.2604458"/>
+  <node id="589263973" lat="-25.4625470" lon="-49.2599723"/>
+  <node id="589264027" lat="-25.4622241" lon="-49.2621297"/>
+  <node id="589264040" lat="-25.4627388" lon="-49.2634193"/>
+  <node id="589264055" lat="-25.4631270" lon="-49.2643642"/>
+  <node id="589264068" lat="-25.4636228" lon="-49.2656830"/>
+  <node id="589264163" lat="-25.4641432" lon="-49.2638812"/>
+  <node id="589264175" lat="-25.4637626" lon="-49.2629424"/>
+  <node id="589264180" lat="-25.4632350" lon="-49.2616505"/>
+  <node id="589264207" lat="-25.4593217" lon="-49.2635610"/>
+  <node id="589264222" lat="-25.4612621" lon="-49.2626052"/>
+  <node id="589264265" lat="-25.4626856" lon="-49.2661356"/>
+  <node id="589264302" lat="-25.4617786" lon="-49.2638818"/>
+  <node id="589264316" lat="-25.4621553" lon="-49.2648128"/>
+  <node id="589264347" lat="-25.4598254" lon="-49.2648055"/>
+  <node id="679327183" lat="-25.4630172" lon="-49.2699539"/>
+  <node id="679327189" lat="-25.4624801" lon="-49.2685776"/>
+  <node id="679327204" lat="-25.4630615" lon="-49.2670272"/>
+  <node id="679327205" lat="-25.4620522" lon="-49.2675404"/>
+  <node id="679327213" lat="-25.4583258" lon="-49.2655332"/>
+  <node id="679327215" lat="-25.4587181" lon="-49.2665096"/>
+  <node id="679327216" lat="-25.4592512" lon="-49.2679320"/>
+  <node id="679327219" lat="-25.4586311" lon="-49.2682504"/>
+  <node id="679343879" lat="-25.4650727" lon="-49.2634357"/>
+  <node id="679343881" lat="-25.4655333" lon="-49.2646669"/>
+  <node id="679343928" lat="-25.4635534" lon="-49.2680654"/>
+  <node id="679343931" lat="-25.4640198" lon="-49.2665358"/>
+  <node id="679343946" lat="-25.4644361" lon="-49.2670609"/>
+  <node id="679343953" lat="-25.4633274" lon="-49.2706221"/>
+  <node id="679344018" lat="-25.4641222" lon="-49.2667711"/>
+  <node id="679344019" lat="-25.4642227" lon="-49.2669253"/>
+  <node id="889746949" lat="-25.4566971" lon="-49.2648477"/>
+  <node id="978827015" lat="-25.4551309" lon="-49.2670546"/>
+  <node id="1051653590" lat="-25.4605522" lon="-49.2608942"/>
+  <node id="1051653599" lat="-25.4594657" lon="-49.2581730"/>
+  <node id="1051653600" lat="-25.4597885" lon="-49.2589441"/>
+  <node id="1051653602" lat="-25.4601991" lon="-49.2599790"/>
+  <node id="1051653606" lat="-25.4609829" lon="-49.2618773"/>
+  <node id="1051653771" lat="-25.4681300" lon="-49.2590711"/>
+  <node id="1306185833" lat="-25.4685398" lon="-49.2589377"/>
+  <node id="1319314674" lat="-25.4584874" lon="-49.2586490"/>
+  <node id="1363005347" lat="-25.4646426" lon="-49.2651357"/>
+  <node id="1386693983" lat="-25.4646013" lon="-49.2622119"/>
+  <node id="1386693986" lat="-25.4636494" lon="-49.2626671"/>
+  <node id="1386693994" lat="-25.4560567" lon="-49.2666058"/>
+  <node id="1386694000" lat="-25.4566736" lon="-49.2663101"/>
+  <node id="1386694004" lat="-25.4655245" lon="-49.2617673"/>
+  <node id="1387619032" lat="-25.4656204" lon="-49.2572814">
+    <tag k="traffic_calming" v="bump"/>
+  </node>
+  <node id="1387738485" lat="-25.4631859" lon="-49.2615307"/>
+  <node id="1387738486" lat="-25.4677223" lon="-49.2592438"/>
+  <node id="1387751822" lat="-25.4664348" lon="-49.2613138"/>
+  <node id="1387751824" lat="-25.4660016" lon="-49.2601197"/>
+  <node id="1387751829" lat="-25.4664818" lon="-49.2612918"/>
+  <node id="1387751839" lat="-25.4624636" lon="-49.2597608"/>
+  <node id="1387751846" lat="-25.4634262" lon="-49.2593084"/>
+  <node id="1400279841" lat="-25.4567424" lon="-49.2616915"/>
+  <node id="1400279899" lat="-25.4578009" lon="-49.2643066"/>
+  <node id="1400279912" lat="-25.4570783" lon="-49.2625471"/>
+  <node id="1400279931" lat="-25.4546284" lon="-49.2626682"/>
+  <node id="1400318144" lat="-25.4600084" lon="-49.2675147"/>
+  <node id="1400318161" lat="-25.4682124" lon="-49.2590394"/>
+  <node id="1400318178" lat="-25.4594501" lon="-49.2661512"/>
+  <node id="1420342933" lat="-25.4561095" lon="-49.2651348"/>
+  <node id="2047845714" lat="-25.4629361" lon="-49.2609425"/>
+  <node id="2581067429" lat="-25.4669042" lon="-49.2596545"/>
+  <node id="2581067430" lat="-25.4673109" lon="-49.2609231"/>
+  <node id="2581067438" lat="-25.4673921" lon="-49.2608788"/>
+  <node id="2581067439" lat="-25.4619433" lon="-49.2614162"/>
+  <node id="2581067443" lat="-25.4669044" lon="-49.2596544"/>
+  <node id="2895155320" lat="-25.4628933" lon="-49.2608064"/>
+  <node id="2895155321" lat="-25.4647252" lon="-49.2597906"/>
+  <node id="3205297929" lat="-25.4669427" lon="-49.2610946"/>
+  <node id="3471328214" lat="-25.4566878" lon="-49.2617174">
+    <tag k="highway" v="speed_camera"/>
+    <tag k="maxspeed" v="60"/>
+  </node>
+  <node id="3471328215" lat="-25.4590982" lon="-49.2627735">
+    <tag k="highway" v="speed_camera"/>
+    <tag k="maxspeed" v="60"/>
+  </node>
+  <node id="3618575066" lat="-25.4631947" lon="-49.2704160"/>
+  <node id="4009277075" lat="-25.4622545" lon="-49.2680248"/>
+  <node id="4244189943" lat="-25.4638454" lon="-49.2661887"/>
+  <node id="4244189949" lat="-25.4628984" lon="-49.2666039"/>
+  <node id="4244189950" lat="-25.4623458" lon="-49.2652652"/>
+  <node id="4244189951" lat="-25.4626339" lon="-49.2651222"/>
+  <node id="4244189952" lat="-25.4624972" lon="-49.2656332"/>
+  <node id="4244189953" lat="-25.4627787" lon="-49.2654816"/>
+  <node id="6136226758" lat="-25.4576621" lon="-49.2658645"/>
+  <node id="6396726974" lat="-25.4631676" lon="-49.2586748"/>
+  <node id="6396726977" lat="-25.4638086" lon="-49.2581630"/>
+  <node id="6586869286" lat="-25.4631745" lon="-49.2703737"/>
+  <node id="8475815901" lat="-25.4585780" lon="-49.2588668"/>
+  <node id="8496587029" lat="-25.4670067" lon="-49.2566510"/>
+  <node id="8496587040" lat="-25.4669698" lon="-49.2566563"/>
+  <node id="8496826507" lat="-25.4667121" lon="-49.2567745"/>
+  <node id="8496826514" lat="-25.4665268" lon="-49.2568594"/>
+  <node id="8499657771" lat="-25.4615404" lon="-49.2597918"/>
+  <node id="8499657773" lat="-25.4613227" lon="-49.2598942"/>
+  <node id="8499657774" lat="-25.4616107" lon="-49.2599823"/>
+  <node id="8499657775" lat="-25.4616300" lon="-49.2600144"/>
+  <node id="8499657776" lat="-25.4616543" lon="-49.2600319"/>
+  <node id="8499657777" lat="-25.4617148" lon="-49.2600493"/>
+  <node id="8499657778" lat="-25.4617887" lon="-49.2600681"/>
+  <node id="8499657779" lat="-25.4618686" lon="-49.2601512"/>
+  <node id="8499657780" lat="-25.4618988" lon="-49.2601942">
+    <tag k="barrier" v="gate"/>
+  </node>
+  <node id="8499657781" lat="-25.4619294" lon="-49.2602660"/>
+  <node id="8499657782" lat="-25.4682258" lon="-49.2604620"/>
+  <node id="8499657783" lat="-25.4687598" lon="-49.2601959"/>
+  <node id="9034022098" lat="-25.4591744" lon="-49.2610712"/>
+  <node id="9034022099" lat="-25.4592779" lon="-49.2610008"/>
+  <node id="9034022100" lat="-25.4592864" lon="-49.2609894"/>
+  <node id="9034022101" lat="-25.4592870" lon="-49.2609780"/>
+  <node id="9034022102" lat="-25.4591865" lon="-49.2606924"/>
+  <node id="9034022103" lat="-25.4591762" lon="-49.2606803"/>
+  <node id="9034022104" lat="-25.4591647" lon="-49.2606810"/>
+  <node id="9034022105" lat="-25.4590624" lon="-49.2607319"/>
+  <node id="9034022106" lat="-25.4590370" lon="-49.2607279"/>
+  <node id="9034022107" lat="-25.4590146" lon="-49.2606991">
+    <tag k="barrier" v="gate"/>
+  </node>
+  <node id="9034022108" lat="-25.4589741" lon="-49.2605975"/>
+  <way id="46201986">
+    <nd ref="679343953"/>
+    <nd ref="3618575066"/>
+    <nd ref="6586869286"/>
+    <nd ref="679327183"/>
+    <nd ref="679327189"/>
+    <nd ref="4009277075"/>
+    <nd ref="679327205"/>
+    <nd ref="589104064"/>
+    <nd ref="589104183"/>
+    <nd ref="589263879"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Professor Rubens Elke Braga"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208598">
+    <nd ref="1387738485"/>
+    <nd ref="589263352"/>
+    <nd ref="589263267"/>
+    <nd ref="1387751824"/>
+    <nd ref="2581067429"/>
+    <nd ref="2581067443"/>
+    <nd ref="1387738486"/>
+    <nd ref="1051653771"/>
+    <nd ref="1400318161"/>
+    <nd ref="1306185833"/>
+    <tag k="alt_name" v="Rua Vinte e Quatro de Maio"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua 24 de Maio"/>
+    <tag k="oneway" v="no"/>
+    <tag k="surface" v="asphalt"/>
+  </way>
+  <way id="46208605">
+    <nd ref="1319314674"/>
+    <nd ref="8475815901"/>
+    <nd ref="589263600"/>
+    <nd ref="589263720"/>
+    <nd ref="589263827"/>
+    <nd ref="589263849"/>
+    <nd ref="589263862"/>
+    <nd ref="589263879"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Professor Rubens Elke Braga"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208607">
+    <nd ref="1400279912"/>
+    <nd ref="589263946"/>
+    <nd ref="589263827"/>
+    <nd ref="1051653590"/>
+    <nd ref="589263960"/>
+    <nd ref="8499657781"/>
+    <nd ref="589263973"/>
+    <tag k="alt_name" v="Rua Doutor Pâmphilo Dassumpção"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Doutor Pâmphilo D'Assunção"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208611">
+    <nd ref="589263731"/>
+    <nd ref="8499657773"/>
+    <nd ref="589263960"/>
+    <nd ref="2581067439"/>
+    <nd ref="589264027"/>
+    <nd ref="589264040"/>
+    <nd ref="589264055"/>
+    <nd ref="589264068"/>
+    <nd ref="4244189943"/>
+    <nd ref="679343931"/>
+    <nd ref="679344018"/>
+    <nd ref="679344019"/>
+    <nd ref="679343946"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Eugênio Parolin"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208615">
+    <nd ref="589264163"/>
+    <nd ref="589264175"/>
+    <nd ref="1386693986"/>
+    <nd ref="589264180"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Antônio Parolin Junior"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208616">
+    <nd ref="589264207"/>
+    <nd ref="589263862"/>
+    <nd ref="589264222"/>
+    <nd ref="589264027"/>
+    <nd ref="589264180"/>
+    <tag k="alt_name" v="Rua 24 de Maio"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Vinte e Quatro de Maio"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="46208618">
+    <nd ref="1051653599"/>
+    <nd ref="1051653600"/>
+    <nd ref="1051653602"/>
+    <nd ref="1051653590"/>
+    <nd ref="1051653606"/>
+    <nd ref="589264222"/>
+    <nd ref="589264302"/>
+    <nd ref="589264316"/>
+    <nd ref="4244189950"/>
+    <nd ref="4244189952"/>
+    <nd ref="589264265"/>
+    <nd ref="4244189949"/>
+    <nd ref="679327204"/>
+    <nd ref="679343928"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Chanceler Lauro Müller"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="46208620">
+    <nd ref="978827015"/>
+    <nd ref="1386693994"/>
+    <nd ref="1386694000"/>
+    <nd ref="372406476"/>
+    <nd ref="6136226758"/>
+    <nd ref="679327213"/>
+    <nd ref="589264347"/>
+    <nd ref="589263879"/>
+    <nd ref="589264302"/>
+    <nd ref="589264040"/>
+    <nd ref="589264175"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Nunes Machado"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="53814835">
+    <nd ref="589263316"/>
+    <nd ref="6396726974"/>
+    <nd ref="1387751846"/>
+    <nd ref="589263342"/>
+    <nd ref="589263352"/>
+    <nd ref="1386693983"/>
+    <nd ref="679343879"/>
+    <nd ref="679343881"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Francisco Parolin"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="122741943">
+    <nd ref="1363005347"/>
+    <nd ref="589264068"/>
+    <nd ref="589264265"/>
+    <nd ref="589104064"/>
+    <nd ref="372403459"/>
+    <nd ref="1400318144"/>
+    <nd ref="679327216"/>
+    <nd ref="679327219"/>
+    <nd ref="372407124"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Rua Brigadeiro Franco"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="124648007">
+    <nd ref="1386693986"/>
+    <nd ref="1386693983"/>
+    <nd ref="1386694004"/>
+    <nd ref="1387751822"/>
+    <nd ref="1387751829"/>
+    <nd ref="3205297929"/>
+    <nd ref="2581067430"/>
+    <nd ref="2581067438"/>
+    <nd ref="8499657782"/>
+    <nd ref="8499657783"/>
+    <nd ref="266970994"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Nunes Machado"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="264923445">
+    <nd ref="589263541"/>
+    <nd ref="589263973"/>
+    <nd ref="1387751839"/>
+    <nd ref="589263389"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Antônio Parolin Júnior"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="264923446">
+    <nd ref="589263541"/>
+    <nd ref="2895155320"/>
+    <nd ref="2047845714"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Antônio Parolin Júnior"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="285877750">
+    <nd ref="2895155321"/>
+    <nd ref="589263342"/>
+    <nd ref="589263541"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Alferes Poli"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="397652154">
+    <nd ref="589264180"/>
+    <nd ref="1387738485"/>
+    <nd ref="2047845714"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Antônio Parolin Júnior"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="397652157">
+    <nd ref="1420342933"/>
+    <nd ref="889746949"/>
+    <nd ref="1400279899"/>
+    <nd ref="589264207"/>
+    <tag k="alt_name" v="Rua 24 de Maio"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="name" v="Rua Vinte e Quatro de Maio"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="397652163">
+    <nd ref="589263668"/>
+    <nd ref="1400279931"/>
+    <nd ref="589263694"/>
+    <nd ref="3471328214"/>
+    <nd ref="1400279841"/>
+    <nd ref="462008791"/>
+    <nd ref="9034022108"/>
+    <nd ref="589263720"/>
+    <nd ref="1051653602"/>
+    <nd ref="589263731"/>
+    <nd ref="589263389"/>
+    <nd ref="589263316"/>
+    <nd ref="6396726977"/>
+    <nd ref="589263214"/>
+    <nd ref="589263163"/>
+    <nd ref="1387619032"/>
+    <nd ref="589263445"/>
+    <nd ref="8496826514"/>
+    <nd ref="8496826507"/>
+    <nd ref="8496587040"/>
+    <nd ref="8496587029"/>
+    <nd ref="462008792"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="lanes" v="3"/>
+    <tag k="maxspeed" v="60"/>
+    <tag k="name" v="Rua Desembargador Westphalen"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="425091533">
+    <nd ref="4244189950"/>
+    <nd ref="4244189951"/>
+    <tag k="highway" v="service"/>
+    <tag k="name" v="Rua Pedro de Matos"/>
+    <tag k="service" v="alley"/>
+  </way>
+  <way id="425091534">
+    <nd ref="4244189952"/>
+    <nd ref="4244189953"/>
+    <tag k="highway" v="service"/>
+    <tag k="name" v="Rua Miguel Matkoski"/>
+    <tag k="service" v="alley"/>
+  </way>
+  <way id="758187576">
+    <nd ref="2047845714"/>
+    <nd ref="2581067439"/>
+    <nd ref="1051653606"/>
+    <nd ref="589263849"/>
+    <nd ref="3471328215"/>
+    <nd ref="372403460"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="name" v="Rua Alferes Poli"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="758187577">
+    <nd ref="372403460"/>
+    <nd ref="589264207"/>
+    <tag k="alt_name" v="Rua João Parolim"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="name" v="Rua João Parolin"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="758187578">
+    <nd ref="589264207"/>
+    <nd ref="589264347"/>
+    <nd ref="589104145"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="name" v="Rua João Parolin"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="758187579">
+    <nd ref="589104145"/>
+    <nd ref="589104183"/>
+    <nd ref="589264316"/>
+    <nd ref="589264055"/>
+    <nd ref="589264163"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Lamenha Lins"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="912665350">
+    <nd ref="679327215"/>
+    <nd ref="1400318178"/>
+    <nd ref="589104145"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Rua Lamenha Lins"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="913712326">
+    <nd ref="589104145"/>
+    <nd ref="372403459"/>
+    <tag k="highway" v="tertiary"/>
+    <tag k="name" v="Rua João Parolin"/>
+    <tag k="oneway" v="no"/>
+  </way>
+  <way id="915004132">
+    <nd ref="8499657781"/>
+    <nd ref="8499657780"/>
+    <nd ref="8499657779"/>
+    <nd ref="8499657778"/>
+    <nd ref="8499657777"/>
+    <nd ref="8499657776"/>
+    <nd ref="8499657775"/>
+    <nd ref="8499657774"/>
+    <nd ref="8499657771"/>
+    <tag k="highway" v="service"/>
+  </way>
+  <way id="976205579">
+    <nd ref="9034022108"/>
+    <nd ref="9034022107"/>
+    <nd ref="9034022106"/>
+    <nd ref="9034022105"/>
+    <nd ref="9034022104"/>
+    <nd ref="9034022103"/>
+    <nd ref="9034022102"/>
+    <nd ref="9034022101"/>
+    <nd ref="9034022100"/>
+    <nd ref="9034022099"/>
+    <nd ref="9034022098"/>
+    <tag k="highway" v="service"/>
+  </way>
+
+</osm>

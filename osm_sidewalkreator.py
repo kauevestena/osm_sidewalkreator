@@ -104,7 +104,6 @@ print(basepath)
 reports_path = os.path.join(basepath,'reports')
 
 
-
 class sidewalkreator:
     """QGIS Plugin Implementation."""
 
@@ -350,7 +349,7 @@ class sidewalkreator:
         self.change_all_labels_bylang()
 
     def change_all_labels_bylang(self):
-        info_tuples = (
+        info_tuples = [
             # tuples: (qt-dlg_element,english_text,ptbr_text)
             (self.dlg.lang_label,"Language: ","Idioma: "),
             (self.dlg.input_pol_label,"Input Polygon: ","Polígono de Entrada" ),
@@ -369,8 +368,9 @@ class sidewalkreator:
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
 
+        ]
 
-        )
+
 
         for info_set in info_tuples:
             # What an elegant solution!!! 
@@ -388,14 +388,26 @@ class sidewalkreator:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
         
-        outputpath_splitted = self.clipped_reproj_path.replace('.geojson','_splitted.geojson')
+        # creating points of intersection:
+        intersection_points = get_intersections(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'TEMPORARY_OUTPUT')
+
+        self.filtered_intersection_name = self.string_according_language('Road_Intersections','Intersecoes_Ruas')
+
+        self.filtered_intersection_points = remove_duplicate_geometries(intersection_points,'memory:'+self.filtered_intersection_name)
+
+
 
         # splitting into segments:
-        splitted_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
+        self.splitted_lines_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
 
-        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+splitted_name)
+        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
 
+
+
+        # adding layers to canvas:
+        self.add_layer_canvas(self.filtered_intersection_points)
         self.add_layer_canvas(self.splitted_lines)
+
 
         # always cleaning stuff user does not need anymore
         remove_layerlist([osm_higway_layer_finalname])

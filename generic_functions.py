@@ -7,6 +7,16 @@ import os
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
+def remove_duplicate_geometries(inputlayer,outputlayer):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
+
+def get_intersections(inputlayer,intersect_layer,outputlayer):
+    parameter_dict = {'INPUT': inputlayer, 'INTERSECT': intersect_layer, 'OUTPUT': outputlayer}
+
+    return processing.run('qgis:lineintersections',parameter_dict)['OUTPUT']
+
 
 def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:Reprojected'):
     parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,
