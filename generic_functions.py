@@ -1,6 +1,6 @@
 from typing import Protocol
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry
 import os
 
 
@@ -221,6 +221,48 @@ def remove_unconnected_lines(inputlayer):
 
     # # # # it works inplace =D ()
     # # # # return inputlayer
+
+def qgs_point_geom_from_line_at(inputlinefeature,index=0):
+    return QgsGeometry.fromPointXY(inputlinefeature.geometry().asPolyline()[index])
+
+def remove_lines_from_no_block(inputlayer):
+    '''
+        remove lines in wich one of its ends 
+        are not connected to any other segment
+    '''
+
+    # TODO: check if will work with multilinestrings
+
+    with edit(inputlayer):
+        feature_ids_to_be_removed = []
+
+        for i,feature_A in enumerate(inputlayer.getFeatures()):
+
+            P0 = qgs_point_geom_from_line_at(feature_A)    # first point
+            PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
+
+            P0_count = 0
+            PF_count = 0
+
+
+            for j,feature_B in enumerate(inputlayer.getFeatures()):
+                if not i == j:
+                    if P0.intersects(feature_B.geometry()):
+                        P0_count += 1
+                    if PF.intersects(feature_B.geometry()):
+                        PF_count += 1
+                    
+        
+
+            if any(count == 0 for count in [P0_count,PF_count]):
+                feature_ids_to_be_removed.append(feature_A.id())
+
+        for feature_id in feature_ids_to_be_removed:
+            inputlayer.deleteFeature(feature_id)
+
+
+
+
 
 
 def remove_features_byattr(inputlayer,attrname,attrvalue):

@@ -402,7 +402,8 @@ class sidewalkreator:
 
         self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
 
-
+        # removing lines that does not serve to form a block ('quarteirão')
+        remove_lines_from_no_block(self.splitted_lines)
 
         # adding layers to canvas:
         self.add_layer_canvas(self.filtered_intersection_points)

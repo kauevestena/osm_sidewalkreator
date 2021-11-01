@@ -1,7 +1,3 @@
-# tlist = ['aaaaaaaaaaaaaaaaaaa','b']
+res = [32,1,3,0]
 
-# res = any('c' in val for val in tlist)
-
-# print(res)
-
-print(type([]) is not list)
+print(any(val == 0 for val in [23,1,0,2]))
