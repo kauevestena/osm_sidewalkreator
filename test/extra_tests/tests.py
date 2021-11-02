@@ -5,6 +5,8 @@
 
 a = {'a':1,'b':2,'d':5}
 
+b = 'testando'
+
 a['a'] = 3
 
 print(a)
