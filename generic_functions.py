@@ -1,11 +1,39 @@
 from typing import Protocol
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty
 import os
 
 
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
+
+def generate_buffer(inputlayer,distance='"width"*0.5',segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
+
+    '''
+        interface with qgis processing operation
+
+        one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter 
+    '''
+
+    parameter_dict = {'INPUT': inputlayer, 'DISTANCE': distance,'OUTPUT': outputlayer,'DISSOLVE':dissolve,'SEGMENTS':segments}
+
+    if type(distance) == str:
+        parameter_dict['DISTANCE'] = QgsProperty.fromExpression(distance)
+
+    cap_styles = {"FLAT":1,"ROUND":0,'SQUARE':2}
+
+    if cap_style.upper() in cap_styles:
+        parameter_dict['END_CAP_STYLE'] = cap_styles[cap_style.upper()]
+
+    join_styles = {'ROUND':0,'MITER':1,'BEVEL':2}
+
+    if join_style.upper() in join_styles:
+        parameter_dict['JOIN_STYLE'] = join_styles[join_style.upper()]
+
+    
+
+    return processing.run('native:buffer',parameter_dict)['OUTPUT']
+
 
 def remove_duplicate_geometries(inputlayer,outputlayer):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
@@ -253,7 +281,7 @@ def remove_lines_from_no_block(inputlayer):
                     PF_count += 1
                     
             
-            print(P0_count,PF_count)
+            # print(P0_count,PF_count)
 
 
             if any(count == 1 for count in [P0_count,PF_count]):

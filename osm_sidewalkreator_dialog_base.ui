@@ -212,6 +212,9 @@
    </property>
   </widget>
   <widget class="QLabel" name="table_txt1">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -249,14 +252,15 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>30</x>
      <y>460</y>
-     <width>131</width>
-     <height>25</height>
+     <width>221</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="text">
-    <string>Clean OSM Data</string>
+    <string>Clean OSM Data and
+Compute Intersections</string>
    </property>
    <property name="checkable">
     <bool>false</bool>
@@ -302,6 +306,51 @@
    </property>
    <property name="wordWrap">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="generate_sidewalks">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>190</y>
+     <width>261</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Generate Sidewalks</string>
+   </property>
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="autoDefault">
+    <bool>true</bool>
+   </property>
+   <property name="default">
+    <bool>false</bool>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="widths_hint">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>140</y>
+     <width>231</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>You Can Set Widths
+for Each Segment...</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>

@@ -66,7 +66,7 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features'):
         Flexible function that can receives either a path to geojson file or geojson as a dictionary
     '''
 
-    if type(geojson) == 'string':
+    if type(geojson) == str:
         with open(geojson) as reader:
             data = reader.read()
 

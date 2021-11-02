@@ -290,7 +290,7 @@ class sidewalkreator:
 
             # setting items that should not be visible at beginning:
             self.dlg.sidewalks_warning.setHidden(True)
-
+            self.dlg.widths_hint.setHidden(True)
 
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
@@ -361,7 +361,7 @@ class sidewalkreator:
             (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
             (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
-            (self.dlg.clean_data,'Clean OSM Data','Limp. dados OSM'),
+            (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
             (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!"),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -413,6 +413,9 @@ class sidewalkreator:
         # always cleaning stuff user does not need anymore
         remove_layerlist([osm_higway_layer_finalname])
 
+        # enabling next button:
+        self.dlg.generate_sidewalks.setEnabled(True)
+        
 
         # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
 
@@ -450,6 +453,8 @@ class sidewalkreator:
         self.dlg.clean_data.setEnabled(False)
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
+        self.dlg.generate_sidewalks.setEnabled(False)
+
 
         # but enable the warning:
         self.dlg.sidewalks_warning.setHidden(False)
@@ -466,7 +471,10 @@ class sidewalkreator:
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
         self.dlg.sidewalks_warning.setHidden(True)
+        self.dlg.widths_hint.setHidden(True)
         self.dlg.output_file_selector.setEnabled(False)
+        self.dlg.generate_sidewalks.setEnabled(False)
+
 
         self.dlg.higway_values_table.setRowCount(0)
         self.dlg.higway_values_table.setColumnCount(0)
