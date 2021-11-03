@@ -377,7 +377,16 @@ class sidewalkreator:
             self.set_text_based_on_language(*info_set)
 
     def data_clean(self):
-        # disabling what should not be used before
+
+        # getting table values, before table deactivation
+        higway_valuestable_dict = {}
+
+        for i,val in enumerate(self.unique_highway_values):
+            # self.dlg.higway_values_table
+            higway_valuestable_dict[val] = float(self.dlg.higway_values_table.item(i,1).text())
+
+
+        # disabling what should not be used afterwards
         self.dlg.clean_data.setEnabled(False)
         self.dlg.higway_values_table.setEnabled(False)
 
@@ -404,6 +413,35 @@ class sidewalkreator:
 
         # removing lines that does not serve to form a block ('quarteirão')
         remove_lines_from_no_block(self.splitted_lines)
+
+        # checking if there's a "width" column, adding if not:
+        if not widths_fieldname in get_column_names(self.splitted_lines):
+            create_new_layerfield(self.splitted_lines,widths_fieldname)
+
+        # filling empty widths with values in table:
+        widths_index = self.splitted_lines.fields().indexOf(widths_fieldname)
+        higway_index = self.splitted_lines.fields().indexOf(highway_tag)
+
+
+        with edit(self.splitted_lines):
+            for feature in self.splitted_lines.getFeatures():
+                feature_attrs_list = feature.attributes()
+
+                # only fill if no value is present
+                if not feature_attrs_list[widths_index]:
+                    highway_tag_val = feature_attrs_list[higway_index]
+                    self.splitted_lines.changeAttributeValue(feature.id(),widths_index,higway_valuestable_dict[highway_tag_val])
+                    """
+                        THX: https://gis.stackexchange.com/a/133669/49900
+
+                        NEVER USE index from enumeration (ordinal) as feature key (ID), as sometimes it's not the actual feature key (ID)
+
+                        index (idx) =/= id
+                
+                    """
+
+
+
 
         # adding layers to canvas:
         self.add_layer_canvas(self.filtered_intersection_points)
@@ -443,7 +481,7 @@ class sidewalkreator:
 
         self.add_layer_canvas(replaced)
 
-    def disable_all(self):
+    def disable_all_because_sidewalks(self):
         # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
 
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -697,7 +735,7 @@ class sidewalkreator:
         # BUT... if there are sidewalks already drawn, one must step back!!
         if sidewalk_tag_value in self.unique_highway_values:
             # DISABLING STUFF
-            self.disable_all()
+            self.disable_all_because_sidewalks()
 
 
         # # # testing if inverse transformation is working:

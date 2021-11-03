@@ -6,6 +6,8 @@ highway_tag = 'highway'
 
 sidewalk_tag_value = 'footway'
 
+widths_fieldname = 'width'
+
 # control
 use_buildings = True
 draw_buildings = True

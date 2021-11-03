@@ -1,6 +1,8 @@
 from typing import Protocol
+from PyQt5.QtCore import QVariant
+# from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField
 import os
 
 
@@ -184,6 +186,14 @@ def check_empty_layer(inputlayer):
 
 def get_column_names(inputlayer):
     return inputlayer.fields().names()
+
+def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
+    with edit(inputlayer):
+        new_field = QgsField(fieldname,datatype)
+        inputlayer.dataProvider().addAttributes([new_field])
+        inputlayer.updateFields()
+
+
 
 def get_layercolumn_byname(inputlayer,columname):
 
