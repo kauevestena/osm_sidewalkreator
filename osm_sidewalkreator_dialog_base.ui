@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>622</width>
-    <height>603</height>
+    <height>663</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -119,7 +119,7 @@
    <property name="geometry">
     <rect>
      <x>220</x>
-     <y>540</y>
+     <y>590</y>
      <width>391</width>
      <height>41</height>
     </rect>
@@ -132,7 +132,7 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>540</y>
+     <y>590</y>
      <width>131</width>
      <height>31</height>
     </rect>
@@ -151,10 +151,15 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>90</y>
-     <width>141</width>
-     <height>25</height>
+     <y>130</y>
+     <width>171</width>
+     <height>51</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
    </property>
    <property name="text">
     <string>Fetch Data</string>
@@ -163,7 +168,7 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>200</x>
      <y>90</y>
      <width>231</width>
      <height>21</height>
@@ -179,8 +184,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>400</x>
-     <y>90</y>
+     <x>430</x>
+     <y>150</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -198,8 +203,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>200</y>
+     <x>30</x>
+     <y>260</y>
      <width>231</width>
      <height>251</height>
     </rect>
@@ -217,8 +222,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>150</y>
+     <x>20</x>
+     <y>210</y>
      <width>231</width>
      <height>21</height>
     </rect>
@@ -233,8 +238,8 @@
   <widget class="QLabel" name="table_txt2">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>170</y>
+     <x>20</x>
+     <y>230</y>
      <width>231</width>
      <height>21</height>
     </rect>
@@ -252,8 +257,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>460</y>
+     <x>40</x>
+     <y>520</y>
      <width>221</width>
      <height>51</height>
     </rect>
@@ -314,8 +319,8 @@ Compute Intersections</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>240</y>
+     <x>290</x>
+     <y>308</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -339,8 +344,8 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>150</y>
+     <x>280</x>
+     <y>210</y>
      <width>291</width>
      <height>41</height>
     </rect>
@@ -359,14 +364,15 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>300</x>
-     <y>210</y>
+     <x>310</x>
+     <y>260</y>
      <width>241</width>
-     <height>23</height>
+     <height>41</height>
     </rect>
    </property>
    <property name="text">
-    <string>Check if Overlaps Buildings</string>
+    <string>Check if Overlaps Buildings
+(much slower)</string>
    </property>
    <property name="checked">
     <bool>false</bool>
@@ -391,6 +397,26 @@ for Each Segment...</string>
     <string>I Have Reviewed the Data
 And It's OK!!
 (or want to draw anyway)</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="ch_ignore_buildings">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>140</y>
+     <width>131</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>ignore buildings
+(much faster)</string>
    </property>
   </widget>
  </widget>
