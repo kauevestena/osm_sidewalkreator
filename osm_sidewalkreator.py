@@ -376,9 +376,7 @@ class sidewalkreator:
             (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
             (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
-
-
-
+            (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n'),
 
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -523,11 +521,12 @@ class sidewalkreator:
 
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
+        self.dlg.ch_ignore_buildings.setEnabled(False)
+        self.dlg.ch_ignore_buildings.setChecked(False)
         self.dlg.input_layer_selector.setEnabled(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
         self.dlg.output_file_selector.setEnabled(False)
-        self.dlg.datafetch.setEnabled(False)
 
 
 
@@ -563,6 +562,8 @@ class sidewalkreator:
         self.dlg.input_layer_selector.setEnabled(True)
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         self.dlg.datafetch.setEnabled(False)
+        self.dlg.ch_ignore_buildings.setEnabled(False)
+        self.dlg.ch_ignore_buildings.setChecked(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
         self.dlg.sidewalks_warning.setHidden(True)
@@ -655,6 +656,8 @@ class sidewalkreator:
 
 
                         self.dlg.datafetch.setEnabled(True)
+                        self.dlg.ch_ignore_buildings.setEnabled(True)
+
                         # self.change_input_labels = False
                         # self.dlg.input_status.setText('Valid Input!')
                         self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
@@ -668,11 +671,15 @@ class sidewalkreator:
                 # self.dlg.input_status.setText('no geometries on input!!')
                 self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
                 self.dlg.datafetch.setEnabled(False)
+                self.dlg.ch_ignore_buildings.setEnabled(False)
+
         else:
 
             # self.dlg.input_status.setText('waiting a valid for input...')
             self.set_text_based_on_language(self.dlg.input_status,'Waiting for a valid input...','Aguardando entrada válida...')
             self.dlg.datafetch.setEnabled(False)
+            self.dlg.ch_ignore_buildings.setEnabled(False)
+
 
 
 
@@ -698,16 +705,16 @@ class sidewalkreator:
         """
 
         # PART 1 : wiping old stuff
-
-        # firstly, delete files from previous session:
+        # delete files from previous session:
         #   and remove layers from project
 
         self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
         self.remove_temporary_layers() # also temporary layers that can be around
 
         # PART 2: Getting and transforming the data
-
         self.dlg.datafetch.setEnabled(False)
+        self.dlg.ch_ignore_buildings.setEnabled(False)
+
 
         # OSM query
         roads_layername = "osm_road_data"
@@ -746,7 +753,7 @@ class sidewalkreator:
         # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
         # # no need for clipping the buildings layer 
 
-        if use_buildings:
+        if not self.dlg.ch_ignore_buildings.isChecked() and use_buildings:
             query_string_buildings = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'building',relation=include_relations)
             buildings_geojsonpath = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon')
             buildings_brutelayer = QgsVectorLayer(buildings_geojsonpath,'brute_buildings','ogr')
