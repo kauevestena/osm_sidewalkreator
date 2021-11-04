@@ -113,6 +113,9 @@ class sidewalkreator:
     # variables to control wheter change in language should change labels
     change_input_labels = True
 
+    # to control wheter one shall ignore a "sidewalks already drawn" warning:
+    ignore_sidewalks_already_drawn = False
+
 
     def __init__(self, iface):
         """Constructor.
@@ -291,11 +294,14 @@ class sidewalkreator:
             # setting items that should not be visible at beginning:
             self.dlg.sidewalks_warning.setHidden(True)
             self.dlg.widths_hint.setHidden(True)
+            self.dlg.ignore_already_drawn_btn.setHidden(True)
+
 
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
             self.dlg.clean_data.clicked.connect(self.data_clean)
             self.dlg.generate_sidewalks.clicked.connect(self.draw_sidewalks)
+            self.dlg.ignore_already_drawn_btn.clicked.connect(self.ignore_already_drawn_fcn)
 
 
             # cancel means reset AND close
@@ -369,6 +375,9 @@ class sidewalkreator:
             (self.dlg.check_if_overlaps_buildings,'Check if Overlaps Buildings','Testar se Sobrepõe Edificações'),
             (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
+            (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
+
+
 
 
             # (self.dlg.,'',''),
@@ -477,7 +486,7 @@ class sidewalkreator:
 
 
 
-        # if no buildings, we can simply generate a dissolved-big_buffer
+        # if no buildings, we can directly generate a simply dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
             dissolved_buffer = generate_buffer(self.splitted_lines)
 
@@ -502,12 +511,12 @@ class sidewalkreator:
                 QgsProject.instance().removeMapLayer(layer_fullnames[i])
 
 
-    def replace_vectorlayer(self,layername,newpath):
-        remove_layerlist([layername])
+    # # def replace_vectorlayer(self,layername,newpath):
+    # #     remove_layerlist([layername])
 
-        replaced =  QgsVectorLayer(newpath,layername,'ogr')
+    # #     replaced =  QgsVectorLayer(newpath,layername,'ogr')
 
-        self.add_layer_canvas(replaced)
+    # #     self.add_layer_canvas(replaced)
 
     def disable_all_because_sidewalks(self):
         # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
@@ -521,6 +530,7 @@ class sidewalkreator:
         self.dlg.datafetch.setEnabled(False)
 
 
+
         # objects that must be hidden:
         self.dlg.generate_sidewalks.setHidden(True)
         self.dlg.check_if_overlaps_buildings.setHidden(True)
@@ -528,13 +538,26 @@ class sidewalkreator:
 
 
 
-        # but enable the warning:
+
+        # but enable the warning and the button:
         self.dlg.sidewalks_warning.setHidden(False)
         self.dlg.sidewalks_warning.setGeometry(270,180, 331, 281)
+
+        self.dlg.ignore_already_drawn_btn.setHidden(False)
+        self.dlg.ignore_already_drawn_btn.setEnabled(True)
+        self.dlg.ignore_already_drawn_btn.setGeometry(300,450, 261, 71)
         # values from Qt Designer
 
+    def ignore_already_drawn_fcn(self):
+        self.ignore_sidewalks_already_drawn = True
 
-    def reset_fields(self):
+        self.reset_fields(reset_ignore_alreadydrawn=False)
+
+
+
+
+
+    def reset_fields(self,reset_ignore_alreadydrawn=True):
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
@@ -547,12 +570,22 @@ class sidewalkreator:
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
-
+        self.dlg.ignore_already_drawn_btn.setEnabled(False)
+        self.dlg.ignore_already_drawn_btn.setHidden(True)
 
 
         self.dlg.higway_values_table.setRowCount(0)
         self.dlg.higway_values_table.setColumnCount(0)
+
+        # objects that always shall be visible
+        self.dlg.generate_sidewalks.setHidden(False)
+        self.dlg.check_if_overlaps_buildings.setHidden(False)
+        self.dlg.widths_hint.setHidden(False)
         
+        # control variables:
+        if reset_ignore_alreadydrawn:
+            self.ignore_sidewalks_already_drawn = False
+
 
         # texts, for appearance:
         self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels)
@@ -722,6 +755,8 @@ class sidewalkreator:
 
             # do not add buildings if there's no need
             if not self.no_buildings:
+                self.dlg.check_if_overlaps_buildings.setChecked(True)
+
                 reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,buildings_layername,lgt_0=self.bbox_center.x())
                 if draw_buildings:
@@ -732,7 +767,6 @@ class sidewalkreator:
 
 
         # adding to canvas
-        # TODO: first, we will need to clip it
         self.add_layer_canvas(self.clipped_reproj_datalayer)
 
         # PART 3: Getting Attributes and drawing table:
@@ -771,7 +805,8 @@ class sidewalkreator:
         # BUT... if there are sidewalks already drawn, one must step back!!
         if sidewalk_tag_value in self.unique_highway_values:
             # DISABLING STUFF
-            self.disable_all_because_sidewalks()
+            if not self.ignore_sidewalks_already_drawn:
+                self.disable_all_because_sidewalks()
 
 
         # # # testing if inverse transformation is working:

@@ -30,6 +30,7 @@ default_widths = {
     # most common:
     'motorway' : 22,
     'trunk' :  18,
+    'primary' : 12,
     'residential': 6,
     'secondary' : 10,
     'tertiary' : 8,
@@ -48,7 +49,7 @@ default_widths = {
     'pedestrian' : 0,
     'escape' : 0,
     'raceway' : 0,
-    'cicleway' : 0,
+    'cycleway' : 0,
     'proposed' :0,
     'construction' : 0,
     'platform' : 0,

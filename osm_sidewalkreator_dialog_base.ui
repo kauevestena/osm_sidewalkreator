@@ -375,6 +375,24 @@ for Each Segment...</string>
     <bool>false</bool>
    </property>
   </widget>
+  <widget class="QPushButton" name="ignore_already_drawn_btn">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>1000</x>
+     <y>450</y>
+     <width>261</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>I Have Reviewed the Data
+And It's OK!!
+(or want to draw anyway)</string>
+   </property>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>
