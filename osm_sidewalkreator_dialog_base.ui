@@ -314,8 +314,8 @@ Compute Intersections</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>190</y>
+     <x>280</x>
+     <y>240</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -339,18 +339,40 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>300</x>
-     <y>140</y>
-     <width>231</width>
+     <x>270</x>
+     <y>150</y>
+     <width>291</width>
      <height>41</height>
     </rect>
    </property>
    <property name="text">
-    <string>You Can Set Widths
+    <string>Hint: You Can Set Widths
 for Each Segment...</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="check_if_overlaps_buildings">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>210</y>
+     <width>241</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Check if Overlaps Buildings</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="tristate">
+    <bool>false</bool>
    </property>
   </widget>
  </widget>

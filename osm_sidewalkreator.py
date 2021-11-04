@@ -295,6 +295,9 @@ class sidewalkreator:
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
             self.dlg.clean_data.clicked.connect(self.data_clean)
+            self.dlg.generate_sidewalks.clicked.connect(self.draw_sidewalks)
+
+
             # cancel means reset AND close
             self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_fields)
             self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.reset_fields)
@@ -363,6 +366,11 @@ class sidewalkreator:
             (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
             (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
             (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!"),
+            (self.dlg.check_if_overlaps_buildings,'Check if Overlaps Buildings','Testar se Sobrepõe Edificações'),
+            (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
+            (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
+
+
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -451,11 +459,22 @@ class sidewalkreator:
         # always cleaning stuff user does not need anymore
         remove_layerlist([osm_higway_layer_finalname])
 
-        # enabling next button:
+        # enabling next button and stuff:
         self.dlg.generate_sidewalks.setEnabled(True)
+        self.dlg.widths_hint.setHidden(False)
+        if not self.no_buildings:
+            self.dlg.check_if_overlaps_buildings.setEnabled(True)
+
         
 
         # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
+
+    def draw_sidewalks(self):
+        # if no buildings, we can simply generate a dissolved-big_buffer
+        if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
+            dissolved_buffer = generate_buffer(self.splitted_lines)
+
+            self.add_layer_canvas(dissolved_buffer)
 
     def string_according_language(self,en_str,ptbr_str):
         if self.current_lang == 'en':
@@ -491,7 +510,13 @@ class sidewalkreator:
         self.dlg.clean_data.setEnabled(False)
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
-        self.dlg.generate_sidewalks.setEnabled(False)
+
+
+        # objects that must be hidden:
+        self.dlg.generate_sidewalks.setHidden(True)
+        self.dlg.check_if_overlaps_buildings.setHidden(True)
+        self.dlg.widths_hint.setHidden(True)
+
 
 
         # but enable the warning:
@@ -512,6 +537,8 @@ class sidewalkreator:
         self.dlg.widths_hint.setHidden(True)
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
+        self.dlg.check_if_overlaps_buildings.setEnabled(False)
+
 
 
         self.dlg.higway_values_table.setRowCount(0)

@@ -2,6 +2,9 @@
  File intended to store "hyperparameters"
 """
 
+# to look for adresses:
+addr_tag = 'addr:housenumber'
+
 highway_tag = 'highway'
 
 sidewalk_tag_value = 'footway'
