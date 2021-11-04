@@ -156,3 +156,6 @@ dmypy.json
 
 # TEMPORARY FILES
 temporary/*
+
+# REPORTS:
+reports/*
