@@ -470,11 +470,20 @@ class sidewalkreator:
         # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
 
     def draw_sidewalks(self):
+
+        # disabling what should not be used afterwards:
+        self.dlg.check_if_overlaps_buildings.setEnabled(False)
+        self.dlg.generate_sidewalks.setEnabled(False)
+
+
+
         # if no buildings, we can simply generate a dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
             dissolved_buffer = generate_buffer(self.splitted_lines)
 
             self.add_layer_canvas(dissolved_buffer)
+        else:
+            pass
 
     def string_according_language(self,en_str,ptbr_str):
         if self.current_lang == 'en':
