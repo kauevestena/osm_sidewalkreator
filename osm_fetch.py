@@ -61,7 +61,7 @@ def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highw
 
     return overpass_query
 
-def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features'):
+def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features',include_feats_without_tags=False):
     '''
         Flexible function that can receives either a path to geojson file or geojson as a dictionary
     '''
@@ -89,13 +89,21 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features'):
         # if entry['geometry']['type'] == geomtype:
         if any(entry['geometry']['type']==val for val in allowed_types):
             # fixing tags not appearing as fields
-            tags_dict = entry['properties']['tags']
+            # checking if tags in 'properties'
+            if 'tags' in entry['properties']:
+                tags_dict = entry['properties']['tags']
 
-            for key in tags_dict:
-                entry['properties'][key] = entry['properties']['tags'][key]
+                for key in tags_dict:
+                    entry['properties'][key] = entry['properties']['tags'][key]
 
-            del entry['properties']['tags']
-            new_list.append(entry)
+                del entry['properties']['tags']
+
+                new_list.append(entry)
+            else:
+                # so by default, features without tags will not be included
+                if include_feats_without_tags:
+                    new_list.append(entry)
+
 
     as_dict[lvl1] = new_list
 

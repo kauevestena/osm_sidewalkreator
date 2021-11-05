@@ -119,6 +119,8 @@ class sidewalkreator:
     # no buildings is the most general situation
     no_buildings = True
 
+    # if method to split sidewalks using addrs and/or building centroids (HERE NAMED POIS) are avaliable (unavaliable is the most general situation, there's lots of areas without a single one)
+    POI_split_avaliable = False
 
     def __init__(self, iface):
         """Constructor.
@@ -781,8 +783,14 @@ class sidewalkreator:
                 if draw_buildings:
                     self.add_layer_canvas(self.reproj_buildings)
 
-                centroids = centroids_layer(self.reproj_buildings)
+                buildings_centroids = gen_centroids_layer(self.reproj_buildings)
                 # self.add_layer_canvas(centroids)
+
+            # # # else:
+            # # #     # as there's no problem in an empty layer, mostly for ease posterior merging
+            #####       also, mergelayers function can accept a list with only one 
+            # # #     centroids = centroids_layer(buildings_brutelayer)
+            
 
             """
             # adresses parts (there are just points in osm database, generally from mapping agencies i.e. IBGE), 
@@ -798,10 +806,49 @@ class sidewalkreator:
             self.no_addrs = check_empty_layer(addrs_brutelayer)
 
             if not self.no_addrs:
-                # set as default option, since sidewalks can overlap buildings
                 reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,reproj_addrs_path,'addrs_points',lgt_0=self.bbox_center.x())
                 # self.add_layer_canvas(self.reproj_addrs)
+
+
+            '''             
+            now the cases to create combined layer w/wout centroids and adresses:
+            both unavaliable: nothing to do, as there a variable @POI_split_avaliable already set for that case 
+            both avaliable: merge 
+            if only addrs, merge 
+            if only centoids, merge
+            '''
+
+            if not self.no_buildings or not self.no_addrs:
+                self.POI_split_avaliable = True
+
+                layersto_merge = []
+
+                if not self.no_buildings:
+                    layersto_merge.append(buildings_centroids)
+
+                if not self.no_addrs:
+                    layersto_merge.append(self.reproj_addrs)
+
+                pois_splitting_name = self.string_according_language('addrs_and_buildings_centroids','enderecos_e_centroides')
+
+                self.POIs_for_splitting_layer = mergelayers(layersto_merge,self.custom_localTM_crs,'memory:'+pois_splitting_name)
+
+                self.add_layer_canvas(self.POIs_for_splitting_layer)
+
+
+
+
+
+            # elif self.no_buildings and not self.no_addrs:
+            #     self.POI_split_avaliable = True
+
+            # elif self.no_buildings and not self.no_addrs:
+            #     self.POI_split_avaliable = True
+
+
+        
+
 
             
 

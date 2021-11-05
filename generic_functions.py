@@ -12,7 +12,7 @@ crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 def generate_buffer(inputlayer,distance='"width"*0.5',segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
 
     '''
-        interface with qgis processing operation
+        interfacing qgis processing operation
 
         one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter 
     '''
@@ -42,7 +42,16 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
 
     return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
 
-def centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
+def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
+    '''
+        Will only work for layers of the same geometry type
+    '''
+
+    parameter_dict = {'LAYERS': inputlayerlist,'CRS':dest_crs, 'OUTPUT': outputlayer}
+
+    return processing.run('native:mergevectorlayers',parameter_dict)['OUTPUT']
+
+def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
 
     return processing.run('native:centroids',parameter_dict)['OUTPUT']
