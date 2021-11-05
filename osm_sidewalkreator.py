@@ -116,6 +116,9 @@ class sidewalkreator:
     # to control wheter one shall ignore a "sidewalks already drawn" warning:
     ignore_sidewalks_already_drawn = False
 
+    # no buildings is the most general situation
+    no_buildings = True
+
 
     def __init__(self, iface):
         """Constructor.
@@ -366,7 +369,7 @@ class sidewalkreator:
             (self.dlg.table_txt2,'"0" means ignore feature','"0": ignorar feições'),
             (self.dlg.output_file_label,'Output File:','Arquivo de Saída:'),
             (self.dlg.datafetch,'Fetch Data','Obter Dados'),
-            (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels),
+            (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels),
             (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
             (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
@@ -376,7 +379,7 @@ class sidewalkreator:
             (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
             (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
-            (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n'),
+            (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n(mais rápido)'),
 
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -415,16 +418,22 @@ class sidewalkreator:
         # creating points of intersection:
         intersection_points = get_intersections(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'TEMPORARY_OUTPUT')
 
+        intersection_points.setCrs(self.custom_localTM_crs)
+
+
         self.filtered_intersection_name = self.string_according_language('Road_Intersections','Intersecoes_Ruas')
 
         self.filtered_intersection_points = remove_duplicate_geometries(intersection_points,'memory:'+self.filtered_intersection_name)
 
+        self.filtered_intersection_points.setCrs(self.custom_localTM_crs)
 
 
         # splitting into segments:
         self.splitted_lines_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
 
         self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
+
+        self.splitted_lines.setCrs(self.custom_localTM_crs)
 
         # removing lines that does not serve to form a block ('quarteirão')
         remove_lines_from_no_block(self.splitted_lines)
@@ -433,7 +442,7 @@ class sidewalkreator:
         if not widths_fieldname in get_column_names(self.splitted_lines):
             create_new_layerfield(self.splitted_lines,widths_fieldname)
 
-        # filling empty widths with values in table:
+        # filling empty widths with values in the table:
         widths_index = self.splitted_lines.fields().indexOf(widths_fieldname)
         higway_index = self.splitted_lines.fields().indexOf(highway_tag)
 
@@ -487,6 +496,8 @@ class sidewalkreator:
         # if no buildings, we can directly generate a simply dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
             dissolved_buffer = generate_buffer(self.splitted_lines)
+            dissolved_buffer.setCrs(self.custom_localTM_crs)
+
 
             self.add_layer_canvas(dissolved_buffer)
         else:
@@ -589,7 +600,7 @@ class sidewalkreator:
 
 
         # texts, for appearance:
-        self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida',self.change_input_labels)
+        self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels)
         self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels)
 
         # also wipe data:
@@ -762,12 +773,41 @@ class sidewalkreator:
 
             # do not add buildings if there's no need
             if not self.no_buildings:
-                self.dlg.check_if_overlaps_buildings.setChecked(True)
+                
+                self.dlg.check_if_overlaps_buildings.setChecked(True) # set as default option, since sidewalks can overlap buildings
 
                 reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,buildings_layername,lgt_0=self.bbox_center.x())
                 if draw_buildings:
                     self.add_layer_canvas(self.reproj_buildings)
+
+                centroids = centroids_layer(self.reproj_buildings)
+                # self.add_layer_canvas(centroids)
+
+            """
+            # adresses parts (there are just points in osm database, generally from mapping agencies i.e. IBGE), 
+            # should be joined with centroids 
+            # and be the default method for sidewalk splitting
+            """
+
+            # mostly a clone of get buildings snippet
+            query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True)
+            addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point')
+            addrs_brutelayer = QgsVectorLayer(addrs_geojsonpath,'brute_buildings','ogr')
+
+            self.no_addrs = check_empty_layer(addrs_brutelayer)
+
+            if not self.no_addrs:
+                # set as default option, since sidewalks can overlap buildings
+                reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
+                self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,reproj_addrs_path,'addrs_points',lgt_0=self.bbox_center.x())
+                # self.add_layer_canvas(self.reproj_addrs)
+
+            
+
+
+
+                    
 
         # a little cleaning:
         remove_unconnected_lines(self.clipped_reproj_datalayer)

@@ -42,6 +42,11 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
 
     return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
 
+def centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
+
+    return processing.run('native:centroids',parameter_dict)['OUTPUT']
+
 def get_intersections(inputlayer,intersect_layer,outputlayer):
     parameter_dict = {'INPUT': inputlayer, 'INTERSECT': intersect_layer, 'OUTPUT': outputlayer}
 
