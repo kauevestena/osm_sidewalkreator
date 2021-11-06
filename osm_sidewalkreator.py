@@ -501,8 +501,13 @@ class sidewalkreator:
             dissolved_buffer.setCrs(self.custom_localTM_crs)
 
 
-            self.add_layer_canvas(dissolved_buffer)
+            self.add_layer_canvas(dissolved_buffer) #just for test
         else:
+            # BUT if we have buildings, sidewalks must not overlap'em
+            # buffering shall be done feature by feature and if overlaps the bunch of polygons
+            # first, we create a dissolved poligon, we may test what will be faster: separated, dissolved, separated with spatial index or dissolved with spatial index 
+
+
             pass
 
     def string_according_language(self,en_str,ptbr_str):
@@ -836,28 +841,16 @@ class sidewalkreator:
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 
-
-
-
-
-            # elif self.no_buildings and not self.no_addrs:
-            #     self.POI_split_avaliable = True
-
-            # elif self.no_buildings and not self.no_addrs:
-            #     self.POI_split_avaliable = True
-
-
-        
-
-
-            
-
-
-
-                    
+                 
 
         # a little cleaning:
         remove_unconnected_lines(self.clipped_reproj_datalayer)
+
+        # creating the 'protoblocks' layer, is a poligonization of the streets layers
+        self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
+        self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
+        # self.add_layer_canvas(self.protoblocks)
 
 
         # adding to canvas

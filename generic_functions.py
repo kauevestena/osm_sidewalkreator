@@ -51,6 +51,16 @@ def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
 
     return processing.run('native:mergevectorlayers',parameter_dict)['OUTPUT']
 
+def dissolve_tosinglepart(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('native:dissolve',parameter_dict)['OUTPUT']
+
+def poligonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
+    parameter_dict = {'INPUT': inputlines, 'OUTPUT': outputlayer,'KEEP_FIELDS':keepfields}
+
+    return processing.run('native:polygonize',parameter_dict)['OUTPUT']
+
 def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
 
