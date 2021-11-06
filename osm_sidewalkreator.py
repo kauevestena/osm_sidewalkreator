@@ -497,18 +497,31 @@ class sidewalkreator:
 
         # if no buildings, we can directly generate a simply dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
-            dissolved_buffer = generate_buffer(self.splitted_lines)
+            proto_dissolved_buffer = generate_buffer(self.splitted_lines)
+            # add
+            dissolved_buffer = generate_buffer(proto_dissolved_buffer,safe_buffer_minimal_continuous)
+
             dissolved_buffer.setCrs(self.custom_localTM_crs)
 
 
             self.add_layer_canvas(dissolved_buffer) #just for test
         else:
+
             # BUT if we have buildings, sidewalks must not overlap'em
             # buffering shall be done feature by feature and if overlaps the bunch of polygons
             # first, we create a dissolved poligon, we may test what will be faster: separated, dissolved, separated with spatial index or dissolved with spatial index 
 
+            dissolved_buildings = dissolve_tosinglepart(self.reproj_buildings)
 
-            pass
+            dissolved_feature_geom = get_first_feature_or_geom(dissolved_buildings,True)
+
+            for i,feature in enumerate(self.splitted_lines.getFeatures()):
+                print(feature.geometry().distance(dissolved_feature_geom),feature['width'],i)
+                
+
+                
+
+
 
     def string_according_language(self,en_str,ptbr_str):
         if self.current_lang == 'en':

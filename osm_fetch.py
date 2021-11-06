@@ -127,6 +127,7 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
             if response.status_code == 200:
                 break
         except:
+            print('request not sucessful, retrying in 5 seconds... status:',response.status_code)
             time.sleep(5)
             
 

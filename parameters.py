@@ -18,6 +18,9 @@ draw_buildings = True
 include_relations = True
 
 
+# safe distance for dissolved buffer to assert that should be continuous
+safe_buffer_minimal_continuous = 0.1 # 10 cm
+
 osm_higway_layer_finalname = 'osm_clipped_highways'
 buildings_layername = 'osm_buildings'
 

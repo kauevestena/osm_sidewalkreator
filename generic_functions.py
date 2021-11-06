@@ -2,7 +2,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature
 import os
 
 
@@ -50,6 +50,10 @@ def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'LAYERS': inputlayerlist,'CRS':dest_crs, 'OUTPUT': outputlayer}
 
     return processing.run('native:mergevectorlayers',parameter_dict)['OUTPUT']
+
+
+# # # def check_distances_layers(layer_many_features,layer_one_feature,idx=0):
+
 
 def dissolve_tosinglepart(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
@@ -199,6 +203,21 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
 
 # def column(matrixList, i):
 #     return [row[i] for row in matrixList]
+
+
+def get_first_feature_or_geom(inputlayer,return_geom=False):
+
+    first_feature = QgsFeature()
+
+    # filling first feature:
+    inputlayer.getFeatures().nextFeature(first_feature)
+
+    if return_geom:
+        return first_feature.geometry()
+
+    else:
+        return first_feature
+
 
 def check_empty_layer(inputlayer):
     feat_count = 0
