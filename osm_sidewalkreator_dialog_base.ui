@@ -184,8 +184,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>150</y>
+     <x>440</x>
+     <y>120</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -344,7 +344,7 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>280</x>
+     <x>300</x>
      <y>210</y>
      <width>291</width>
      <height>41</height>
@@ -364,7 +364,7 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>310</x>
+     <x>340</x>
      <y>260</y>
      <width>241</width>
      <height>41</height>
@@ -456,7 +456,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>460</x>
+     <x>480</x>
      <y>320</y>
      <width>69</width>
      <height>26</height>
@@ -481,17 +481,60 @@ And It's OK!!
     <double>5.000000000000000</double>
    </property>
   </widget>
-  <widget class="QProgressBar" name="datafetch_progress">
+  <widget class="QProgressBar" name="datafetch_progressbar">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>470</x>
-     <y>120</y>
+     <x>460</x>
+     <y>150</y>
      <width>118</width>
      <height>23</height>
     </rect>
    </property>
    <property name="value">
-    <number>24</number>
+    <number>0</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>310</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Min Distance
+to Buildings</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>540</x>
+     <y>310</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Curve
+Radius</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>

@@ -650,6 +650,9 @@ class sidewalkreator:
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setHidden(True)
         self.dlg.widths_hint.setHidden(False)
+        self.dlg.datafetch_progressbar.setEnabled(False)
+        self.dlg.datafetch_progressbar.setValue(0)
+
 
         # table controlling
         self.dlg.higway_values_table.setRowCount(0)
@@ -730,6 +733,7 @@ class sidewalkreator:
 
 
                         self.dlg.datafetch.setEnabled(True)
+                        self.dlg.datafetch_progressbar.setEnabled(True)
                         self.dlg.ch_ignore_buildings.setEnabled(True)
 
                         # self.change_input_labels = False
@@ -778,12 +782,19 @@ class sidewalkreator:
         Function to call the functions from "osm fetch" module
         """
 
+        # to prevent user to loop
+        self.dlg.input_layer_selector.setEnabled(False)
+
+
         # PART 1 : wiping old stuff
         # delete files from previous session:
         #   and remove layers from project
 
         self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
         self.remove_temporary_layers() # also temporary layers that can be around
+
+        self.dlg.datafetch_progressbar.setValue(10)
+
 
         # PART 2: Getting and transforming the data
         self.dlg.datafetch.setEnabled(False)
@@ -796,13 +807,9 @@ class sidewalkreator:
         # acquired file
         data_geojsonpath = get_osm_data(query_string,roads_layername)
 
-        # self.dlg.input_status_of_data.setText('data acquired!')
-        self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
+        self.dlg.datafetch_progressbar.setValue(30)
 
-        # to prevent user to loop
-        self.dlg.input_layer_selector.setEnabled(False)
-
-
+        
         clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
 
         clip_polygon_path = path_from_layer(self.input_layer)
@@ -814,6 +821,9 @@ class sidewalkreator:
 
         cliplayer(osm_data_layer,self.input_layer,clipped_path)
 
+        self.dlg.datafetch_progressbar.setValue(35)
+
+
 
         clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
 
@@ -822,6 +832,9 @@ class sidewalkreator:
 
 
         self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,self.clipped_reproj_path,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
+
+        self.dlg.datafetch_progressbar.setValue(40)
+
 
 
         # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
@@ -834,15 +847,24 @@ class sidewalkreator:
 
             self.no_buildings = check_empty_layer(buildings_brutelayer) # asserts if there are buildings in the area
 
+            self.dlg.datafetch_progressbar.setValue(45)
+
+
             # do not add buildings if there's no need
             if not self.no_buildings:
                 
                 self.dlg.check_if_overlaps_buildings.setChecked(True) # set as default option, since sidewalks can overlap buildings
 
                 reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
+                self.dlg.datafetch_progressbar.setValue(50)
+
                 self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,buildings_layername,lgt_0=self.bbox_center.x())
+                self.dlg.datafetch_progressbar.setValue(55)
+
                 if draw_buildings:
                     self.add_layer_canvas(self.reproj_buildings)
+
+
 
                 buildings_centroids = gen_centroids_layer(self.reproj_buildings)
                 # self.add_layer_canvas(centroids)
@@ -852,6 +874,8 @@ class sidewalkreator:
             #####       also, mergelayers function can accept a list with only one 
             # # #     centroids = centroids_layer(buildings_brutelayer)
             
+            self.dlg.datafetch_progressbar.setValue(60)
+
 
             """
             # adresses parts (there are just points in osm database, generally from mapping agencies i.e. IBGE), 
@@ -866,10 +890,15 @@ class sidewalkreator:
 
             self.no_addrs = check_empty_layer(addrs_brutelayer)
 
+            self.dlg.datafetch_progressbar.setValue(70)
+
+
             if not self.no_addrs:
                 reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,reproj_addrs_path,'addrs_points',lgt_0=self.bbox_center.x())
                 # self.add_layer_canvas(self.reproj_addrs)
+
+            self.dlg.datafetch_progressbar.setValue(75)
 
 
             '''             
@@ -897,6 +926,10 @@ class sidewalkreator:
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 
+
+        
+        self.dlg.datafetch_progressbar.setValue(90)
+
                  
 
         # a little cleaning:
@@ -915,6 +948,10 @@ class sidewalkreator:
         # PART 3: Getting Attributes and drawing table:
         higway_list = get_layercolumn_byname(self.clipped_reproj_datalayer,highway_tag)
 
+
+
+
+        self.dlg.datafetch_progressbar.setValue(95)
 
         # Table Filling
         self.dlg.higway_values_table.setEnabled(True)
@@ -942,8 +979,7 @@ class sidewalkreator:
         
 
 
-        # Finally, enabling next button:
-        self.dlg.clean_data.setEnabled(True)
+
 
         # BUT... if there are sidewalks already drawn, one must step back!!
         if sidewalk_tag_value in self.unique_highway_values:
@@ -954,6 +990,12 @@ class sidewalkreator:
 
         # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
+
+
+        # Finally, enabling next button:
+        self.dlg.clean_data.setEnabled(True)
+        self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
+        self.dlg.datafetch_progressbar.setValue(100)
 
 
     def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
