@@ -382,6 +382,12 @@ class sidewalkreator:
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
             (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
             (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n(mais rápido)'),
+            (self.dlg.min_d_label,'Min Distance\nto Buildings','Distância Mínima\np. Edificaçoes'),
+            (self.dlg.min_d_label,'Min Distance\nto Buildings','Dist. Min.\np. Edificaçoes'),
+            (self.dlg.curveradius_label,'Curve\nRadius','Raio de\nCurvatura'),
+
+
+
 
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -479,9 +485,21 @@ class sidewalkreator:
 
         # enabling next button and stuff:
         self.dlg.generate_sidewalks.setEnabled(True)
+        self.dlg.curve_radius_box.setEnabled(True)
+        self.dlg.curveradius_label.setEnabled(True)
         self.dlg.widths_hint.setHidden(False)
+
+        # to say to the user: it's not the global progress, 
+        # its just to that part
+        self.dlg.datafetch_progressbar.setEnabled(False)
+
+        
+
         if not self.no_buildings:
             self.dlg.check_if_overlaps_buildings.setEnabled(True)
+            self.dlg.min_d_label.setEnabled(True)
+            self.dlg.min_d_buildings_box.setEnabled(True)
+
 
         
 
@@ -525,7 +543,7 @@ class sidewalkreator:
                     # actually projected distance:
                     ac_prj_d = feature['width']/2
                     
-                    dif = (d_to_nearest_building - min_d_to_building) - ac_prj_d
+                    dif = (d_to_nearest_building - self.dlg.min_d_buildings_box.value()) - ac_prj_d
 
                     # dividing and multiplying by 2 as buffer is done side-by-side
 
@@ -551,9 +569,9 @@ class sidewalkreator:
         proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines)
         
         # adding then removing that safe distance
-        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,safe_buffer_minimal_continuous)
+        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,self.dlg.curve_radius_box.value())
 
-        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-safe_buffer_minimal_continuous)
+        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.dlg.curve_radius_box.value())
 
         # just for sanity always set the CRS
         dissolved_buffer.setCrs(self.custom_localTM_crs)
@@ -562,6 +580,12 @@ class sidewalkreator:
         self.add_layer_canvas(proto_dissolved_buffer_step1) #just for test
         self.add_layer_canvas(proto_dissolved_buffer_step2) #just for test
         self.add_layer_canvas(dissolved_buffer) #just for test
+
+        # disabling what won't be needed afterwards
+        self.dlg.min_d_buildings_box.setEnabled(False)
+        self.dlg.min_d_label.setEnabled(False)
+        self.dlg.curve_radius_box.setEnabled(False)
+        self.dlg.curveradius_label.setEnabled(False)
 
 
                 
@@ -609,9 +633,10 @@ class sidewalkreator:
         # objects that must be hidden:
         self.dlg.generate_sidewalks.setHidden(True)
         self.dlg.check_if_overlaps_buildings.setHidden(True)
-        self.dlg.widths_hint.setHidden(True)
-
-
+        self.dlg.min_d_buildings_box.setHidden(True)
+        self.dlg.min_d_label.setHidden(True)
+        self.dlg.curve_radius_box.setHidden(True)
+        self.dlg.curveradius_label.setHidden(True)
 
 
         # but enable the warning and the button:
@@ -649,9 +674,17 @@ class sidewalkreator:
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setHidden(True)
-        self.dlg.widths_hint.setHidden(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.datafetch_progressbar.setValue(0)
+
+        self.dlg.min_d_buildings_box.setEnabled(False)
+        self.dlg.min_d_label.setEnabled(False)
+        self.dlg.curve_radius_box.setEnabled(False)
+        self.dlg.curveradius_label.setEnabled(False)
+
+        self.dlg.min_d_buildings_box.setValue(min_d_to_building)
+        self.dlg.curve_radius_box.setValue(default_curve_radius)
+
 
 
         # table controlling
@@ -661,7 +694,11 @@ class sidewalkreator:
         # objects that always shall be visible
         self.dlg.generate_sidewalks.setHidden(False)
         self.dlg.check_if_overlaps_buildings.setHidden(False)
-        self.dlg.widths_hint.setHidden(False)
+        self.dlg.min_d_buildings_box.setHidden(False)
+        self.dlg.min_d_label.setHidden(False)
+        self.dlg.curve_radius_box.setHidden(False)
+        self.dlg.curveradius_label.setHidden(False)
+
         
         # control variables:
         if reset_ignore_alreadydrawn:
@@ -886,6 +923,8 @@ class sidewalkreator:
             # mostly a clone of get buildings snippet
             query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True)
             addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point')
+            self.dlg.datafetch_progressbar.setValue(65)
+
             addrs_brutelayer = QgsVectorLayer(addrs_geojsonpath,'brute_buildings','ogr')
 
             self.no_addrs = check_empty_layer(addrs_brutelayer)

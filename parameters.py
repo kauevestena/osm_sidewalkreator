@@ -21,13 +21,11 @@ draw_buildings = True
 include_relations = True
 
 
-# safe distance for dissolved buffer to assert that should be continuous
-safe_buffer_minimal_continuous = 10 # 10 cm
-
-
+# buffer that defines the curvature radius is defined in GUI, max and min are in the .ui file
+default_curve_radius = 5
 
 # minimal distance that a sidewalk must be from a building
-min_d_to_building = 1 # 1 m
+min_d_to_building = 1 # 1 m defined in gui, along with max an min allowed values at .ui file
 
 osm_higway_layer_finalname = 'osm_clipped_highways'
 buildings_layername = 'osm_buildings'
