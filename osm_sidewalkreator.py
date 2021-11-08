@@ -492,32 +492,77 @@ class sidewalkreator:
         # disabling what should not be used afterwards:
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
-
+        self.dlg.widths_hint.setHidden(True)
 
 
         # if no buildings, we can directly generate a simply dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
-            proto_dissolved_buffer = generate_buffer(self.splitted_lines)
-            # add
-            dissolved_buffer = generate_buffer(proto_dissolved_buffer,safe_buffer_minimal_continuous)
+            
 
-            dissolved_buffer.setCrs(self.custom_localTM_crs)
+            pass
 
-
-            self.add_layer_canvas(dissolved_buffer) #just for test
+            # as of last code editing, I realized that one must only edit widths, so...
         else:
 
             # BUT if we have buildings, sidewalks must not overlap'em
             # buffering shall be done feature by feature and if overlaps the bunch of polygons
-            # first, we create a dissolved poligon, we may test what will be faster: separated, dissolved, separated with spatial index or dissolved with spatial index 
+            # first, we create a dissolved poligon, we may test what 
+            # then we check distances
+
 
             dissolved_buildings = dissolve_tosinglepart(self.reproj_buildings)
 
             dissolved_feature_geom = get_first_feature_or_geom(dissolved_buildings,True)
 
-            for i,feature in enumerate(self.splitted_lines.getFeatures()):
-                print(feature.geometry().distance(dissolved_feature_geom),feature['width'],i)
-                
+            widths_index = self.splitted_lines.fields().indexOf(widths_fieldname)
+
+            with edit(self.splitted_lines):
+                for i,feature in enumerate(self.splitted_lines.getFeatures()):
+
+                    # distance to nearest building
+                    d_to_nearest_building = feature.geometry().distance(dissolved_feature_geom)
+
+                    # actually projected distance:
+                    ac_prj_d = feature['width']/2
+                    
+                    dif = (d_to_nearest_building - min_d_to_building) - ac_prj_d
+
+                    # dividing and multiplying by 2 as buffer is done side-by-side
+
+                    if dif < 0:
+
+                        new_width = 2 * (ac_prj_d + dif)
+
+                        if new_width < minimal_buffer:
+                            # imagine the worst case where someone has created  a building intersecting or nearly touching the very road
+                            new_width = minimal_buffer
+
+
+                        print(new_width)
+                        # finally, editing the field when needed 
+                        self.splitted_lines.changeAttributeValue(feature.id(),widths_index,new_width)
+                        
+
+
+                                                
+
+                    print(d_to_nearest_building,feature['width']/2,i)
+                    
+        proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines)
+        
+        # adding then removing that safe distance
+        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,safe_buffer_minimal_continuous)
+
+        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-safe_buffer_minimal_continuous)
+
+        # just for sanity always set the CRS
+        dissolved_buffer.setCrs(self.custom_localTM_crs)
+
+
+        self.add_layer_canvas(proto_dissolved_buffer_step1) #just for test
+        self.add_layer_canvas(proto_dissolved_buffer_step2) #just for test
+        self.add_layer_canvas(dissolved_buffer) #just for test
+
 
                 
 
@@ -604,8 +649,9 @@ class sidewalkreator:
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setHidden(True)
+        self.dlg.widths_hint.setHidden(False)
 
-
+        # table controlling
         self.dlg.higway_values_table.setRowCount(0)
         self.dlg.higway_values_table.setColumnCount(0)
 
@@ -631,9 +677,6 @@ class sidewalkreator:
 
         # and refresh canvas:
         self.iface.mapCanvas().refresh()
-
-
-
 
 
 

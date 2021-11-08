@@ -1,5 +1,8 @@
 """
  File intended to store "hyperparameters"
+
+
+ ALL DISTANCES MUST BE IN METERS, no feets nor yards
 """
 
 # to look for adresses:
@@ -19,11 +22,19 @@ include_relations = True
 
 
 # safe distance for dissolved buffer to assert that should be continuous
-safe_buffer_minimal_continuous = 0.1 # 10 cm
+safe_buffer_minimal_continuous = 10 # 10 cm
+
+
+
+# minimal distance that a sidewalk must be from a building
+min_d_to_building = 1 # 1 m
 
 osm_higway_layer_finalname = 'osm_clipped_highways'
 buildings_layername = 'osm_buildings'
 
+
+# min buffer size for the worst case (building intersecting road)
+minimal_buffer = 2 # 2m
 
 # for values that must be ignored one must use "0" as value
 default_widths = {
