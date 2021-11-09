@@ -568,18 +568,40 @@ class sidewalkreator:
                     
         proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines)
         
-        # adding then removing that safe distance
+        # rounding directly, as it avoids small polygons aswell
+        # TODO: check if it's the best approach, or to do it feature-wise
         proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,self.dlg.curve_radius_box.value())
 
         dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.dlg.curve_radius_box.value())
+
+
 
         # just for sanity always set the CRS
         dissolved_buffer.setCrs(self.custom_localTM_crs)
 
 
-        self.add_layer_canvas(proto_dissolved_buffer_step1) #just for test
-        self.add_layer_canvas(proto_dissolved_buffer_step2) #just for test
-        self.add_layer_canvas(dissolved_buffer) #just for test
+        # now generating the big buffer to extract the sidewalks
+        big_temporary_buffer = generate_buffer(dissolved_buffer,big_buffer_d)
+        big_temporary_buffer.setCrs(self.custom_localTM_crs)
+
+        # difference layer:
+        diff_layer = compute_difference_layer(big_temporary_buffer,dissolved_buffer)
+        diff_layer.setCrs(self.custom_localTM_crs)
+
+
+        # to singleparts:
+        diff_layer_as_singleparts = convert_multipart_to_singleparts(diff_layer)
+        remove_biggest_polygon(diff_layer_as_singleparts)
+        diff_layer_as_singleparts.setCrs(self.custom_localTM_crs)
+
+
+        # self.add_layer_canvas(big_temporary_buffer) #just for test
+        # self.add_layer_canvas(dissolved_buffer) #just for test
+        # self.add_layer_canvas(diff_layer) #just for test
+        self.add_layer_canvas(diff_layer_as_singleparts) #just for test
+
+
+
 
         # disabling what won't be needed afterwards
         self.dlg.min_d_buildings_box.setEnabled(False)

@@ -30,6 +30,8 @@ min_d_to_building = 1 # 1 m defined in gui, along with max an min allowed values
 osm_higway_layer_finalname = 'osm_clipped_highways'
 buildings_layername = 'osm_buildings'
 
+# big buffer distance
+big_buffer_d = 3000
 
 # min buffer size for the worst case (building intersecting road)
 minimal_buffer = 2 # 2m

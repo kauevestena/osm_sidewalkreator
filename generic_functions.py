@@ -42,6 +42,20 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
 
     return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
 
+def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTPUT'):
+
+    parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer, 'OUTPUT': outputlayer}
+
+    return processing.run('qgis:difference',parameter_dict)['OUTPUT']
+
+
+def convert_multipart_to_singleparts(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('native:multiparttosingleparts',parameter_dict)['OUTPUT']
+
+
 def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
     '''
         Will only work for layers of the same geometry type
@@ -102,6 +116,25 @@ def cliplayer(inlayerpath,cliplayerpath,outputpath):
     '''
     #run the clip tool
     processing.run("native:clip", {'INPUT':inlayerpath,'OVERLAY':cliplayerpath,'OUTPUT':outputpath})
+
+
+def remove_biggest_polygon(inputlayer):
+    areas = []
+    ids = []
+
+    with edit(inputlayer):
+        for feature in inputlayer.getFeatures():
+            areas.append(feature.geometry().area())
+            ids.append(feature.id())
+
+        max_area_idx = areas.index(max(areas))
+        inputlayer.deleteFeature(ids[max_area_idx])
+
+
+        
+
+
+
 
 
 def path_from_layer(inputlayer,splitcharacter='|',splitposition=0):
