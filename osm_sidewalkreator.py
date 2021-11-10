@@ -591,15 +591,23 @@ class sidewalkreator:
 
         # to singleparts:
         diff_layer_as_singleparts = convert_multipart_to_singleparts(diff_layer)
-        remove_biggest_polygon(diff_layer_as_singleparts)
+        remove_biggest_polygon(diff_layer_as_singleparts,True) # also recording areas for later use
         diff_layer_as_singleparts.setCrs(self.custom_localTM_crs)
+
+
+        self.whole_sidewalklayer_name = self.string_according_language('SIDEWALKS','CALÇADAS')
+
+        # finally, the sidewalks as boundaries (before any division):
+        self.whole_sidewalks = extract_lines_from_polygons(diff_layer_as_singleparts,'memory:'+self.whole_sidewalklayer_name)
+        self.whole_sidewalks.setCrs(self.custom_localTM_crs)
+
 
 
         # self.add_layer_canvas(big_temporary_buffer) #just for test
         # self.add_layer_canvas(dissolved_buffer) #just for test
         # self.add_layer_canvas(diff_layer) #just for test
-        self.add_layer_canvas(diff_layer_as_singleparts) #just for test
-
+        self.add_layer_canvas(self.whole_sidewalks) #just for test
+        
 
 
 

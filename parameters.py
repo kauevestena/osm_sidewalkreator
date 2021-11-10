@@ -34,7 +34,7 @@ buildings_layername = 'osm_buildings'
 big_buffer_d = 3000
 
 # min buffer size for the worst case (building intersecting road)
-minimal_buffer = 2 # 2m
+minimal_buffer = 3 # 2m
 
 # for values that must be ignored one must use "0" as value
 default_widths = {

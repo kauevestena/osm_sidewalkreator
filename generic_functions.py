@@ -79,6 +79,11 @@ def poligonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
 
     return processing.run('native:polygonize',parameter_dict)['OUTPUT']
 
+def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}
+
+    return processing.run('native:polygonstolines',parameter_dict)['OUTPUT']
+
 def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
 
@@ -118,14 +123,25 @@ def cliplayer(inlayerpath,cliplayerpath,outputpath):
     processing.run("native:clip", {'INPUT':inlayerpath,'OVERLAY':cliplayerpath,'OUTPUT':outputpath})
 
 
-def remove_biggest_polygon(inputlayer):
+def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
     areas = []
     ids = []
 
+    
+    # if one extracts only boundaries, one can still use the area value
+    if record_area:
+        create_new_layerfield(inputlayer,area_fieldname)
+        area_idx = inputlayer.fields().indexOf(area_fieldname)
+
     with edit(inputlayer):
         for feature in inputlayer.getFeatures():
-            areas.append(feature.geometry().area())
+            area_val = feature.geometry().area()
+            areas.append(area_val)
             ids.append(feature.id())
+
+            if record_area:
+                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
+
 
         max_area_idx = areas.index(max(areas))
         inputlayer.deleteFeature(ids[max_area_idx])
