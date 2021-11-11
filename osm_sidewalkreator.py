@@ -309,6 +309,9 @@ class sidewalkreator:
             self.dlg.clean_data.clicked.connect(self.data_clean)
             self.dlg.generate_sidewalks.clicked.connect(self.draw_sidewalks)
             self.dlg.ignore_already_drawn_btn.clicked.connect(self.ignore_already_drawn_fcn)
+            self.dlg.add_osm_basemap.clicked.connect(self.add_osm_basemap_func)
+            self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
+
 
 
             # cancel means reset AND close
@@ -389,6 +392,9 @@ class sidewalkreator:
             (self.dlg.curveradius_label,'Curve\nRadius','Raio de\nCurvatura'),
             (self.dlg.d_to_add_label,'Distance to\nadd to Width','D. Adic.\nàs Larguras'),
             (self.dlg.min_width_label,'Min Width','Largura Mínima'),
+            (self.dlg.add_osm_basemap,'+ OSM\nBase Map','+Mapa-Base\nOSM'),
+            (self.dlg.add_bing_base,'+ BING\nBase Img.','+Imagens\nBING'),
+
 
 
 
@@ -513,6 +519,22 @@ class sidewalkreator:
         
 
         # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
+
+    def add_osm_basemap_func(self):
+        layername = self.string_according_language('OSM Default','OSM Padrão')
+
+        add_tms_layer(osm_basemap_str,layername)
+
+        self.dlg.add_osm_basemap.setEnabled(False)
+
+    def add_bing_baseimg_func(self):
+        layername = self.string_according_language('BING Aerial','Imagens BING')
+
+        add_tms_layer(bing_baseimg_str,layername)
+
+        self.dlg.add_bing_base.setEnabled(False)
+
+
 
     def draw_sidewalks(self):
 
@@ -744,6 +766,8 @@ class sidewalkreator:
         self.dlg.min_width_box.setEnabled(False)
         self.dlg.min_width_label.setEnabled(False)
 
+        self.dlg.add_osm_basemap.setEnabled(True)
+        self.dlg.add_bing_base.setEnabled(True)
 
         # default value setting:
         self.dlg.min_d_buildings_box.setValue(min_d_to_building)

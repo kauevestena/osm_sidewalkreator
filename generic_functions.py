@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer
 import os
 
 
@@ -408,9 +410,6 @@ def remove_features_byattr(inputlayer,attrname,attrvalue):
                 inputlayer.deleteFeature(feature.id())
                 
 
-
-            
-
-
-
-
+def add_tms_layer(qms_string,layername):
+    # mostly for user to add basemaps
+    QgsProject.instance().addMapLayer(QgsRasterLayer(qms_string,layername, 'wms'))

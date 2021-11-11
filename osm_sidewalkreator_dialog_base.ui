@@ -171,7 +171,7 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>220</x>
+     <x>320</x>
      <y>90</y>
      <width>231</width>
      <height>21</height>
@@ -653,6 +653,34 @@ add to Width</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="add_osm_basemap">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>90</y>
+     <width>81</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>+ OSM
+Base Map</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="add_bing_base">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>90</y>
+     <width>81</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>+ BING
+Base Img.</string>
    </property>
   </widget>
  </widget>
