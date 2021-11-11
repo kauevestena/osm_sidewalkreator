@@ -129,9 +129,12 @@
    </property>
   </widget>
   <widget class="QLabel" name="output_file_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>40</x>
+     <x>50</x>
      <y>590</y>
      <width>131</width>
      <height>31</height>
@@ -320,7 +323,7 @@ Compute Intersections</string>
    <property name="geometry">
     <rect>
      <x>330</x>
-     <y>370</y>
+     <y>390</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -344,8 +347,8 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>300</x>
-     <y>210</y>
+     <x>290</x>
+     <y>190</y>
      <width>291</width>
      <height>41</height>
     </rect>
@@ -364,11 +367,16 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>340</x>
-     <y>260</y>
+     <x>360</x>
+     <y>290</y>
      <width>241</width>
      <height>41</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <strikeout>false</strikeout>
+    </font>
    </property>
    <property name="text">
     <string>Check if Overlaps Buildings
@@ -426,7 +434,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>280</x>
-     <y>320</y>
+     <y>250</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -457,7 +465,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>480</x>
-     <y>320</y>
+     <y>350</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -504,7 +512,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>360</x>
-     <y>310</y>
+     <y>240</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -524,7 +532,7 @@ to Buildings</string>
    <property name="geometry">
     <rect>
      <x>540</x>
-     <y>310</y>
+     <y>340</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -532,6 +540,116 @@ to Buildings</string>
    <property name="text">
     <string>Curve
 Radius</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="d_to_add_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>340</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Distance to
+add to Width</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QDoubleSpinBox" name="d_to_add_box">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>350</y>
+     <width>69</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="prefix">
+    <string/>
+   </property>
+   <property name="suffix">
+    <string> m</string>
+   </property>
+   <property name="decimals">
+    <number>2</number>
+   </property>
+   <property name="minimum">
+    <double>0.000000000000000</double>
+   </property>
+   <property name="maximum">
+    <double>4.000000000000000</double>
+   </property>
+   <property name="singleStep">
+    <double>0.100000000000000</double>
+   </property>
+   <property name="value">
+    <double>2.000000000000000</double>
+   </property>
+  </widget>
+  <widget class="QDoubleSpinBox" name="min_width_box">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>480</x>
+     <y>250</y>
+     <width>69</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="buttonSymbols">
+    <enum>QAbstractSpinBox::UpDownArrows</enum>
+   </property>
+   <property name="prefix">
+    <string/>
+   </property>
+   <property name="suffix">
+    <string> m</string>
+   </property>
+   <property name="decimals">
+    <number>2</number>
+   </property>
+   <property name="minimum">
+    <double>4.000000000000000</double>
+   </property>
+   <property name="maximum">
+    <double>8.000000000000000</double>
+   </property>
+   <property name="singleStep">
+    <double>0.500000000000000</double>
+   </property>
+   <property name="value">
+    <double>6.000000000000000</double>
+   </property>
+  </widget>
+  <widget class="QLabel" name="min_width_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>540</x>
+     <y>240</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Min Width</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>

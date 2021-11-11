@@ -385,6 +385,8 @@ class sidewalkreator:
             (self.dlg.min_d_label,'Min Distance\nto Buildings','Distância Mínima\np. Edificaçoes'),
             (self.dlg.min_d_label,'Min Distance\nto Buildings','Dist. Min.\np. Edificaçoes'),
             (self.dlg.curveradius_label,'Curve\nRadius','Raio de\nCurvatura'),
+            (self.dlg.d_to_add_label,'Distance to\nadd to Width','D. Adic.\nàs Larguras'),
+            (self.dlg.min_width_label,'Min Width','Largura Mínima'),
 
 
 
@@ -486,7 +488,10 @@ class sidewalkreator:
         # enabling next button and stuff:
         self.dlg.generate_sidewalks.setEnabled(True)
         self.dlg.curve_radius_box.setEnabled(True)
+        self.dlg.d_to_add_box.setEnabled(True)
         self.dlg.curveradius_label.setEnabled(True)
+        self.dlg.d_to_add_label.setEnabled(True)
+
         self.dlg.widths_hint.setHidden(False)
 
         # to say to the user: it's not the global progress, 
@@ -499,6 +504,8 @@ class sidewalkreator:
             self.dlg.check_if_overlaps_buildings.setEnabled(True)
             self.dlg.min_d_label.setEnabled(True)
             self.dlg.min_d_buildings_box.setEnabled(True)
+            self.dlg.min_width_box.setEnabled(True)
+            self.dlg.min_width_label.setEnabled(True)
 
 
         
@@ -540,9 +547,10 @@ class sidewalkreator:
                     # distance to nearest building
                     d_to_nearest_building = feature.geometry().distance(dissolved_feature_geom)
 
-                    # actually projected distance:
-                    ac_prj_d = feature['width']/2
+                    # actually projected distance (half the width plus half the "distance to be add", avaliable at the GUI):
+                    ac_prj_d = feature['width']/2 + self.dlg.d_to_add_box.value()/2
                     
+                    # discounting the minimum distance, so it will always be considered
                     dif = (d_to_nearest_building - self.dlg.min_d_buildings_box.value()) - ac_prj_d
 
                     # dividing and multiplying by 2 as buffer is done side-by-side
@@ -551,12 +559,11 @@ class sidewalkreator:
 
                         new_width = 2 * (ac_prj_d + dif)
 
-                        if new_width < minimal_buffer:
+                        if new_width < self.dlg.min_width_box.value():
                             # imagine the worst case where someone has created  a building intersecting or nearly touching the very road
-                            new_width = minimal_buffer
+                            new_width = self.dlg.min_width_box.value()
 
 
-                        print(new_width)
                         # finally, editing the field when needed 
                         self.splitted_lines.changeAttributeValue(feature.id(),widths_index,new_width)
                         
@@ -564,9 +571,13 @@ class sidewalkreator:
 
                                                 
 
-                    print(d_to_nearest_building,feature['width']/2,i)
-                    
-        proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines)
+                    # print(d_to_nearest_building,feature['width']/2,i)
+        
+        buffer_distance_string = f'("width" /2)+{self.dlg.d_to_add_box.value()/2}'
+
+        print(buffer_distance_string)
+
+        proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines,buffer_distance_string)
         
         # rounding directly, as it avoids small polygons aswell
         # TODO: check if it's the best approach, or to do it feature-wise
@@ -616,6 +627,11 @@ class sidewalkreator:
         self.dlg.min_d_label.setEnabled(False)
         self.dlg.curve_radius_box.setEnabled(False)
         self.dlg.curveradius_label.setEnabled(False)
+
+        self.dlg.d_to_add_box.setEnabled(False)
+        self.dlg.d_to_add_label.setEnabled(False)
+        self.dlg.min_width_box.setEnabled(False)
+        self.dlg.min_width_label.setEnabled(False)
 
 
                 
@@ -668,6 +684,11 @@ class sidewalkreator:
         self.dlg.curve_radius_box.setHidden(True)
         self.dlg.curveradius_label.setHidden(True)
 
+        self.dlg.d_to_add_box.setHidden(True)
+        self.dlg.d_to_add_label.setHidden(True)
+        self.dlg.min_width_box.setHidden(True)
+        self.dlg.min_width_label.setHidden(True)
+
 
         # but enable the warning and the button:
         self.dlg.sidewalks_warning.setHidden(False)
@@ -697,13 +718,10 @@ class sidewalkreator:
         self.dlg.ch_ignore_buildings.setChecked(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
-        self.dlg.sidewalks_warning.setHidden(True)
-        self.dlg.widths_hint.setHidden(True)
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
-        self.dlg.ignore_already_drawn_btn.setHidden(True)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.datafetch_progressbar.setValue(0)
 
@@ -712,22 +730,41 @@ class sidewalkreator:
         self.dlg.curve_radius_box.setEnabled(False)
         self.dlg.curveradius_label.setEnabled(False)
 
+        self.dlg.d_to_add_box.setEnabled(False)
+        self.dlg.d_to_add_label.setEnabled(False)
+        self.dlg.min_width_box.setEnabled(False)
+        self.dlg.min_width_label.setEnabled(False)
+
+
+        # default value setting:
         self.dlg.min_d_buildings_box.setValue(min_d_to_building)
         self.dlg.curve_radius_box.setValue(default_curve_radius)
+        self.dlg.d_to_add_box.setValue(d_to_add_to_each_side*2)
+        self.dlg.min_width_box.setValue(minimal_buffer*2)
 
+
+        #hidden elements
+        self.dlg.widths_hint.setHidden(True)
+        self.dlg.ignore_already_drawn_btn.setHidden(True)
+        self.dlg.sidewalks_warning.setHidden(True)
 
 
         # table controlling
         self.dlg.higway_values_table.setRowCount(0)
         self.dlg.higway_values_table.setColumnCount(0)
 
-        # objects that always shall be visible
+        # objects that shall be visible by default
         self.dlg.generate_sidewalks.setHidden(False)
         self.dlg.check_if_overlaps_buildings.setHidden(False)
         self.dlg.min_d_buildings_box.setHidden(False)
         self.dlg.min_d_label.setHidden(False)
         self.dlg.curve_radius_box.setHidden(False)
         self.dlg.curveradius_label.setHidden(False)
+
+        self.dlg.d_to_add_box.setHidden(False)
+        self.dlg.d_to_add_label.setHidden(False)
+        self.dlg.min_width_box.setHidden(False)
+        self.dlg.min_width_label.setHidden(False)
 
         
         # control variables:

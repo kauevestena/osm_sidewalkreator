@@ -36,6 +36,10 @@ big_buffer_d = 3000
 # min buffer size for the worst case (building intersecting road)
 minimal_buffer = 3 # 2m
 
+
+# distance to add to each side, as we are creating sidewalk axis, nor kerbs
+d_to_add_to_each_side = 1 # 1m
+
 # for values that must be ignored one must use "0" as value
 default_widths = {
     # loosely based on https://www.gov.br/dnit/pt-br/rodovias/operacoes-rodoviarias/faixa-de-dominio/regulamentacao-atual/normas-para-o-projeto-das-estradas-de-rodagem (Brazilian DNIT specifications)

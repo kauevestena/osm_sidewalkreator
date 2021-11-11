@@ -9,12 +9,13 @@ import os
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
-def generate_buffer(inputlayer,distance='"width"*0.5',segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
+def generate_buffer(inputlayer,distance,segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
 
     '''
         interfacing qgis processing operation
 
         one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter 
+        someting like: '( "width" /2)+1.5'
     '''
 
     parameter_dict = {'INPUT': inputlayer, 'DISTANCE': distance,'OUTPUT': outputlayer,'DISSOLVE':dissolve,'SEGMENTS':segments}
