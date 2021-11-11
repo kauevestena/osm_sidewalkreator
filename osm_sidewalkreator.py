@@ -103,6 +103,8 @@ temps_path = os.path.join(basepath,'temporary')
 print(basepath)
 reports_path = os.path.join(basepath,'reports')
 
+assets_path = os.path.join(basepath,'assets')
+
 
 class sidewalkreator:
     """QGIS Plugin Implementation."""
@@ -613,6 +615,11 @@ class sidewalkreator:
         self.whole_sidewalks.setCrs(self.custom_localTM_crs)
 
 
+        # styling the roads layer
+        sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
+
+        self.whole_sidewalks.loadNamedStyle(sidewalk_stylefile_path)
+        #  self.whole_sidewalks.triggerRepaint()
 
         # self.add_layer_canvas(big_temporary_buffer) #just for test
         # self.add_layer_canvas(dissolved_buffer) #just for test
@@ -621,6 +628,8 @@ class sidewalkreator:
         
 
 
+
+        
 
         # disabling what won't be needed afterwards
         self.dlg.min_d_buildings_box.setEnabled(False)

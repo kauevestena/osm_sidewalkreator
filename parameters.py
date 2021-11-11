@@ -77,3 +77,7 @@ default_widths = {
     
     # '' : ,
     }
+
+# ASSETS:
+# names of the assets filenames:
+sidewalks_stylefilename = 'sidewalkstyles.qml'
