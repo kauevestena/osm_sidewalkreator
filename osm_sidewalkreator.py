@@ -636,8 +636,19 @@ class sidewalkreator:
         self.whole_sidewalks = extract_lines_from_polygons(diff_layer_as_singleparts,'memory:'+self.whole_sidewalklayer_name)
         self.whole_sidewalks.setCrs(self.custom_localTM_crs)
 
+        # first, deleting all previous fields:
+        remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
+        '''
+            tags to denote it's a sidewalk
+            footway=sidewalk
+            highway=footway
 
-        # styling the roads layer
+            then filling:
+        '''
+        create_filled_newlayerfield(self.whole_sidewalks,'highway','footway',QVariant.String)
+        create_filled_newlayerfield(self.whole_sidewalks,'footway','sidewalk',QVariant.String)
+
+        # styling the sidewalks layer
         sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
 
         self.whole_sidewalks.loadNamedStyle(sidewalk_stylefile_path)
@@ -921,6 +932,9 @@ class sidewalkreator:
 
         # to prevent user to loop
         self.dlg.input_layer_selector.setEnabled(False)
+        self.dlg.add_osm_basemap.setEnabled(False)
+        self.dlg.add_bing_base.setEnabled(False)
+
 
 
         # PART 1 : wiping old stuff

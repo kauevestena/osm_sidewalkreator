@@ -283,10 +283,38 @@ def get_column_names(inputlayer):
     return inputlayer.fields().names()
 
 def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
+    '''
+        create a new field for the layer, and also can return the index of the new field
+    '''
+
     with edit(inputlayer):
         new_field = QgsField(fieldname,datatype)
         inputlayer.dataProvider().addAttributes([new_field])
         inputlayer.updateFields()
+
+    return inputlayer.fields().indexOf(fieldname)
+
+
+def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
+    # creating field
+    field_index = create_new_layerfield(inputlayer,fieldname,datatype)
+
+    # then filling:
+    with edit(inputlayer):
+        for feature in inputlayer.getFeatures():
+            inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
+
+
+def remove_layerfields(inputlayer,fieldlist):
+
+    # to assert if the field name really exists in 'fieldlist'
+    layer_fields = get_column_names(inputlayer)
+
+    with edit(inputlayer):
+        for field_name in fieldlist:
+            if field_name in layer_fields:
+                f_idx = inputlayer.fields().indexOf(field_name)
+                inputlayer.deleteAttribute(f_idx)
 
 
 
