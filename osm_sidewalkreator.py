@@ -106,6 +106,10 @@ reports_path = os.path.join(basepath,'reports')
 assets_path = os.path.join(basepath,'assets')
 
 
+basic_folderpathlist = [temps_path,reports_path,assets_path]
+for folderpath in basic_folderpathlist:
+    create_dir_ifnotexists(folderpath)
+
 class sidewalkreator:
     """QGIS Plugin Implementation."""
 
@@ -298,6 +302,9 @@ class sidewalkreator:
             self.first_start = False
             self.dlg = sidewalkreatorDialog()
 
+
+            
+
             # setting items that should not be visible at beginning:
             self.dlg.sidewalks_warning.setHidden(True)
             self.dlg.widths_hint.setHidden(True)
@@ -326,12 +333,14 @@ class sidewalkreator:
 
 
             # # # handles and modifications/ors:
-
-
             self.dlg.input_layer_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.input_layer_selector.setAllowEmptyLayer(True)
             self.dlg.input_layer_selector.setLayer(None)
             # thx: https://github.com/qgis/QGIS/issues/38472
+
+        # check in runtime if those folders actually exists
+        for folderpath in basic_folderpathlist:
+            create_dir_ifnotexists(folderpath)
 
         # show the dialog
         self.dlg.show()
