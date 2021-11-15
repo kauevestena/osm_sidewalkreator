@@ -318,6 +318,8 @@ class sidewalkreator:
             self.dlg.ignore_already_drawn_btn.clicked.connect(self.ignore_already_drawn_fcn)
             self.dlg.add_osm_basemap.clicked.connect(self.add_osm_basemap_func)
             self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
+            self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
+
 
 
 
@@ -382,7 +384,7 @@ class sidewalkreator:
             (self.dlg.lang_label,"Language: ","Idioma: "),
             (self.dlg.input_pol_label,"Input Polygon: ","Polígono de Entrada" ),
             (self.dlg.table_txt1,'default widths for tag values','larguras-padrão para valores'),
-            (self.dlg.table_txt2,'"0" means ignore feature','"0": ignorar feições'),
+            (self.dlg.table_txt2,'"0" means ignore features','"0": ignorar feições'),
             (self.dlg.output_file_label,'Output File:','Arquivo de Saída:'),
             (self.dlg.datafetch,'Fetch Data','Obter Dados'),
             (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels),
@@ -403,6 +405,8 @@ class sidewalkreator:
             (self.dlg.min_width_label,'Min Width','Largura Mínima'),
             (self.dlg.add_osm_basemap,'+ OSM\nBase Map','+Mapa-Base\nOSM'),
             (self.dlg.add_bing_base,'+ BING\nBase Img.','+Imagens\nBING'),
+            (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
+
 
 
 
@@ -544,6 +548,49 @@ class sidewalkreator:
         self.dlg.add_bing_base.setEnabled(False)
 
 
+    def draw_crossings(self):
+        # stuff to be disabled:
+        self.dlg.generate_crossings.setEnabled(False)
+
+        # analyzing if the endpoits of splitted lines are elegible for  
+        #   iterating again each street segment:
+        for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
+
+            P0 = qgs_point_geom_from_line_at(feature_A)    # first point
+            PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
+
+            P0_count = 0
+            PF_count = 0
+
+            featurelen = feature_A.geometry().length()
+
+            featurewidth = feature_A[widths_fieldname]
+
+            for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
+                # if not i == j:
+                if P0.intersects(feature_B.geometry()):
+                    P0_count += 1
+                if PF.intersects(feature_B.geometry()):
+                    PF_count += 1
+
+            print(i,P0_count,PF_count)
+
+            if P0_count > 2:
+                innerP0_0 = feature_A.geometry().interpolate(self.curveradius*1.5)
+                print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
+
+            if PF_count > 2:
+                innerPF_0 = feature_A.geometry().interpolate(featurelen-self.curveradius*1.5)
+                print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
+            
+            print()
+                
+
+        
+            
+
+
+
 
     def draw_sidewalks(self):
 
@@ -614,9 +661,11 @@ class sidewalkreator:
         
         # rounding directly, as it avoids small polygons aswell
         # TODO: check if it's the best approach, or to do it feature-wise
-        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,self.dlg.curve_radius_box.value())
+        self.curveradius = self.dlg.curve_radius_box.value()
 
-        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.dlg.curve_radius_box.value())
+        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,self.curveradius)
+
+        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.curveradius)
 
 
 
@@ -666,7 +715,7 @@ class sidewalkreator:
         # self.add_layer_canvas(big_temporary_buffer) #just for test
         # self.add_layer_canvas(dissolved_buffer) #just for test
         # self.add_layer_canvas(diff_layer) #just for test
-        self.add_layer_canvas(self.whole_sidewalks) #just for test
+        self.add_layer_canvas(self.whole_sidewalks)
         
 
 
@@ -683,6 +732,10 @@ class sidewalkreator:
         self.dlg.d_to_add_label.setEnabled(False)
         self.dlg.min_width_box.setEnabled(False)
         self.dlg.min_width_label.setEnabled(False)
+
+        # enabling what shall be enabled afterwards:
+        self.dlg.generate_crossings.setEnabled(True)
+
 
 
                 
@@ -740,6 +793,9 @@ class sidewalkreator:
         self.dlg.min_width_box.setHidden(True)
         self.dlg.min_width_label.setHidden(True)
 
+        self.dlg.generate_crossings.setHidden(True)
+
+
 
         # but enable the warning and the button:
         self.dlg.sidewalks_warning.setHidden(False)
@@ -774,6 +830,10 @@ class sidewalkreator:
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
+        self.dlg.generate_crossings.setEnabled(False)
+
+
+
         self.dlg.datafetch_progressbar.setValue(0)
 
         self.dlg.min_d_buildings_box.setEnabled(False)
@@ -819,6 +879,8 @@ class sidewalkreator:
         self.dlg.min_width_box.setHidden(False)
         self.dlg.min_width_label.setHidden(False)
 
+        self.dlg.generate_crossings.setHidden(False)
+        
         
         # control variables:
         if reset_ignore_alreadydrawn:

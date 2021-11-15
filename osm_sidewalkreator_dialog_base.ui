@@ -414,7 +414,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>60</x>
-     <y>140</y>
+     <y>150</y>
      <width>161</width>
      <height>41</height>
     </rect>
@@ -658,9 +658,9 @@ add to Width</string>
   <widget class="QPushButton" name="add_osm_basemap">
    <property name="geometry">
     <rect>
-     <x>30</x>
+     <x>20</x>
      <y>90</y>
-     <width>81</width>
+     <width>91</width>
      <height>41</height>
     </rect>
    </property>
@@ -674,7 +674,7 @@ Base Map</string>
     <rect>
      <x>140</x>
      <y>90</y>
-     <width>81</width>
+     <width>91</width>
      <height>41</height>
     </rect>
    </property>

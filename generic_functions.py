@@ -399,39 +399,36 @@ def remove_lines_from_no_block(inputlayer):
 
     # TODO: check if will work with multilinestrings
 
+
+    feature_ids_to_be_removed = []
+
+
+    for i,feature_A in enumerate(inputlayer.getFeatures()):
+
+        P0 = qgs_point_geom_from_line_at(feature_A)    # first point
+        PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
+
+        P0_count = 0
+        PF_count = 0
+
+
+        for j,feature_B in enumerate(inputlayer.getFeatures()):
+            # if not i == j:
+            if P0.intersects(feature_B.geometry()):
+                P0_count += 1
+            if PF.intersects(feature_B.geometry()):
+                PF_count += 1
+                
+        
+        # print(P0_count,PF_count)
+
+
+        if any(count == 1 for count in [P0_count,PF_count]):
+            feature_ids_to_be_removed.append(feature_A.id())
+
     with edit(inputlayer):
-        feature_ids_to_be_removed = []
-
-        for i,feature_A in enumerate(inputlayer.getFeatures()):
-
-            P0 = qgs_point_geom_from_line_at(feature_A)    # first point
-            PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
-
-            P0_count = 0
-            PF_count = 0
-
-
-            for j,feature_B in enumerate(inputlayer.getFeatures()):
-                # if not i == j:
-                if P0.intersects(feature_B.geometry()):
-                    P0_count += 1
-                if PF.intersects(feature_B.geometry()):
-                    PF_count += 1
-                    
-            
-            # print(P0_count,PF_count)
-
-
-            if any(count == 1 for count in [P0_count,PF_count]):
-                feature_ids_to_be_removed.append(feature_A.id())
-
         for feature_id in feature_ids_to_be_removed:
             inputlayer.deleteFeature(feature_id)
-
-
-
-
-
 
 def remove_features_byattr(inputlayer,attrname,attrvalue):
 
@@ -446,3 +443,18 @@ def remove_features_byattr(inputlayer,attrname,attrvalue):
 def add_tms_layer(qms_string,layername):
     # mostly for user to add basemaps
     QgsProject.instance().addMapLayer(QgsRasterLayer(qms_string,layername, 'wms'))
+
+def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False):
+    ret_dict = {}
+
+    for feature in inputlayer.getFeatures():
+        ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
+
+    if as_list:
+        if to_sort:
+            return sorted(list(ret_dict.values()))
+        else:
+            return list(ret_dict.values())
+
+    else:
+        return ret_dict
