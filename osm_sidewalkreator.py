@@ -37,9 +37,12 @@ from qgis.PyQt.QtWidgets import QAction
 from qgis import processing
 from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit
 
+
 # pure Qt imports, keep at minimun =P
 from PyQt5.QtWidgets import QTableWidgetItem
 from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtCore import QVariant
+
 
 
 # Initialize Qt resources from file resources.py
@@ -554,6 +557,10 @@ class sidewalkreator:
 
         # analyzing if the endpoits of splitted lines are elegible for  
         #   iterating again each street segment:
+
+        # storing innerpoints, to then create a layer with them
+        inner_pts_featlist = []
+
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
             P0 = qgs_point_geom_from_line_at(feature_A)    # first point
@@ -566,25 +573,75 @@ class sidewalkreator:
 
             featurewidth = feature_A[widths_fieldname]
 
+            feature_osm_id = feature_A['id'] 
+
+            feature_layer_id = feature_A.id()
+
+            # filling with 
+            P0_intersecting_widths = []
+            PF_intersecting_widths = []
+
             for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
                 # if not i == j:
                 if P0.intersects(feature_B.geometry()):
                     P0_count += 1
+
+                    P0_intersecting_widths.append(feature_B['width']) #[feature_B.id()] = feature_B['width']
+
+
                 if PF.intersects(feature_B.geometry()):
                     PF_count += 1
+                    PF_intersecting_widths.append(feature_B['width']) #[feature_B.id()] = feature_B['width']
 
-            print(i,P0_count,PF_count)
 
+            # print(i,P0_count,PF_count)
+
+            # getting the "orthogonal" widths as the 
+
+            print(P0_intersecting_widths,'\n',PF_intersecting_widths,'\n\n')
+
+            # doing for the point at the beggining of segment:
             if P0_count > 2:
-                innerP0_0 = feature_A.geometry().interpolate(self.curveradius*1.5)
-                print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
+                d_to_interpolate_P0 = (get_major_dif_signed(featurewidth,P0_intersecting_widths) * 0.5) + self.curveradius
 
+                # checking if its bigger than half the feature length:
+                if d_to_interpolate_P0 > (0.5 * featurelen):
+                    d_to_interpolate_P0 = featurelen * perc_to_interpolate
+
+                innerP0_0 = feature_A.geometry().interpolate(d_to_interpolate_P0) #(self.curveradius*1.5)
+                # print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
+
+                # transforming as a feature, storing osm id
+                innerP0_feat = QgsFeature()
+                innerP0_feat.setGeometry(innerP0_0)
+                innerP0_feat.setAttributes([feature_osm_id])
+                inner_pts_featlist.append(innerP0_feat)
+
+            # doing for the point at the end of segment:
             if PF_count > 2:
-                innerPF_0 = feature_A.geometry().interpolate(featurelen-self.curveradius*1.5)
-                print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
+
+                d_to_interpolate_PF = (get_major_dif_signed(featurewidth,PF_intersecting_widths) * 0.5) + self.curveradius
+
+                # checking if its bigger than half the feature length:
+                if d_to_interpolate_PF > (0.5 * featurelen):
+                    d_to_interpolate_PF = featurelen * perc_to_interpolate
+
+                # since we are interpolating from the end and by QGIS 3.20 it does not support negative interpolation, we just subtract from total feature length
+                innerPF_0 = feature_A.geometry().interpolate(featurelen-d_to_interpolate_PF)
+                # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
+
+                # transforming as a feature, storing osm id
+                innerPF_feat = QgsFeature()
+                innerPF_feat.setGeometry(innerPF_0)
+                innerPF_feat.setAttributes([feature_osm_id])
+                inner_pts_featlist.append(innerPF_feat)
             
-            print()
-                
+        self.inner_crossings_layer = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
+        self.inner_crossings_layer.setCrs(self.custom_localTM_crs) 
+
+
+        self.add_layer_canvas(self.inner_crossings_layer)
+                  
 
         
             

@@ -6,6 +6,7 @@ from PyQt5.QtCore import QVariant
 from qgis import processing
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer
 import os
+from math import isclose
 
 
 
@@ -458,3 +459,52 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
 
     else:
         return ret_dict
+
+def get_major_dif_signed(inputval,inputlist,tol=0.5,print_diffs=False):
+    diffs = []
+
+    for value in inputlist:
+        # always avoid to compare floats equally
+        if not isclose(inputval,value,abs_tol=tol):
+            print(value)
+            diffs.append(value-inputval)
+
+    if print_diffs:
+        print(diffs)
+
+    if diffs:
+        if len(diffs) > 1:
+            return inputval+max(diffs)
+        else:
+            return inputval+diffs[0]
+    else:
+        return inputval
+
+
+
+def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
+
+    lname = 'temp'
+
+    if layername:
+        lname = layername
+
+    ret_layer =  QgsVectorLayer(geomtype, lname, "memory")
+
+    with edit(ret_layer):
+        if attrs_dict:
+            attrs_list = []
+
+            for key in attrs_dict:
+                attrs_list.append(QgsField(key,attrs_dict[key]))
+
+            ret_layer.dataProvider().addAttributes(attrs_list)
+            
+            ret_layer.updateFields()
+
+        for feature in featlist:
+            ret_layer.dataProvider().addFeature(feature)
+
+        ret_layer.updateExtents()
+
+    return ret_layer

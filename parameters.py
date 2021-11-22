@@ -39,6 +39,9 @@ big_buffer_d = 3000
 minimal_buffer = 3 # 2m
 
 
+# percent of length to interpolate if passes half the length
+perc_to_interpolate = 0.4
+
 # distance to add to each side, as we are creating sidewalk axis, nor kerbs
 d_to_add_to_each_side = 1 # 1m
 
@@ -87,3 +90,6 @@ sidewalks_stylefilename = 'sidewalkstyles.qml'
 osm_basemap_str = "crs=EPSG:3857&format&type=xyz&url=http://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png&zmax=19&zmin=0"
 
 bing_baseimg_str = 'crs=EPSG:3857&format&type=xyz&url=http://ak.t0.tiles.virtualearth.net/tiles/a%7Bq%7D.jpeg?n%3Dz%26g%3D5880&zmax=19&zmin=0'
+
+
+crossing_centers_layername = 'crossing_centers'
