@@ -581,6 +581,12 @@ class sidewalkreator:
             P0_intersecting_widths = []
             PF_intersecting_widths = []
 
+
+            # tolerance for considering that a crossing center will have the crossing effectively drawn
+            # a: two times (half width plus self.dlg.d_to_add_box.value())
+            # b: three times half the width
+            tolerance_draw_crossing = featurewidth + self.dlg.d_to_add_box.value()
+
             for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
                 # if not i == j:
                 if P0.intersects(feature_B.geometry()):
@@ -598,11 +604,11 @@ class sidewalkreator:
 
             # getting the "orthogonal" widths as the 
 
-            print(P0_intersecting_widths,'\n',PF_intersecting_widths,'\n\n')
+            # print(P0_intersecting_widths,'\n',PF_intersecting_widths,'\n\n')
 
             # doing for the point at the beggining of segment:
             if P0_count > 2:
-                d_to_interpolate_P0 = (get_major_dif_signed(featurewidth,P0_intersecting_widths) * 0.5) + self.curveradius
+                d_to_interpolate_P0 = (get_major_dif_signed(featurewidth,P0_intersecting_widths) * 0.5) + self.curveradius + d_to_add_interp_d
 
                 # checking if its bigger than half the feature length:
                 if d_to_interpolate_P0 > (0.5 * featurelen):
@@ -611,16 +617,22 @@ class sidewalkreator:
                 innerP0_0 = feature_A.geometry().interpolate(d_to_interpolate_P0) #(self.curveradius*1.5)
                 # print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
 
-                # transforming as a feature, storing osm id
-                innerP0_feat = QgsFeature()
-                innerP0_feat.setGeometry(innerP0_0)
-                innerP0_feat.setAttributes([feature_osm_id])
-                inner_pts_featlist.append(innerP0_feat)
+                # getting distances from inner_points to sidewalks:
+                dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True)
+
+                print(i+1,dlist_P0) 
+
+                if items_minor_than_inlist(tolerance_draw_crossing,dlist_P0) == 2:
+                    # transforming as a feature, storing osm id
+                    innerP0_feat = QgsFeature()
+                    innerP0_feat.setGeometry(innerP0_0)
+                    innerP0_feat.setAttributes([feature_osm_id])
+                    inner_pts_featlist.append(innerP0_feat)
 
             # doing for the point at the end of segment:
             if PF_count > 2:
 
-                d_to_interpolate_PF = (get_major_dif_signed(featurewidth,PF_intersecting_widths) * 0.5) + self.curveradius
+                d_to_interpolate_PF = (get_major_dif_signed(featurewidth,PF_intersecting_widths) * 0.5) + self.curveradius + d_to_add_interp_d
 
                 # checking if its bigger than half the feature length:
                 if d_to_interpolate_PF > (0.5 * featurelen):
@@ -630,12 +642,19 @@ class sidewalkreator:
                 innerPF_0 = feature_A.geometry().interpolate(featurelen-d_to_interpolate_PF)
                 # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
 
-                # transforming as a feature, storing osm id
-                innerPF_feat = QgsFeature()
-                innerPF_feat.setGeometry(innerPF_0)
-                innerPF_feat.setAttributes([feature_osm_id])
-                inner_pts_featlist.append(innerPF_feat)
+                # getting distances from inner_points to sidewalks:
+                dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True) 
+
+                print(dlist_PF,'\n') 
+
+                if items_minor_than_inlist(tolerance_draw_crossing,dlist_PF) == 2:
+                    # transforming as a feature, storing osm id
+                    innerPF_feat = QgsFeature()
+                    innerPF_feat.setGeometry(innerPF_0)
+                    innerPF_feat.setAttributes([feature_osm_id])
+                    inner_pts_featlist.append(innerPF_feat)
             
+        
         self.inner_crossings_layer = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
         self.inner_crossings_layer.setCrs(self.custom_localTM_crs) 
 
@@ -1214,6 +1233,7 @@ class sidewalkreator:
                  
 
         # a little cleaning:
+        #   move do self.data_clean?
         remove_unconnected_lines(self.clipped_reproj_datalayer)
 
         # creating the 'protoblocks' layer, is a poligonization of the streets layers

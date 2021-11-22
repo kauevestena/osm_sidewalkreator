@@ -447,6 +447,11 @@ def add_tms_layer(qms_string,layername):
 
 def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False):
     ret_dict = {}
+    '''
+        one passes a geometry and a layer anf get dict/list of distances
+    '''
+
+    # TODO: create a buffer and intersection alternative method if surpasses a number of features 
 
     for feature in inputlayer.getFeatures():
         ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
@@ -460,13 +465,17 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
     else:
         return ret_dict
 
+
 def get_major_dif_signed(inputval,inputlist,tol=0.5,print_diffs=False):
+    '''
+        in spite of finding a simple way to obtain the 'orthogonal' distance 
+    '''
+    
     diffs = []
 
     for value in inputlist:
         # always avoid to compare floats equally
         if not isclose(inputval,value,abs_tol=tol):
-            print(value)
             diffs.append(value-inputval)
 
     if print_diffs:
@@ -483,6 +492,9 @@ def get_major_dif_signed(inputval,inputlist,tol=0.5,print_diffs=False):
 
 
 def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
+    '''
+        creating a layer from a list of features (not geometries)
+    '''
 
     lname = 'temp'
 
@@ -508,3 +520,7 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
         ret_layer.updateExtents()
 
     return ret_layer
+
+def items_minor_than_inlist(value,inpulist):
+    # thx: https://stackoverflow.com/a/10543316/4436950
+    return sum(entry < value for entry in inpulist)
