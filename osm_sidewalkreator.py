@@ -470,7 +470,7 @@ class sidewalkreator:
         self.splitted_lines.setCrs(self.custom_localTM_crs)
 
         # removing lines that does not serve to form a block ('quarteirão')
-        remove_lines_from_no_block(self.splitted_lines)
+        remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks)
 
         # checking if there's a "width" column, adding if not:
         if not widths_fieldname in get_column_names(self.splitted_lines):
@@ -870,6 +870,8 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(True)
 
         self.dlg.generate_crossings.setHidden(True)
+        self.dlg.widths_hint.setHidden(True)
+
 
 
 
@@ -1243,11 +1245,18 @@ class sidewalkreator:
 
         # a little cleaning:
         #   move do self.data_clean?
+        # it just removes lines that are really not connected
         remove_unconnected_lines(self.clipped_reproj_datalayer)
 
         # creating the 'protoblocks' layer, is a poligonization of the streets layers
         self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
+        # dissolving so will become just one geometry:
+        dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
+
+        #adding little buffer, so features touching boundaries will be fully within
+        self.dissolved_protoblocks = generate_buffer(dissolved_protoblocks_0,protoblocks_buffer)
 
         # self.add_layer_canvas(self.protoblocks)
 

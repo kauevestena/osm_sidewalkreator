@@ -392,14 +392,21 @@ def remove_unconnected_lines(inputlayer):
 def qgs_point_geom_from_line_at(inputlinefeature,index=0):
     return QgsGeometry.fromPointXY(inputlinefeature.geometry().asPolyline()[index])
 
-def remove_lines_from_no_block(inputlayer):
+def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
     '''
         remove lines in wich one of its ends 
         are not connected to any other segment
+
+        the "layer_to_check_culdesac" is a whole layer (dissolved) that should be checked for 'within' condition
     '''
 
     # TODO: check if will work with multilinestrings
 
+    check_for_culdesacs = False
+
+    if layer_to_check_culdesac:
+        check_for_culdesacs = True
+        checker_geom = get_first_feature_or_geom(layer_to_check_culdesac,True)
 
     feature_ids_to_be_removed = []
 
@@ -425,7 +432,14 @@ def remove_lines_from_no_block(inputlayer):
 
 
         if any(count == 1 for count in [P0_count,PF_count]):
-            feature_ids_to_be_removed.append(feature_A.id())
+            # after checking, only add if its not a "culdesac" 
+            if check_for_culdesacs:
+                if not feature_A.geometry().within(checker_geom):
+                    feature_ids_to_be_removed.append(feature_A.id())
+
+            # if no "checker geometry", then just add directly
+            else:
+                feature_ids_to_be_removed.append(feature_A.id())
 
     with edit(inputlayer):
         for feature_id in feature_ids_to_be_removed:

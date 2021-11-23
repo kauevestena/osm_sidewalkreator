@@ -97,3 +97,6 @@ bing_baseimg_str = 'crs=EPSG:3857&format&type=xyz&url=http://ak.t0.tiles.virtual
 
 
 crossing_centers_layername = 'crossing_centers'
+
+# little buffer for dissolved protoblocks "within" condition elegibility in all cases (as long as I know)
+protoblocks_buffer = 0.5 # 50 cm
