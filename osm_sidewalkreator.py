@@ -395,7 +395,7 @@ class sidewalkreator:
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
             (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
             (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
-            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!"),
+            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,that stuff shall be handled properly...)","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)"),
             (self.dlg.check_if_overlaps_buildings,'Check if Overlaps Buildings','Testar se Sobrepõe Edificações'),
             (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
@@ -883,15 +883,21 @@ class sidewalkreator:
         # values from Qt Designer
 
     def ignore_already_drawn_fcn(self):
+
+        self.reset_fields()
+
+        # the trick is, by default the previous function set this control variable as false, 
+        # then right after its call we revert the variable value (bug 001 memories)
         self.ignore_sidewalks_already_drawn = True
 
-        self.reset_fields(reset_ignore_alreadydrawn=False)
+
+        # print(self.ignore_sidewalks_already_drawn)
 
 
 
 
 
-    def reset_fields(self,reset_ignore_alreadydrawn=True):
+    def reset_fields(self):
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
@@ -959,8 +965,9 @@ class sidewalkreator:
         
         
         # control variables:
-        if reset_ignore_alreadydrawn:
+        if self.ignore_sidewalks_already_drawn:
             self.ignore_sidewalks_already_drawn = False
+     
 
 
         # texts, for appearance:
@@ -1072,7 +1079,9 @@ class sidewalkreator:
             wipe_folder_files(folderpath)
 
 
-    def call_get_osm_data(self):
+    
+    # called at "Fetch Data" or self.datafetch button
+    def call_get_osm_data(self): 
         """
         Function to call the functions from "osm fetch" module
         """
@@ -1284,9 +1293,12 @@ class sidewalkreator:
 
         # BUT... if there are sidewalks already drawn, one must step back!!
         if sidewalk_tag_value in self.unique_highway_values:
+            print('felt!!',self.ignore_sidewalks_already_drawn)
             # DISABLING STUFF
             if not self.ignore_sidewalks_already_drawn:
                 self.disable_all_because_sidewalks()
+
+                self.ignore_sidewalks_already_drawn = True
 
 
         # # # testing if inverse transformation is working:

@@ -289,8 +289,8 @@ Compute Intersections</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>600</x>
-     <y>590</y>
+     <x>640</x>
+     <y>630</y>
      <width>331</width>
      <height>281</height>
     </rect>
@@ -301,7 +301,8 @@ Compute Intersections</string>
     </font>
    </property>
    <property name="text">
-    <string>Some Sidewalks are already drawn!!! You must reshape your input polygon!!!</string>
+    <string>Some Sidewalks are already drawn!!! You must reshape your input polygon!!!
+(in a future release,that stuff shall be handled properly...)</string>
    </property>
    <property name="textFormat">
     <enum>Qt::PlainText</enum>
@@ -310,7 +311,7 @@ Compute Intersections</string>
     <bool>false</bool>
    </property>
    <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
