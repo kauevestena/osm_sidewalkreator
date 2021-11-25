@@ -464,7 +464,7 @@ class sidewalkreator:
 
         # removing lines that does not serve to form a block ('quarteirão')
         if self.dlg.dead_end_iters_box.value() == 0:
-            remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks)
+            remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks_buff)
         else:
             for i in range(self.dlg.dead_end_iters_box.value()):
                 # without second input, the function will work just as before
@@ -643,17 +643,17 @@ class sidewalkreator:
                 # print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
 
                 # getting distances from inner_points to sidewalks:
-                dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True)
+                # dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True)
                 # dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,False,sidewalks_spatial_index,tol_search_d,3)
 
-                print(i+1,dlist_P0) 
+                # print(i+1,dlist_P0) 
 
-                if items_minor_than_inlist(tolerance_draw_crossing,dlist_P0) == 2:
-                    # transforming as a feature, storing osm id
-                    innerP0_feat = QgsFeature()
-                    innerP0_feat.setGeometry(innerP0_0)
-                    innerP0_feat.setAttributes([feature_osm_id])
-                    inner_pts_featlist.append(innerP0_feat)
+                # if items_minor_than_inlist(tolerance_draw_crossing,dlist_P0) == 2:
+                # transforming as a feature, storing osm id
+                innerP0_feat = QgsFeature()
+                innerP0_feat.setGeometry(innerP0_0)
+                innerP0_feat.setAttributes([feature_osm_id])
+                inner_pts_featlist.append(innerP0_feat)
 
             # doing for the point at the end of segment:
             if PF_count > 2:
@@ -669,24 +669,28 @@ class sidewalkreator:
                 # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
 
                 # getting distances from inner_points to sidewalks:
-                dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True)
+                # dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True)
                 # dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,False,sidewalks_spatial_index,tol_search_d,3) 
 
 
-                print(dlist_PF,'\n') 
+                # print(dlist_PF,'\n') 
 
-                if items_minor_than_inlist(tolerance_draw_crossing,dlist_PF) == 2:
+                # if items_minor_than_inlist(tolerance_draw_crossing,dlist_PF) == 2:
                     # transforming as a feature, storing osm id
-                    innerPF_feat = QgsFeature()
-                    innerPF_feat.setGeometry(innerPF_0)
-                    innerPF_feat.setAttributes([feature_osm_id])
-                    inner_pts_featlist.append(innerPF_feat)
+                innerPF_feat = QgsFeature()
+                innerPF_feat.setGeometry(innerPF_0)
+                innerPF_feat.setAttributes([feature_osm_id])
+                inner_pts_featlist.append(innerPF_feat)
 
             self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             
         
         self.inner_crossings_layer = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
-        self.inner_crossings_layer.setCrs(self.custom_localTM_crs) 
+        self.inner_crossings_layer.setCrs(self.custom_localTM_crs)
+
+
+        # NEW METHOD to select elegible crossing centers: by buffer crossing centers and test if the tiny circles are within the big protoblocks layer
+        inner_crossings_buff = generate_buffer(self.inner_crossings_layer,1,4,False,'ROUND')
 
 
         self.add_layer_canvas(self.inner_crossings_layer)
@@ -1301,13 +1305,20 @@ class sidewalkreator:
         self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
+        self.add_layer_canvas(self.protoblocks)
+
+
         # dissolving so will become just one geometry:
-        dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
+        self.dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
+        self.dissolved_protoblocks_0.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
 
         #adding little buffer, so features touching boundaries will be fully within
-        self.dissolved_protoblocks = generate_buffer(dissolved_protoblocks_0,protoblocks_buffer)
+        self.dissolved_protoblocks_buff = generate_buffer(self.
+        dissolved_protoblocks_0,protoblocks_buffer)
+        self.dissolved_protoblocks_buff.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
-        # self.add_layer_canvas(self.protoblocks)
+
 
 
         # adding to canvas
