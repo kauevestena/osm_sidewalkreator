@@ -4,7 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest
 import os
 from math import isclose
 
@@ -445,6 +445,7 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
         for feature_id in feature_ids_to_be_removed:
             inputlayer.deleteFeature(feature_id)
 
+
 def remove_features_byattr(inputlayer,attrname,attrvalue):
 
     column_values = get_layercolumn_byname(inputlayer,attrname)
@@ -456,18 +457,26 @@ def remove_features_byattr(inputlayer,attrname,attrvalue):
                 
 
 def add_tms_layer(qms_string,layername):
-    # mostly for user to add basemaps
+    # mostly for user add basemaps buttons
     QgsProject.instance().addMapLayer(QgsRasterLayer(qms_string,layername, 'wms'))
 
-def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False):
+def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False,input_spatial_index=None,max_dist=100,nn_feat_num=5):
     ret_dict = {}
     '''
         one passes a geometry and a layer anf get dict/list of distances
     '''
 
-    # TODO: create a buffer and intersection alternative method if surpasses a number of features 
+    feat_request = QgsFeatureRequest()
 
-    for feature in inputlayer.getFeatures():
+    if input_spatial_index:
+        # thx, pt 2 https://gis.stackexchange.com/a/59185/49900 
+        nearest_ids = input_spatial_index.nearestNeighbor(inputgeom,nn_feat_num,max_dist)
+
+        feat_request.setFilterFids(nearest_ids)
+
+
+
+    for feature in inputlayer.getFeatures(feat_request):
         ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
 
     if as_list:
@@ -478,6 +487,36 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
 
     else:
         return ret_dict
+
+def gen_layer_spatial_index(inputlayer,use_fullgeom_flag=True):
+    '''
+        return a spatial index filled with all of the layer's features
+    '''
+    # thx: https://gis.stackexchange.com/a/59185/49900 (part 1)
+
+
+
+    feat_iterator = inputlayer.dataProvider().getFeatures()
+
+
+    if use_fullgeom_flag:
+        # thx: https://gis.stackexchange.com/a/374282/49900
+        ret_spatial_index = QgsSpatialIndex(feat_iterator,flags=QgsSpatialIndex.FlagStoreFeatureGeometries)
+    else:
+        ret_spatial_index = QgsSpatialIndex(feat_iterator)
+
+
+    # temp_feat = QgsFeature() # just to store temporarily
+    # # filling:
+    # while feat_iterator.nextFeature(temp_feat): # so ellegant
+    #     ret_spatial_index.insertFeature(temp_feat)
+
+    return ret_spatial_index
+
+# def distances_anotherlyr_unsingNN(inputPTgeom,inputspatialindex,inputlayer,max_dist=100,nn_feat_num=5):
+
+
+
 
 
 def get_major_dif_signed(inputval,inputlist,tol=0.5,print_diffs=False):

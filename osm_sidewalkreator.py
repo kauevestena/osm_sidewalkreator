@@ -409,6 +409,8 @@ class sidewalkreator:
             (self.dlg.add_osm_basemap,'+ OSM\nBase Map','+Mapa-Base\nOSM'),
             (self.dlg.add_bing_base,'+ BING\nBase Img.','+Imagens\nBING'),
             (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
+            (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
+            (self.dlg.dead_end_iters_label,'Iters. to remove\ndead-end-streets\n(0 to keep all of them)','Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)'),
 
 
 
@@ -440,6 +442,8 @@ class sidewalkreator:
 
         # disabling what should not be used afterwards
         self.dlg.clean_data.setEnabled(False)
+        self.dlg.dead_end_iters_label.setEnabled(False)
+        self.dlg.dead_end_iters_box.setEnabled(False)
         self.dlg.higway_values_table.setEnabled(False)
 
         # removing undesired tag values:
@@ -449,8 +453,26 @@ class sidewalkreator:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
         
-        # creating points of intersection:
-        intersection_points = get_intersections(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'TEMPORARY_OUTPUT')
+
+
+        # splitting into segments:
+        self.splitted_lines_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
+
+        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
+
+        self.splitted_lines.setCrs(self.custom_localTM_crs)
+
+        # removing lines that does not serve to form a block ('quarteirão')
+        if self.dlg.dead_end_iters_box.value() == 0:
+            remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks)
+        else:
+            for i in range(self.dlg.dead_end_iters_box.value()):
+                # without second input, the function will work just as before
+                remove_lines_from_no_block(self.splitted_lines)
+
+
+        ##### creating points of intersection:
+        intersection_points = get_intersections(self.splitted_lines,self.splitted_lines,'TEMPORARY_OUTPUT')
 
         intersection_points.setCrs(self.custom_localTM_crs)
 
@@ -462,17 +484,7 @@ class sidewalkreator:
         self.filtered_intersection_points.setCrs(self.custom_localTM_crs)
 
 
-        # splitting into segments:
-        self.splitted_lines_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
-
-        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
-
-        self.splitted_lines.setCrs(self.custom_localTM_crs)
-
-        # removing lines that does not serve to form a block ('quarteirão')
-        remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks)
-
-        # checking if there's a "width" column, adding if not:
+        #### checking if there's a "width" column, adding if not:
         if not widths_fieldname in get_column_names(self.splitted_lines):
             create_new_layerfield(self.splitted_lines,widths_fieldname)
 
@@ -561,6 +573,16 @@ class sidewalkreator:
         # storing innerpoints, to then create a layer with them
         inner_pts_featlist = []
 
+
+        # creating a spatial index for sidewalks
+        # sidewalks_spatial_index = gen_layer_spatial_index(self.whole_sidewalks,False)
+
+        # to count time 
+        ref_time = time.time()
+
+        # for progressbar:
+        featcount = self.splitted_lines.featureCount()
+
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
             P0 = qgs_point_geom_from_line_at(feature_A)    # first point
@@ -586,6 +608,9 @@ class sidewalkreator:
             # a: two times (half width plus self.dlg.d_to_add_box.value())
             # b: three times half the width
             tolerance_draw_crossing = featurewidth + self.dlg.d_to_add_box.value()
+
+            # 3 times to KNN search
+            tol_search_d = 3 * tolerance_draw_crossing
 
             for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
                 # if not i == j:
@@ -619,6 +644,7 @@ class sidewalkreator:
 
                 # getting distances from inner_points to sidewalks:
                 dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True)
+                # dlist_P0 = distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,False,sidewalks_spatial_index,tol_search_d,3)
 
                 print(i+1,dlist_P0) 
 
@@ -643,7 +669,9 @@ class sidewalkreator:
                 # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
 
                 # getting distances from inner_points to sidewalks:
-                dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True) 
+                dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True)
+                # dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,False,sidewalks_spatial_index,tol_search_d,3) 
+
 
                 print(dlist_PF,'\n') 
 
@@ -653,6 +681,8 @@ class sidewalkreator:
                     innerPF_feat.setGeometry(innerPF_0)
                     innerPF_feat.setAttributes([feature_osm_id])
                     inner_pts_featlist.append(innerPF_feat)
+
+            self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             
         
         self.inner_crossings_layer = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
@@ -660,6 +690,14 @@ class sidewalkreator:
 
 
         self.add_layer_canvas(self.inner_crossings_layer)
+
+
+        self.dlg.gencrossings_progressbar.setEnabled(False)
+
+
+        print('took: ',time.time()-ref_time,' seconds')
+        self.dlg.gencrossings_progressbar.setValue(100)
+
                   
 
         
@@ -731,7 +769,7 @@ class sidewalkreator:
         
         buffer_distance_string = f'("width" /2)+{self.dlg.d_to_add_box.value()/2}'
 
-        print(buffer_distance_string)
+        # print(buffer_distance_string)
 
         proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines,buffer_distance_string)
         
@@ -795,6 +833,8 @@ class sidewalkreator:
         
 
 
+        # stuff for later use 
+        
 
         
 
@@ -811,6 +851,8 @@ class sidewalkreator:
 
         # enabling what shall be enabled afterwards:
         self.dlg.generate_crossings.setEnabled(True)
+        self.dlg.gencrossings_progressbar.setEnabled(True)
+
 
 
 
@@ -870,6 +912,7 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(True)
 
         self.dlg.generate_crossings.setHidden(True)
+        self.dlg.gencrossings_progressbar.setHidden(True)
         self.dlg.widths_hint.setHidden(True)
 
 
@@ -915,10 +958,14 @@ class sidewalkreator:
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.generate_crossings.setEnabled(False)
+        self.dlg.dead_end_iters_label.setEnabled(False)
+        self.dlg.dead_end_iters_box.setEnabled(False)
+        self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
-
+        self.dlg.gencrossings_progressbar.setValue(0)
         self.dlg.datafetch_progressbar.setValue(0)
+        
 
         self.dlg.min_d_buildings_box.setEnabled(False)
         self.dlg.min_d_label.setEnabled(False)
@@ -964,6 +1011,8 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(False)
 
         self.dlg.generate_crossings.setHidden(False)
+        self.dlg.gencrossings_progressbar.setHidden(False)
+
         
         
         # control variables:
@@ -1302,7 +1351,6 @@ class sidewalkreator:
 
         # BUT... if there are sidewalks already drawn, one must step back!!
         if sidewalk_tag_value in self.unique_highway_values:
-            print('felt!!',self.ignore_sidewalks_already_drawn)
             # DISABLING STUFF
             if not self.ignore_sidewalks_already_drawn:
                 self.disable_all_because_sidewalks()
@@ -1316,6 +1364,8 @@ class sidewalkreator:
 
         # Finally, enabling next button:
         self.dlg.clean_data.setEnabled(True)
+        self.dlg.dead_end_iters_label.setEnabled(True)
+        self.dlg.dead_end_iters_box.setEnabled(True)
         self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
         self.dlg.datafetch_progressbar.setValue(100)
 
