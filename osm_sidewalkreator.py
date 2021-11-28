@@ -452,7 +452,24 @@ class sidewalkreator:
             if float(self.dlg.higway_values_table.item(i,1).text()) < 0.5:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
-        
+                # creating the 'protoblocks' layer, is a poligonization of the streets layers
+
+        # protoblocks has been moved to here
+
+        self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
+        self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
+
+
+        # dissolving so will become just one geometry:
+        self.dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
+        self.dissolved_protoblocks_0.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
+
+        #adding little buffer, so features touching boundaries will be fully within
+        self.dissolved_protoblocks_buff = generate_buffer(self.
+        dissolved_protoblocks_0,protoblocks_buffer)
+        self.dissolved_protoblocks_buff.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
 
         # splitting into segments:
@@ -682,25 +699,35 @@ class sidewalkreator:
                 innerPF_feat.setAttributes([feature_osm_id])
                 inner_pts_featlist.append(innerPF_feat)
 
-            self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
+            # # self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             
         
-        self.inner_crossings_layer = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
-        self.inner_crossings_layer.setCrs(self.custom_localTM_crs)
+        inner_crossings_layer_0 = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
+        inner_crossings_layer_0.setCrs(self.custom_localTM_crs)
 
 
         # NEW METHOD to select elegible crossing centers: by buffer crossing centers and test if the tiny circles are within the big protoblocks layer
-        inner_crossings_buff = generate_buffer(self.inner_crossings_layer,1,4,False,'ROUND')
+        inner_crossings_buff = generate_buffer(inner_crossings_layer_0,1,5,False,'ROUND')
+        inner_crossings_buff.setCrs(self.custom_localTM_crs)
 
+        # only circles within the dissolved protoblocks are mantained
+        keep_only_contained_within(inner_crossings_buff,self.dissolved_protoblocks_0)
+
+        # clipping the crossing centers:
+        self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:crossing_centers')
 
         self.add_layer_canvas(self.inner_crossings_layer)
+        self.add_layer_canvas(inner_crossings_buff)
+        self.add_layer_canvas(self.protoblocks)
+        self.add_layer_canvas(self.dissolved_protoblocks_0)
 
 
-        self.dlg.gencrossings_progressbar.setEnabled(False)
+
+        # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
         print('took: ',time.time()-ref_time,' seconds')
-        self.dlg.gencrossings_progressbar.setValue(100)
+        # self.dlg.gencrossings_progressbar.setValue(100)
 
                   
 
@@ -855,7 +882,7 @@ class sidewalkreator:
 
         # enabling what shall be enabled afterwards:
         self.dlg.generate_crossings.setEnabled(True)
-        self.dlg.gencrossings_progressbar.setEnabled(True)
+        # self.dlg.gencrossings_progressbar.setEnabled(True)
 
 
 
@@ -916,7 +943,7 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(True)
 
         self.dlg.generate_crossings.setHidden(True)
-        self.dlg.gencrossings_progressbar.setHidden(True)
+        # self.dlg.gencrossings_progressbar.setHidden(True)
         self.dlg.widths_hint.setHidden(True)
 
 
@@ -964,10 +991,10 @@ class sidewalkreator:
         self.dlg.generate_crossings.setEnabled(False)
         self.dlg.dead_end_iters_label.setEnabled(False)
         self.dlg.dead_end_iters_box.setEnabled(False)
-        self.dlg.gencrossings_progressbar.setEnabled(False)
+        # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
-        self.dlg.gencrossings_progressbar.setValue(0)
+        # self.dlg.gencrossings_progressbar.setValue(0)
         self.dlg.datafetch_progressbar.setValue(0)
         
 
@@ -1015,7 +1042,7 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(False)
 
         self.dlg.generate_crossings.setHidden(False)
-        self.dlg.gencrossings_progressbar.setHidden(False)
+        # self.dlg.gencrossings_progressbar.setHidden(False)
 
         
         
@@ -1301,22 +1328,7 @@ class sidewalkreator:
         # it just removes lines that are really not connected
         remove_unconnected_lines(self.clipped_reproj_datalayer)
 
-        # creating the 'protoblocks' layer, is a poligonization of the streets layers
-        self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
-        self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
-        self.add_layer_canvas(self.protoblocks)
-
-
-        # dissolving so will become just one geometry:
-        self.dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
-        self.dissolved_protoblocks_0.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
-
-
-        #adding little buffer, so features touching boundaries will be fully within
-        self.dissolved_protoblocks_buff = generate_buffer(self.
-        dissolved_protoblocks_0,protoblocks_buffer)
-        self.dissolved_protoblocks_buff.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
 
 

@@ -39,7 +39,7 @@ big_buffer_d = 3000
 minimal_buffer = 3 # 2m
 
 # distance to add to distance to interpolate inner_points, should be a small distance, 0.5 or 1 m, generally
-d_to_add_interp_d = 0.5
+d_to_add_interp_d = 2
 
 
 # percent of length to interpolate if passes half the length

@@ -690,8 +690,8 @@ Base Img.</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>470</y>
+     <x>340</x>
+     <y>480</y>
      <width>231</width>
      <height>31</height>
     </rect>
@@ -747,22 +747,6 @@ dead-end-streets
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QProgressBar" name="gencrossings_progressbar">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>520</x>
-     <y>475</y>
-     <width>121</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="value">
-    <number>0</number>
    </property>
   </widget>
  </widget>

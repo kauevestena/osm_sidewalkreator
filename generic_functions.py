@@ -103,6 +103,13 @@ def get_intersections(inputlayer,intersect_layer,outputlayer):
 
     return processing.run('qgis:lineintersections',parameter_dict)['OUTPUT']
 
+def cliplayer_v2(inputlayer,overlay_lyr,outputlayer):
+    """
+        the first one was intended for datafiles, not memeory layers
+    """
+    parameter_dict = {'INPUT': inputlayer, 'OVERLAY': overlay_lyr, 'OUTPUT': outputlayer}
+
+    return processing.run('qgis:clip',parameter_dict)['OUTPUT']
 
 def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:Reprojected'):
     parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,
@@ -577,3 +584,12 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
 def items_minor_than_inlist(value,inpulist):
     # thx: https://stackoverflow.com/a/10543316/4436950
     return sum(entry < value for entry in inpulist)
+
+def keep_only_contained_within(inputlayer,geomlayer):
+
+    geomtocheck = get_first_feature_or_geom(geomlayer,True)
+
+    with edit(inputlayer):
+        for feature in inputlayer.getFeatures():
+            if not feature.geometry().within(geomtocheck):
+                inputlayer.deleteFeature(feature.id())
