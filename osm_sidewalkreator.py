@@ -618,8 +618,8 @@ class sidewalkreator:
             feature_layer_id = feature_A.id()
 
             # filling with 
-            P0_intersecting_widths = []
-            PF_intersecting_widths = []
+            P0_intersecting_widths = {} #[]
+            PF_intersecting_widths = {} #[]
 
 
             # tolerance for considering that a crossing center will have the crossing effectively drawn
@@ -635,12 +635,12 @@ class sidewalkreator:
                 if P0.intersects(feature_B.geometry()):
                     P0_count += 1
 
-                    P0_intersecting_widths.append(feature_B['width']) #[feature_B.id()] = feature_B['width']
+                    P0_intersecting_widths[feature_B.id()] = feature_B['width']
 
 
                 if PF.intersects(feature_B.geometry()):
                     PF_count += 1
-                    PF_intersecting_widths.append(feature_B['width']) #[feature_B.id()] = feature_B['width']
+                    PF_intersecting_widths[feature_B.id()] = feature_B['width']
 
 
             # print(i,P0_count,PF_count)
@@ -651,7 +651,9 @@ class sidewalkreator:
 
             # doing for the point at the beggining of segment:
             if P0_count > 2:
-                d_to_interpolate_P0 = (get_major_dif_signed(featurewidth,P0_intersecting_widths) * 0.5) + self.curveradius + d_to_add_interp_d
+                tr_widthP0, trfeat_idP0 = get_major_dif_signed(featurewidth,P0_intersecting_widths)
+
+                d_to_interpolate_P0 = (tr_widthP0 * 0.5) + self.curveradius + d_to_add_interp_d
 
                 # checking if its bigger than half the feature length:
                 if d_to_interpolate_P0 > (0.5 * featurelen):
@@ -676,7 +678,10 @@ class sidewalkreator:
             # doing for the point at the end of segment:
             if PF_count > 2:
 
-                d_to_interpolate_PF = (get_major_dif_signed(featurewidth,PF_intersecting_widths) * 0.5) + self.curveradius + d_to_add_interp_d
+                tr_widthPF, trfeat_idPF = get_major_dif_signed(featurewidth,PF_intersecting_widths)
+
+
+                d_to_interpolate_PF = (tr_widthPF * 0.5) + self.curveradius + d_to_add_interp_d
 
                 # checking if its bigger than half the feature length:
                 if d_to_interpolate_PF > (0.5 * featurelen):
@@ -718,9 +723,9 @@ class sidewalkreator:
         self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:crossing_centers')
 
         self.add_layer_canvas(self.inner_crossings_layer)
-        self.add_layer_canvas(inner_crossings_buff)
-        self.add_layer_canvas(self.protoblocks)
-        self.add_layer_canvas(self.dissolved_protoblocks_0)
+        # self.add_layer_canvas(inner_crossings_buff)
+        # self.add_layer_canvas(self.protoblocks)
+        # self.add_layer_canvas(self.dissolved_protoblocks_0)
 
 
 

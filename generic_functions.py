@@ -526,28 +526,31 @@ def gen_layer_spatial_index(inputlayer,use_fullgeom_flag=True):
 
 
 
-def get_major_dif_signed(inputval,inputlist,tol=0.5,print_diffs=False):
+def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
     '''
         in spite of finding a simple way to obtain the 'orthogonal' distance 
     '''
     
-    diffs = []
+    diffs = {} # []
 
-    for value in inputlist:
+    for key in inputdict:
         # always avoid to compare floats equally
-        if not isclose(inputval,value,abs_tol=tol):
-            diffs.append(value-inputval)
+        if not isclose(inputval,inputdict[key],abs_tol=tol):
+            diffs[key] = inputdict[key]-inputval #.append(inputdict[key]-inputval)
 
     if print_diffs:
         print(diffs)
 
     if diffs:
         if len(diffs) > 1:
-            return inputval+max(diffs)
+            key_maxdif = max(diffs,key=diffs.get)
+            return inputval+diffs[key_maxdif],key_maxdif
         else:
-            return inputval+diffs[0]
+            # dict with only one key:
+            only_key = next(iter(diffs)) # thx: https://stackoverflow.com/a/46042617/4436950
+            return inputval+diffs[only_key],only_key
     else:
-        return inputval
+        return inputval,-1
 
 
 
