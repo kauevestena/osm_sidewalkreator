@@ -528,7 +528,7 @@ def gen_layer_spatial_index(inputlayer,use_fullgeom_flag=True):
 
 def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
     '''
-        in spite of finding a simple way to obtain the 'orthogonal' distance 
+        in spite of finding a simple way to obtain the 'orthogonal' distance and ID of the orthonogal feature
     '''
     
     diffs = {} # []
@@ -537,6 +537,8 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
         # always avoid to compare floats equally
         if not isclose(inputval,inputdict[key],abs_tol=tol):
             diffs[key] = inputdict[key]-inputval #.append(inputdict[key]-inputval)
+        else:
+            refused_key = key
 
     if print_diffs:
         print(diffs)
@@ -550,7 +552,7 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
             only_key = next(iter(diffs)) # thx: https://stackoverflow.com/a/46042617/4436950
             return inputval+diffs[only_key],only_key
     else:
-        return inputval,-1
+        return inputval,refused_key
 
 
 
@@ -596,3 +598,19 @@ def keep_only_contained_within(inputlayer,geomlayer):
         for feature in inputlayer.getFeatures():
             if not feature.geometry().within(geomtocheck):
                 inputlayer.deleteFeature(feature.id())
+
+def feature_from_fid(inputlayer,fid):
+    """
+        could be a little less burocratic, but...
+    """
+
+    # thx: https://gis.stackexchange.com/a/59185/49900
+
+    feat_iterator = inputlayer.getFeatures(QgsFeatureRequest().setFilterFid(fid))
+
+    ret_feat = QgsFeature()
+
+    feat_iterator.nextFeature(ret_feat)
+
+    return ret_feat
+

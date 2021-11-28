@@ -635,12 +635,21 @@ class sidewalkreator:
                 if P0.intersects(feature_B.geometry()):
                     P0_count += 1
 
-                    P0_intersecting_widths[feature_B.id()] = feature_B['width']
+                    if not feature_B.id() == feature_layer_id:
+                        if not feature_osm_id == feature_B['id']: 
+                            P0_intersecting_widths[feature_B.id()] = feature_B['width']
 
 
                 if PF.intersects(feature_B.geometry()):
                     PF_count += 1
-                    PF_intersecting_widths[feature_B.id()] = feature_B['width']
+
+                    if not feature_B.id() == feature_layer_id:
+                        if not feature_osm_id == feature_B['id']: 
+                            PF_intersecting_widths[feature_B.id()] = feature_B['width']
+
+
+            # print(i+1,P0_intersecting_widths)
+            # print(i+1,PF_intersecting_widths,'\n')
 
 
             # print(i,P0_count,PF_count)
@@ -675,6 +684,16 @@ class sidewalkreator:
                 innerP0_feat.setAttributes([feature_osm_id])
                 inner_pts_featlist.append(innerP0_feat)
 
+
+
+                # part for the "cross-cut" segment
+                cr_feature_P0 = feature_from_fid(self.splitted_lines,trfeat_idP0) 
+
+                # then: lineLocatePoint
+                # line = QgsGeometry.fromPolyline([line_start,line_end])
+                # thx: https://gis.stackexchange.com/a/59196/49900
+
+
             # doing for the point at the end of segment:
             if PF_count > 2:
 
@@ -705,6 +724,10 @@ class sidewalkreator:
                 innerPF_feat.setAttributes([feature_osm_id])
                 inner_pts_featlist.append(innerPF_feat)
 
+
+                # part for the "cross-cut" segment
+                cr_feature_PF = feature_from_fid(self.splitted_lines,trfeat_idPF) 
+
             # # self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             
         
@@ -732,7 +755,6 @@ class sidewalkreator:
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
-        print('took: ',time.time()-ref_time,' seconds')
         # self.dlg.gencrossings_progressbar.setValue(100)
 
                   
