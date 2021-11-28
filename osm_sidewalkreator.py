@@ -411,6 +411,7 @@ class sidewalkreator:
             (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
             (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
             (self.dlg.dead_end_iters_label,'Iters. to remove\ndead-end-streets\n(0 to keep all of them)','Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)'),
+            (self.dlg.split_sidewalks,'Split Sidewalk Geometries','Subdividir Calçadas (Geometrias)'),
 
 
 
@@ -986,6 +987,7 @@ class sidewalkreator:
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
+        self.dlg.check_if_overlaps_buildings.setChecked(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.generate_crossings.setEnabled(False)
@@ -1050,6 +1052,8 @@ class sidewalkreator:
         if self.ignore_sidewalks_already_drawn:
             self.ignore_sidewalks_already_drawn = False
      
+        # control variables:
+        self.no_buildings = True
 
 
         # texts, for appearance:

@@ -119,7 +119,7 @@
    <property name="geometry">
     <rect>
      <x>230</x>
-     <y>600</y>
+     <y>610</y>
      <width>391</width>
      <height>41</height>
     </rect>
@@ -134,8 +134,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>600</y>
+     <x>80</x>
+     <y>610</y>
      <width>131</width>
      <height>31</height>
     </rect>
@@ -691,8 +691,8 @@ Base Img.</string>
    <property name="geometry">
     <rect>
      <x>340</x>
-     <y>480</y>
-     <width>231</width>
+     <y>470</y>
+     <width>261</width>
      <height>31</height>
     </rect>
    </property>
@@ -747,6 +747,34 @@ dead-end-streets
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="split_sidewalks">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>570</y>
+     <width>261</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Split Sidewalk Geometries</string>
+   </property>
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="autoDefault">
+    <bool>true</bool>
+   </property>
+   <property name="default">
+    <bool>false</bool>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
    </property>
   </widget>
  </widget>
