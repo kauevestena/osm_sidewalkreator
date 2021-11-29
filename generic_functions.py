@@ -317,6 +317,15 @@ def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
         for feature in inputlayer.getFeatures():
             inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
 
+def create_fill_id_field(inputlayer,fieldname = 'id_on_layer'):
+
+    created_field_index = create_new_layerfield(inputlayer,fieldname,QVariant.Int)
+
+    with edit(inputlayer):
+        for feature in inputlayer.getFeatures():
+            inputlayer.changeAttributeValue(feature.id(),created_field_index,feature.id())
+
+
 
 def remove_layerfields(inputlayer,fieldlist):
 
@@ -614,3 +623,48 @@ def feature_from_fid(inputlayer,fid):
 
     return ret_feat
 
+
+def points_intersecting_buffer_boundary(input_point,inputlayer,featlist=None,buffersize=1,segments=5):
+    '''
+        inputlayer must have geometries of Line type
+    '''
+
+    boundary = input_point.buffer(buffersize,segments).convertToType(1) # 1 is the value for "LineGeometry" in https://qgis.org/api/classQgsWkbTypes.html
+
+    # list storing the points that shall be returned:
+    ret_list = []
+
+
+    feat_request = QgsFeatureRequest()
+
+    if featlist:
+        feat_request.setFilterFids(featlist)
+
+
+
+    for feature in inputlayer.getFeatures(feat_request):
+        # ret_list.append(boundary.intersection(feature.geometry()))
+        ret_list.append(feature.geometry().intersection(boundary))
+
+
+    
+
+    return ret_list
+
+
+def min_angle_by_pointlist(fixedpoint_A,centerpoint_B,pointlist,return_index=False,max_instead=False):
+
+    if len(pointlist) == 0:
+        if return_index:
+            return 0
+        else:
+            return(pointlist[0])
+
+    else:
+        anglelist = []
+
+
+        for point in pointlist:
+            # point.asPoint
+
+            angle = QgsGeometryUtils.angleBetweenThreePoints()

@@ -35,7 +35,7 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from qgis import processing
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils
 
 
 # pure Qt imports, keep at minimun =P
@@ -529,7 +529,8 @@ class sidewalkreator:
                     """
 
 
-
+        # filling a column with original id within layer to recover after a operation like 
+        create_fill_id_field(self.splitted_lines)
 
         # adding layers to canvas:
         self.add_layer_canvas(self.filtered_intersection_points)
@@ -686,12 +687,18 @@ class sidewalkreator:
 
 
 
-                # part for the "cross-cut" segment
-                cr_feature_P0 = feature_from_fid(self.splitted_lines,trfeat_idP0) 
+                # # # part for the "cross-cut" segment
+                # # cr_feature_P0 = feature_from_fid(self.splitted_lines,trfeat_idP0) 
 
-                # then: lineLocatePoint
-                # line = QgsGeometry.fromPolyline([line_start,line_end])
-                # thx: https://gis.stackexchange.com/a/59196/49900
+
+                # # # then: lineLocatePoint
+                # # # line = QgsGeometry.fromPolyline([line_start,line_end])
+                # # # thx: https://gis.stackexchange.com/a/59196/49900
+
+                # testing by doing some buffer
+
+                pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
+
 
 
             # doing for the point at the end of segment:
