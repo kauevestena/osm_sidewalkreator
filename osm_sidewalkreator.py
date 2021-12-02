@@ -583,6 +583,7 @@ class sidewalkreator:
 
 
     def draw_crossings(self):
+
         # stuff to be disabled:
         self.dlg.generate_crossings.setEnabled(False)
 
@@ -601,6 +602,11 @@ class sidewalkreator:
 
         # for progressbar:
         featcount = self.splitted_lines.featureCount()
+
+
+        # to (probably) speed up intersections:
+        dissolved_sidewalks = dissolve_tosinglepart(self.whole_sidewalks)
+        dissolved_sidewalks_geom = get_first_feature_or_geom(dissolved_sidewalks,True)
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
@@ -697,7 +703,31 @@ class sidewalkreator:
 
                 # testing by doing some buffer
 
+                '''
+                    in the next functions, we:
+
+                        - create the candidate points, intersecting lines with circle 
+
+                        - find the index of the point that forms the minor angle 
+
+                        - create the vector containing the direction of the crossing
+                '''
+
                 pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
+
+
+                # chosen index:
+                ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
+
+                crossing_dirvec_P0 = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+
+
+            # summing up to obtain points in each side and creating line   geometries to find intersections (at the function)
+
+
+
+
+
 
 
 
@@ -733,7 +763,7 @@ class sidewalkreator:
 
 
                 # part for the "cross-cut" segment
-                cr_feature_PF = feature_from_fid(self.splitted_lines,trfeat_idPF) 
+                # cr_feature_PF = feature_from_fid(self.splitted_lines,trfeat_idPF) 
 
             # # self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             

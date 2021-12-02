@@ -4,9 +4,9 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector
 import os
-from math import isclose
+from math import isclose,pi
 
 
 
@@ -652,7 +652,19 @@ def points_intersecting_buffer_boundary(input_point,inputlayer,featlist=None,buf
     return ret_list
 
 
-def min_angle_by_pointlist(fixedpoint_A,centerpoint_B,pointlist,return_index=False,max_instead=False):
+def qgsgeom_to_pointuple(inputgeom):
+    # TODO (if needed): consider Z or M
+
+    p = inputgeom.asPoint()
+
+    return p.x(),p.y()
+
+def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index=False,max_instead=False,print_angles=False):
+    '''
+        that is: the point that will forms the minor angle, compared to other angles spawn by the other points.
+
+        All angles are formed in conjunction with fixed points A and B 
+    '''
 
     if len(pointlist) == 0:
         if return_index:
@@ -663,8 +675,71 @@ def min_angle_by_pointlist(fixedpoint_A,centerpoint_B,pointlist,return_index=Fal
     else:
         anglelist = []
 
+        pA = qgsgeom_to_pointuple(fixedpoint_A)
+
+        pB = qgsgeom_to_pointuple(centerpoint_B)
+
 
         for point in pointlist:
-            # point.asPoint
+            pC = qgsgeom_to_pointuple(point)
 
-            angle = QgsGeometryUtils.angleBetweenThreePoints()
+
+            angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+
+            if angle > 180:
+                angle = 360 - angle
+
+            anglelist.append(angle)
+
+        if print_angles:
+            print(anglelist)
+
+        index = anglelist.index(min(anglelist))
+
+        if return_index:
+            return index
+        else:
+            return pointlist[index]
+
+
+def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
+
+    pA = qgsgeom_to_pointuple(point_A)
+
+    pB = qgsgeom_to_pointuple(point_B)
+
+    dx = pB[0] - pA[0]
+
+    dy = pB[1] - pA[1]
+
+    ret_vec = QgsVector(dx,dy)
+
+    if desiredLen:
+        return ret_vec.normalized() * desiredLen
+    else:
+        if normalized:
+            return ret_vec.normalized()
+        else:
+            return ret_vec
+
+def two_intersections_byvector(vector,centerpoint,target_intersec_geom):
+
+        # correct datatype (QgsPoint/QGSPointXY)
+        center_point = centerpoint.asPoint()
+
+
+        p_sideA = center_point + vector
+        p_sideB = center_point - vector
+
+
+
+
+
+        line_sideA = QgsGeometry.fromPolylineXY([center_point,p_sideA])
+        intersec_sideA = target_intersec_geom.intersection(line_sideA)
+
+
+        line_sideB = QgsGeometry.fromPolylineXY([center_point,p_sideB])
+        intersec_sideB = target_intersec_geom.intersection(line_sideB)
+
+        print(intersec_sideA,intersec_sideB)
