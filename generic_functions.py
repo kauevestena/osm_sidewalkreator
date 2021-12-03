@@ -722,24 +722,20 @@ def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
         else:
             return ret_vec
 
-def two_intersections_byvector(vector,centerpoint,target_intersec_geom):
-
-        # correct datatype (QgsPoint/QGSPointXY)
-        center_point = centerpoint.asPoint()
-
-
-        p_sideA = center_point + vector
-        p_sideB = center_point - vector
-
+def check_sidewalk_intersection(intersectiongeom,referencepoint):
+    if not intersectiongeom.isEmpty():
+        if not intersectiongeom.isMultipart():
+            return True,intersectiongeom
+        else:
+            # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearer to "referencepoint" 
+            as_geomcollection = intersectiongeom.asGeometryCollection()
 
 
+            distances = [referencepoint.distance(point.asPoint()) for point in as_geomcollection]
+
+            return True,as_geomcollection[distances.index(min(distances))]
 
 
-        line_sideA = QgsGeometry.fromPolylineXY([center_point,p_sideA])
-        intersec_sideA = target_intersec_geom.intersection(line_sideA)
-
-
-        line_sideB = QgsGeometry.fromPolylineXY([center_point,p_sideB])
-        intersec_sideB = target_intersec_geom.intersection(line_sideB)
-
-        print(intersec_sideA,intersec_sideB)
+    else:
+        # if there's no intersection point it's because the vector length isn't enough in order to make it, so we need to enlarge that vector 
+        return False,None

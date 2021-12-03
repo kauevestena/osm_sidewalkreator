@@ -1,4 +1,6 @@
-a = {}
+a = [False,True]
 
-if a:
-    print('a')
+if not all(a):
+    print(a)
+else:
+    print('no')

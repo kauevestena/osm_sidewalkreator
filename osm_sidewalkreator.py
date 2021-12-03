@@ -582,6 +582,9 @@ class sidewalkreator:
         self.dlg.add_bing_base.setEnabled(False)
 
 
+    
+
+
     def draw_crossings(self):
 
         # stuff to be disabled:
@@ -603,10 +606,6 @@ class sidewalkreator:
         # for progressbar:
         featcount = self.splitted_lines.featureCount()
 
-
-        # to (probably) speed up intersections:
-        dissolved_sidewalks = dissolve_tosinglepart(self.whole_sidewalks)
-        dissolved_sidewalks_geom = get_first_feature_or_geom(dissolved_sidewalks,True)
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
@@ -720,6 +719,9 @@ class sidewalkreator:
                 ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
 
                 crossing_dirvec_P0 = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+
+                # this part should be done after decimating only elegible points
+                # pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(crossing_dirvec_P0,innerP0_0,True)
 
 
             # summing up to obtain points in each side and creating line   geometries to find intersections (at the function)
@@ -926,6 +928,11 @@ class sidewalkreator:
         # self.add_layer_canvas(dissolved_buffer) #just for test
         # self.add_layer_canvas(diff_layer) #just for test
         self.add_layer_canvas(self.whole_sidewalks)
+
+
+        # to (probably) speed up intersections:
+        self.dissolved_sidewalks = dissolve_tosinglepart(self.whole_sidewalks)
+        self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
         
 
 
@@ -1474,5 +1481,51 @@ class sidewalkreator:
             session_report.write(str(input_stringable))
             if add_newline:
                 session_report.write('\n')
+
+    def two_intersections_byvector_with_sidewalks(self,vector,centerpoint,print_points=False):
+
+        # correct datatype (QgsPoint/QGSPointXY)
+        center_point = centerpoint.asPoint()
+
+        coef_sideA = 1
+        coef_sideB = 1
+
+        sideA_ok = False
+        sideB_ok = False
+
+        while not all([sideA_ok,sideB_ok]):
+            # we may iterate, as the intersection can give more than one point or no point at all
+
+            p_sideA = center_point + (vector * coef_sideA)
+            p_sideB = center_point - (vector * coef_sideB)
+
+            line_sideA = QgsGeometry.fromPolylineXY([center_point,p_sideA])
+            intersec_sideA_0 = self.dissolved_sidewalks_geom.intersection(line_sideA)
+
+            line_sideB = QgsGeometry.fromPolylineXY([center_point,p_sideB])
+            intersec_sideB_0 = self.dissolved_sidewalks_geom.intersection(line_sideB)
+
+
+            print('lines: ',line_sideA,line_sideB)
+            print('intersections:',intersec_sideA_0,intersec_sideB_0)
+            print('vector,points: ',vector,'\n',p_sideA,p_sideB,'\n\n')
+            time.sleep(10)
+
+            sideA_ok,intersec_sideA = check_sidewalk_intersection(intersec_sideA_0,center_point)
+            sideB_ok,intersec_sideB = check_sidewalk_intersection(intersec_sideB_0,center_point)
+
+
+
+
+            if not sideA_ok:
+                coef_sideA *= 2
+            if not sideB_ok:
+                coef_sideB *= 2
+
+
+        if print_points:
+            print(intersec_sideA,intersec_sideB)
+
+        return intersec_sideA,intersec_sideB
 
 
