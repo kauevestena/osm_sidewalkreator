@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>668</width>
+    <width>702</width>
     <height>663</height>
    </rect>
   </property>
@@ -324,7 +324,7 @@ Compute Intersections</string>
    <property name="geometry">
     <rect>
      <x>340</x>
-     <y>400</y>
+     <y>392</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -369,7 +369,7 @@ for Each Segment...</string>
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>300</y>
+     <y>290</y>
      <width>241</width>
      <height>41</height>
     </rect>
@@ -435,7 +435,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>290</x>
-     <y>260</y>
+     <y>250</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -466,7 +466,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>490</x>
-     <y>360</y>
+     <y>350</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -513,7 +513,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>250</y>
+     <y>240</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -533,7 +533,7 @@ to Buildings</string>
    <property name="geometry">
     <rect>
      <x>550</x>
-     <y>350</y>
+     <y>340</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -553,7 +553,7 @@ Radius</string>
    <property name="geometry">
     <rect>
      <x>380</x>
-     <y>350</y>
+     <y>340</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -573,7 +573,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>300</x>
-     <y>360</y>
+     <y>350</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -607,7 +607,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>490</x>
-     <y>260</y>
+     <y>250</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -644,7 +644,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>550</x>
-     <y>250</y>
+     <y>240</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -776,6 +776,102 @@ dead-end-streets
    <property name="flat">
     <bool>false</bool>
    </property>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>420</y>
+     <width>414</width>
+     <height>44</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <item>
+     <widget class="QDoubleSpinBox" name="d_to_add_inward_box">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="prefix">
+       <string/>
+      </property>
+      <property name="suffix">
+       <string> m</string>
+      </property>
+      <property name="decimals">
+       <number>2</number>
+      </property>
+      <property name="minimum">
+       <double>0.000000000000000</double>
+      </property>
+      <property name="maximum">
+       <double>4.000000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.100000000000000</double>
+      </property>
+      <property name="value">
+       <double>2.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="label_inward_d">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>distance
+inward</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QRadioButton" name="opt_parallel_crossings">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>in parallel to
+transversal seg.</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="opt_perp_crossings">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>perpendicularly</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
  </widget>
  <customwidgets>

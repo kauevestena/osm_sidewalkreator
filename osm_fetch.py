@@ -3,6 +3,7 @@ import requests, os, time, json
 # import geopandas as gpd
 # from geopandas import read_file
 import osm2geojson
+from itertools import cycle
 from qgis.core import QgsApplication
 
 # doing some stuff again to avoid circular imports:
@@ -114,21 +115,28 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
 
-    # the requests part:
-    overpass_url = "http://overpass-api.de/api/interpreter" # there are also other options
+    overpass_url_list = ["http://overpass-api.de/api/interpreter","https://lz4.overpass-api.de/api/interpreter","https://z.overpass-api.de/api/interpreter",'https://overpass.openstreetmap.ru/api/interpreter','https://overpass.openstreetmap.fr/api/interpreter','https://overpass.kumi.systems/api/interpreter']
+
+    # to iterate circularly, thx: https://stackoverflow.com/a/23416519/4436950
+    circular_iterator = cycle(overpass_url_list)
+
+    overpass_url = next(circular_iterator)
 
 
     while True:
         # TODO: ensure sucess 
         #   (the try statement is an improvement already)
         try:
-            response = requests.get(overpass_url,params={'data':querystring})
+            response = requests.get(overpass_url,params={'data':querystring},timeout=30)
 
             if response.status_code == 200:
                 break
         except:
             print('request not sucessful, retrying in 5 seconds... status:',response.status_code)
             time.sleep(5)
+            overpass_url = next(circular_iterator)
+            print('retrying with server',overpass_url)
+
             
 
 

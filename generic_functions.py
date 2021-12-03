@@ -563,7 +563,8 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
     else:
         return inputval,refused_key
 
-
+def geom_to_feature(inputgeom):
+    return QgsFeature().setGeometry(inputgeom)
 
 def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
     '''

@@ -596,6 +596,8 @@ class sidewalkreator:
         # storing innerpoints, to then create a layer with them
         inner_pts_featlist = []
 
+        # storing the direction vectors of crossings
+        dirvecs_dict = {}
 
         # creating a spatial index for sidewalks
         # sidewalks_spatial_index = gen_layer_spatial_index(self.whole_sidewalks,False)
@@ -683,11 +685,13 @@ class sidewalkreator:
 
                 # print(i+1,dlist_P0) 
 
+                innerP0_id = f"{feature_layer_id}_P0"
+
                 # if items_minor_than_inlist(tolerance_draw_crossing,dlist_P0) == 2:
                 # transforming as a feature, storing osm id
                 innerP0_feat = QgsFeature()
                 innerP0_feat.setGeometry(innerP0_0)
-                innerP0_feat.setAttributes([feature_osm_id])
+                innerP0_feat.setAttributes([feature_osm_id,innerP0_id])
                 inner_pts_featlist.append(innerP0_feat)
 
 
@@ -718,10 +722,11 @@ class sidewalkreator:
                 # chosen index:
                 ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
 
-                crossing_dirvec_P0 = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+                dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+
 
                 # this part should be done after decimating only elegible points
-                # pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(crossing_dirvec_P0,innerP0_0,True)
+
 
 
             # summing up to obtain points in each side and creating line   geometries to find intersections (at the function)
@@ -747,6 +752,9 @@ class sidewalkreator:
 
                 # since we are interpolating from the end and by QGIS 3.20 it does not support negative interpolation, we just subtract from total feature length
                 innerPF_0 = feature_A.geometry().interpolate(featurelen-d_to_interpolate_PF)
+
+                innerPF_id = f"{feature_layer_id}_PF"
+
                 # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
 
                 # getting distances from inner_points to sidewalks:
@@ -760,8 +768,27 @@ class sidewalkreator:
                     # transforming as a feature, storing osm id
                 innerPF_feat = QgsFeature()
                 innerPF_feat.setGeometry(innerPF_0)
-                innerPF_feat.setAttributes([feature_osm_id])
+                innerPF_feat.setAttributes([feature_osm_id,innerPF_id])
                 inner_pts_featlist.append(innerPF_feat)
+
+
+                '''
+                    in the next functions, we:
+
+                        - create the candidate points, intersecting lines with circle 
+
+                        - find the index of the point that forms the minor angle 
+
+                        - create the vector containing the direction of the crossing
+                '''
+
+                pts_inters_PF =  points_intersecting_buffer_boundary(PF,self.splitted_lines,list(PF_intersecting_widths))
+
+
+                # chosen index:
+                ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
+
+                dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],tolerance_draw_crossing)
 
 
                 # part for the "cross-cut" segment
@@ -770,7 +797,7 @@ class sidewalkreator:
             # # self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
             
         
-        inner_crossings_layer_0 = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String})
+        inner_crossings_layer_0 = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String,'crossing_center_id':QVariant.String})
         inner_crossings_layer_0.setCrs(self.custom_localTM_crs)
 
 
@@ -783,6 +810,25 @@ class sidewalkreator:
 
         # clipping the crossing centers:
         self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:crossing_centers')
+
+        """
+            now doing computation of crossing points   
+        """
+
+        for feature in self.inner_crossings_layer.getFeatures():
+            
+            key = feature['crossing_center_id']
+
+
+            pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry())
+
+            pA_feat = geom_to_feature(pA_crossings)
+            pE_feat = geom_to_feature(pE_crossings)
+
+            self.inner_crossings_layer.dataProvider().addFeature(pA_feat)
+            self.inner_crossings_layer.dataProvider().addFeature(pE_feat)
+
+
 
         self.add_layer_canvas(self.inner_crossings_layer)
         # self.add_layer_canvas(inner_crossings_buff)
@@ -1485,7 +1531,10 @@ class sidewalkreator:
     def two_intersections_byvector_with_sidewalks(self,vector,centerpoint,print_points=False):
 
         # correct datatype (QgsPoint/QGSPointXY)
-        center_point = centerpoint.asPoint()
+        if centerpoint.isMultipart():
+            center_point = centerpoint.asGeometryCollection()[0].asPoint()
+        else:
+            center_point = centerpoint.asPoint()
 
         coef_sideA = 1
         coef_sideB = 1

@@ -1,6 +1,31 @@
-a = [False,True]
+from itertools import cycle
 
-if not all(a):
-    print(a)
-else:
-    print('no')
+l = [1,2,3,4,5,]
+
+pool = cycle(l)
+
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
+print(next(pool))
