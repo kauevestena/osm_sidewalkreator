@@ -564,7 +564,13 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
         return inputval,refused_key
 
 def geom_to_feature(inputgeom):
-    return QgsFeature().setGeometry(inputgeom)
+    # remember that inplace methods generally have a return that isn't the object itself #lessons
+
+    ret_feat = QgsFeature()
+
+    ret_feat.setGeometry(inputgeom)
+
+    return ret_feat 
 
 def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
     '''

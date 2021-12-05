@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>702</width>
+    <width>771</width>
     <height>663</height>
    </rect>
   </property>
@@ -153,7 +153,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>270</x>
+     <x>350</x>
      <y>140</y>
      <width>171</width>
      <height>51</height>
@@ -187,7 +187,7 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>450</x>
+     <x>530</x>
      <y>130</y>
      <width>171</width>
      <height>21</height>
@@ -323,7 +323,7 @@ Compute Intersections</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>340</x>
+     <x>400</x>
      <y>392</y>
      <width>261</width>
      <height>31</height>
@@ -348,7 +348,7 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>300</x>
+     <x>360</x>
      <y>200</y>
      <width>291</width>
      <height>41</height>
@@ -368,7 +368,7 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>370</x>
+     <x>430</x>
      <y>290</y>
      <width>241</width>
      <height>41</height>
@@ -434,7 +434,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>350</x>
      <y>250</y>
      <width>69</width>
      <height>26</height>
@@ -465,7 +465,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>490</x>
+     <x>550</x>
      <y>350</y>
      <width>69</width>
      <height>26</height>
@@ -496,7 +496,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>470</x>
+     <x>550</x>
      <y>160</y>
      <width>118</width>
      <height>23</height>
@@ -512,7 +512,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>370</x>
+     <x>430</x>
      <y>240</y>
      <width>101</width>
      <height>41</height>
@@ -532,7 +532,7 @@ to Buildings</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>550</x>
+     <x>610</x>
      <y>340</y>
      <width>101</width>
      <height>41</height>
@@ -552,7 +552,7 @@ Radius</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>380</x>
+     <x>440</x>
      <y>340</y>
      <width>101</width>
      <height>41</height>
@@ -572,7 +572,7 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>300</x>
+     <x>360</x>
      <y>350</y>
      <width>69</width>
      <height>26</height>
@@ -606,7 +606,7 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>490</x>
+     <x>550</x>
      <y>250</y>
      <width>69</width>
      <height>26</height>
@@ -643,7 +643,7 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>550</x>
+     <x>610</x>
      <y>240</y>
      <width>101</width>
      <height>41</height>
@@ -690,14 +690,14 @@ Base Img.</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>340</x>
+     <x>400</x>
      <y>470</y>
      <width>261</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>Generate Crossings</string>
+    <string>Generate Crossings and Kerbs</string>
    </property>
    <property name="checkable">
     <bool>false</bool>
@@ -755,7 +755,7 @@ dead-end-streets
    </property>
    <property name="geometry">
     <rect>
-     <x>330</x>
+     <x>390</x>
      <y>570</y>
      <width>261</width>
      <height>31</height>
@@ -777,16 +777,43 @@ dead-end-streets
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>280</x>
      <y>420</y>
-     <width>414</width>
+     <width>491</width>
      <height>44</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <item>
+     <widget class="QSpinBox" name="perc_draw_kerbs_box">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="suffix">
+       <string>%</string>
+      </property>
+      <property name="value">
+       <number>30</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="perc_draw_kerbs_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Kerbs
+at</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
     <item>
      <widget class="QDoubleSpinBox" name="d_to_add_inward_box">
       <property name="enabled">
@@ -862,7 +889,8 @@ transversal seg.</string>
          <enum>Qt::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>perpendicularly</string>
+         <string>perpen-
+dicularly</string>
         </property>
         <property name="checkable">
          <bool>true</bool>

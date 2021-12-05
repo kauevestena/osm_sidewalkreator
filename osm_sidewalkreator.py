@@ -412,6 +412,10 @@ class sidewalkreator:
             (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
             (self.dlg.dead_end_iters_label,'Iters. to remove\ndead-end-streets\n(0 to keep all of them)','Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)'),
             (self.dlg.split_sidewalks,'Split Sidewalk Geometries','Subdividir Calçadas (Geometrias)'),
+            (self.dlg.perc_draw_kerbs_label,'Kerbs\nat','Kerb*\nem.'),
+            (self.dlg.opt_parallel_crossings,'in parallel to\ntransversal seg.','paralelo ao\nseg. transversal'),
+            (self.dlg.opt_perp_crossings,'perpen-\ndicularly','perpendi-\ncularmente'),
+            (self.dlg.label_inward_d,'distance\ninward','distância\nadentro'),
 
 
 
@@ -670,7 +674,7 @@ class sidewalkreator:
             if P0_count > 2:
                 tr_widthP0, trfeat_idP0 = get_major_dif_signed(featurewidth,P0_intersecting_widths)
 
-                d_to_interpolate_P0 = (tr_widthP0 * 0.5) + self.curveradius + d_to_add_interp_d
+                d_to_interpolate_P0 = (tr_widthP0 * 0.5) + self.curveradius + self.dlg.d_to_add_inward_box.value()
 
                 # checking if its bigger than half the feature length:
                 if d_to_interpolate_P0 > (0.5 * featurelen):
@@ -822,8 +826,12 @@ class sidewalkreator:
 
             pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry())
 
+            # print(pA_crossings,pE_crossings)
+
             pA_feat = geom_to_feature(pA_crossings)
             pE_feat = geom_to_feature(pE_crossings)
+
+            # print(pA_feat,pE_feat)
 
             self.inner_crossings_layer.dataProvider().addFeature(pA_feat)
             self.inner_crossings_layer.dataProvider().addFeature(pE_feat)
@@ -1109,7 +1117,12 @@ class sidewalkreator:
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.generate_crossings.setEnabled(False)
         self.dlg.dead_end_iters_label.setEnabled(False)
-        self.dlg.dead_end_iters_box.setEnabled(False)
+        self.dlg.perc_draw_kerbs_box.setEnabled(False)
+        self.dlg.perc_draw_kerbs_label.setEnabled(False)
+        self.dlg.d_to_add_inward_box.setEnabled(False)
+        self.dlg.label_inward_d.setEnabled(False)
+        self.dlg.opt_parallel_crossings.setEnabled(False)
+        self.dlg.opt_perp_crossings.setEnabled(False)
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
@@ -1135,6 +1148,8 @@ class sidewalkreator:
         self.dlg.curve_radius_box.setValue(default_curve_radius)
         self.dlg.d_to_add_box.setValue(d_to_add_to_each_side*2)
         self.dlg.min_width_box.setValue(minimal_buffer*2)
+        self.dlg.perc_draw_kerbs_box.setValue(perc_draw_kerbs)
+        self.dlg.d_to_add_inward_box.setValue(d_to_add_interp_d)
 
 
         #hidden elements
@@ -1161,6 +1176,17 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(False)
 
         self.dlg.generate_crossings.setHidden(False)
+
+        self.dlg.split_sidewalks.setHidden(False)
+
+
+        self.dlg.perc_draw_kerbs_box.setHidden(False)
+        self.dlg.perc_draw_kerbs_label.setHidden(False)
+        self.dlg.d_to_add_inward_box.setHidden(False)
+        self.dlg.label_inward_d.setHidden(False)
+        self.dlg.opt_parallel_crossings.setHidden(False)
+        self.dlg.opt_perp_crossings.setHidden(False)
+
         # self.dlg.gencrossings_progressbar.setHidden(False)
 
         
@@ -1555,10 +1581,10 @@ class sidewalkreator:
             intersec_sideB_0 = self.dissolved_sidewalks_geom.intersection(line_sideB)
 
 
-            print('lines: ',line_sideA,line_sideB)
-            print('intersections:',intersec_sideA_0,intersec_sideB_0)
-            print('vector,points: ',vector,'\n',p_sideA,p_sideB,'\n\n')
-            time.sleep(10)
+            # print('lines: ',line_sideA,line_sideB)
+            # print('intersections:',intersec_sideA_0,intersec_sideB_0)
+            # print('vector,points: ',vector,'\n',p_sideA,p_sideB,'\n\n')
+            # time.sleep(10)
 
             sideA_ok,intersec_sideA = check_sidewalk_intersection(intersec_sideA_0,center_point)
             sideB_ok,intersec_sideB = check_sidewalk_intersection(intersec_sideB_0,center_point)

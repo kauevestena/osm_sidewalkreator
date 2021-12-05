@@ -41,6 +41,8 @@ minimal_buffer = 3 # 2m
 # distance to add to distance to interpolate inner_points, should be a small distance, 0.5 or 1 m, generally
 d_to_add_interp_d = 2
 
+# percent of middle-crossing segment to draw Kerbs
+perc_draw_kerbs = 30
 
 # percent of length to interpolate if passes half the length
 perc_to_interpolate = 0.4
