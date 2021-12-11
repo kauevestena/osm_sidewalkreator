@@ -337,6 +337,7 @@ class sidewalkreator:
             self.dlg.input_layer_selector.layerChanged.connect(self.get_input_layer)
 
 
+
             # # # handles and modifications/ors:
             self.dlg.input_layer_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.input_layer_selector.setAllowEmptyLayer(True)
@@ -408,7 +409,6 @@ class sidewalkreator:
             (self.dlg.min_width_label,'Min Width','Largura Mínima'),
             (self.dlg.add_osm_basemap,'+ OSM\nBase Map','+Mapa-Base\nOSM'),
             (self.dlg.add_bing_base,'+ BING\nBase Img.','+Imagens\nBING'),
-            (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
             (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
             (self.dlg.dead_end_iters_label,'Iters. to remove\ndead-end-streets\n(0 to keep all of them)','Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)'),
             (self.dlg.split_sidewalks,'Split Sidewalk Geometries','Subdividir Calçadas (Geometrias)'),
@@ -590,9 +590,16 @@ class sidewalkreator:
 
 
     def draw_crossings(self):
+        print()
 
         # stuff to be disabled:
         self.dlg.generate_crossings.setEnabled(False)
+        self.dlg.perc_draw_kerbs_box.setEnabled(False)
+        self.dlg.perc_draw_kerbs_label.setEnabled(False)
+        self.dlg.d_to_add_inward_box.setEnabled(False)
+        self.dlg.label_inward_d.setEnabled(False)
+        self.dlg.opt_parallel_crossings.setEnabled(False)
+        self.dlg.opt_perp_crossings.setEnabled(False)
 
         # analyzing if the endpoits of splitted lines are elegible for  
         #   iterating again each street segment:
@@ -723,10 +730,23 @@ class sidewalkreator:
                 pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
 
 
-                # chosen index:
-                ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
+                if self.dlg.opt_parallel_crossings.isChecked():
+                    # chosen index:
+                    ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
 
-                dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+                    dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],tolerance_draw_crossing)
+
+                if self.dlg.opt_perp_crossings.isChecked():
+
+                    # creating a perpendicular vector:
+                    #    first, we create a vector parallel to the current street segment
+                    seg_parallel_vector = vector_from_2_pts(P0,innerP0_0,tolerance_draw_crossing)
+
+                    # now the direction perpendicular vector:
+
+
+
+                    
 
 
                 # this part should be done after decimating only elegible points
@@ -1008,6 +1028,12 @@ class sidewalkreator:
 
         # enabling what shall be enabled afterwards:
         self.dlg.generate_crossings.setEnabled(True)
+        self.dlg.perc_draw_kerbs_box.setEnabled(True)
+        self.dlg.perc_draw_kerbs_label.setEnabled(True)
+        self.dlg.d_to_add_inward_box.setEnabled(True)
+        self.dlg.label_inward_d.setEnabled(True)
+        self.dlg.opt_parallel_crossings.setEnabled(True)
+        self.dlg.opt_perp_crossings.setEnabled(True)
         # self.dlg.gencrossings_progressbar.setEnabled(True)
 
 
@@ -1069,6 +1095,12 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(True)
 
         self.dlg.generate_crossings.setHidden(True)
+        self.dlg.perc_draw_kerbs_box.setHidden(True)
+        self.dlg.perc_draw_kerbs_label.setHidden(True)
+        self.dlg.d_to_add_inward_box.setHidden(True)
+        self.dlg.label_inward_d.setHidden(True)
+        self.dlg.opt_parallel_crossings.setHidden(True)
+        self.dlg.opt_perp_crossings.setHidden(True)
         # self.dlg.gencrossings_progressbar.setHidden(True)
         self.dlg.widths_hint.setHidden(True)
 
@@ -1115,8 +1147,8 @@ class sidewalkreator:
         self.dlg.check_if_overlaps_buildings.setChecked(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
-        self.dlg.generate_crossings.setEnabled(False)
         self.dlg.dead_end_iters_label.setEnabled(False)
+        self.dlg.generate_crossings.setEnabled(False)
         self.dlg.perc_draw_kerbs_box.setEnabled(False)
         self.dlg.perc_draw_kerbs_label.setEnabled(False)
         self.dlg.d_to_add_inward_box.setEnabled(False)
@@ -1176,6 +1208,12 @@ class sidewalkreator:
         self.dlg.min_width_label.setHidden(False)
 
         self.dlg.generate_crossings.setHidden(False)
+        self.dlg.perc_draw_kerbs_box.setHidden(False)
+        self.dlg.perc_draw_kerbs_label.setHidden(False)
+        self.dlg.d_to_add_inward_box.setHidden(False)
+        self.dlg.label_inward_d.setHidden(False)
+        self.dlg.opt_parallel_crossings.setHidden(False)
+        self.dlg.opt_perp_crossings.setHidden(False)
 
         self.dlg.split_sidewalks.setHidden(False)
 
