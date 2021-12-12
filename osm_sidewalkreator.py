@@ -590,7 +590,6 @@ class sidewalkreator:
 
 
     def draw_crossings(self):
-        print()
 
         # stuff to be disabled:
         self.dlg.generate_crossings.setEnabled(False)
@@ -646,8 +645,9 @@ class sidewalkreator:
             # b: three times half the width
             tolerance_draw_crossing = featurewidth + self.dlg.d_to_add_box.value()
 
-            # 3 times to KNN search
-            tol_search_d = 3 * tolerance_draw_crossing
+            # # 3 times to KNN search 
+            # # KNN search was deprecated
+            # # tol_search_d = 3 * tolerance_draw_crossing
 
             for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
                 # if not i == j:
@@ -727,10 +727,11 @@ class sidewalkreator:
                         - create the vector containing the direction of the crossing
                 '''
 
-                pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
 
 
                 if self.dlg.opt_parallel_crossings.isChecked():
+                    pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
+
                     # chosen index:
                     ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
 
@@ -741,6 +742,8 @@ class sidewalkreator:
                     # creating a perpendicular vector:
                     #    first, we create a vector parallel to the current street segment
                     seg_parallel_vector = vector_from_2_pts(P0,innerP0_0,tolerance_draw_crossing)
+
+                    dirvecs_dict[innerP0_id] = seg_parallel_vector.perpVector()
 
                     # now the direction perpendicular vector:
 
@@ -806,14 +809,24 @@ class sidewalkreator:
                         - create the vector containing the direction of the crossing
                 '''
 
-                pts_inters_PF =  points_intersecting_buffer_boundary(PF,self.splitted_lines,list(PF_intersecting_widths))
+
+                if self.dlg.opt_parallel_crossings.isChecked():
+                    pts_inters_PF =  points_intersecting_buffer_boundary(PF,self.splitted_lines,list(PF_intersecting_widths))
 
 
-                # chosen index:
-                ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
+                    # chosen index:
+                    ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
 
-                dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],tolerance_draw_crossing)
+                    dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],tolerance_draw_crossing)
 
+
+                if self.dlg.opt_perp_crossings.isChecked():
+
+                    # creating a perpendicular vector:
+                    #    first, we create a vector parallel to the current street segment
+                    seg_parallel_vector = vector_from_2_pts(PF,innerPF_0,tolerance_draw_crossing)
+
+                    dirvecs_dict[innerPF_id] = seg_parallel_vector.perpVector()
 
                 # part for the "cross-cut" segment
                 # cr_feature_PF = feature_from_fid(self.splitted_lines,trfeat_idPF) 
@@ -843,10 +856,16 @@ class sidewalkreator:
             
             key = feature['crossing_center_id']
 
+            pC = feature.geometry().asPoint()
 
             pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry())
 
             # print(pA_crossings,pE_crossings)
+
+
+            segment_AC = QgsGeometry.fromPolyline([])
+            segment_EC = QgsGeometry.fromPolyline([])
+
 
             pA_feat = geom_to_feature(pA_crossings)
             pE_feat = geom_to_feature(pE_crossings)
@@ -1079,6 +1098,8 @@ class sidewalkreator:
         self.dlg.clean_data.setEnabled(False)
         self.dlg.output_file_selector.setEnabled(False)
 
+        self.dlg.dead_end_iters_label.setEnabled(False)
+        self.dlg.dead_end_iters_box.setEnabled(False)
 
 
         # objects that must be hidden:
@@ -1227,7 +1248,7 @@ class sidewalkreator:
 
         # self.dlg.gencrossings_progressbar.setHidden(False)
 
-        
+        self.dlg.opt_parallel_crossings.setChecked(True)
         
         # control variables:
         if self.ignore_sidewalks_already_drawn:
@@ -1553,7 +1574,10 @@ class sidewalkreator:
 
 
         
-
+        # Finally, enabling next button:
+        self.dlg.clean_data.setEnabled(True)
+        self.dlg.dead_end_iters_label.setEnabled(True)
+        self.dlg.dead_end_iters_box.setEnabled(True)
 
 
 
@@ -1570,10 +1594,7 @@ class sidewalkreator:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
 
-        # Finally, enabling next button:
-        self.dlg.clean_data.setEnabled(True)
-        self.dlg.dead_end_iters_label.setEnabled(True)
-        self.dlg.dead_end_iters_box.setEnabled(True)
+
         self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
         self.dlg.datafetch_progressbar.setValue(100)
 

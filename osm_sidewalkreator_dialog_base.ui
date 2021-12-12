@@ -795,6 +795,15 @@ dead-end-streets
       <property name="suffix">
        <string>%</string>
       </property>
+      <property name="minimum">
+       <number>20</number>
+      </property>
+      <property name="maximum">
+       <number>50</number>
+      </property>
+      <property name="singleStep">
+       <number>5</number>
+      </property>
       <property name="value">
        <number>30</number>
       </property>
@@ -840,7 +849,7 @@ at</string>
        <double>4.000000000000000</double>
       </property>
       <property name="singleStep">
-       <double>0.100000000000000</double>
+       <double>0.500000000000000</double>
       </property>
       <property name="value">
        <double>2.000000000000000</double>
