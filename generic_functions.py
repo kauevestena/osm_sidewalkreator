@@ -746,3 +746,11 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
     else:
         # if there's no intersection point it's because the vector length isn't enough in order to make it, so we need to enlarge that vector 
         return False,None
+
+def interpolate_by_percent(inputline,percent):
+    len = inputline.length()
+
+    len_at_perc = (len/100) * percent
+
+    return inputline.interpolate(len_at_perc)
+

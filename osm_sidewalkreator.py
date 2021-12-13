@@ -856,23 +856,36 @@ class sidewalkreator:
             
             key = feature['crossing_center_id']
 
-            pC = feature.geometry().asPoint()
+
 
             pA_crossings,pE_crossings = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry())
 
-            # print(pA_crossings,pE_crossings)
+            # stuff for kerb points ("B" and "D") computation
+
+            pC = feature.geometry().asGeometryCollection()[0].asPoint()
 
 
-            segment_AC = QgsGeometry.fromPolyline([])
-            segment_EC = QgsGeometry.fromPolyline([])
+            segment_AC = QgsGeometry.fromPolylineXY([pA_crossings.asPoint(),pC])
+            segment_EC = QgsGeometry.fromPolylineXY([pE_crossings.asPoint(),pC])
+
+            kerb_perc = self.dlg.perc_draw_kerbs_box.value()
+
+            pB = interpolate_by_percent(segment_AC,kerb_perc)
+            pD = interpolate_by_percent(segment_EC,kerb_perc)
 
 
             pA_feat = geom_to_feature(pA_crossings)
+            pB_feat = geom_to_feature(pB)
+            pD_feat = geom_to_feature(pD)
             pE_feat = geom_to_feature(pE_crossings)
+
 
             # print(pA_feat,pE_feat)
 
+            pA_feat = geom_to_feature(pA_crossings)
             self.inner_crossings_layer.dataProvider().addFeature(pA_feat)
+            self.inner_crossings_layer.dataProvider().addFeature(pB_feat)
+            self.inner_crossings_layer.dataProvider().addFeature(pD_feat)           
             self.inner_crossings_layer.dataProvider().addFeature(pE_feat)
 
 
