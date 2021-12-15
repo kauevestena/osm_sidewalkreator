@@ -4,7 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform
 import os
 from math import isclose,pi
 
@@ -754,3 +754,11 @@ def interpolate_by_percent(inputline,percent):
 
     return inputline.interpolate(len_at_perc)
 
+def get_bbox4326_currCRS(inputbbox,current_crs):
+    # thx: https://kartoza.com/en/blog/how-to-quickly-transform-a-bounding-box-from-one-crs-to-another-using-qgis/
+    dest_crs = QgsCoordinateReferenceSystem(current_crs)
+    source_crs = QgsCoordinateReferenceSystem('EPSG:4326')
+
+    transformer = QgsCoordinateTransform(source_crs, dest_crs,QgsProject.instance())
+
+    return transformer.transformBoundingBox(inputbbox)

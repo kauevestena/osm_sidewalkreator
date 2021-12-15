@@ -7,6 +7,9 @@
  ALL DISTANCES MUST BE IN METERS, no feets nor yards
 """
 
+
+CRS_LATLON_4326 = "EPSG:4326"
+
 # to look for adresses:
 addr_tag = 'addr:housenumber'
 
@@ -92,6 +95,8 @@ default_widths = {
 # ASSETS:
 # names of the assets filenames:
 sidewalks_stylefilename = 'sidewalkstyles.qml'
+inputpolygons_stylefilename = 'polygonstyles.qml'
+
 
 osm_basemap_str = "crs=EPSG:3857&format&type=xyz&url=http://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png&zmax=19&zmin=0"
 

@@ -93,7 +93,7 @@ from .parameters import *
 
 # user_profile = 'default' #TODO: read from session
 
-# TODO: adapt for windows aswell
+# TODO: adapt for windows aswell (actually we may only need to test the current solution)
 
 # basepathp1 = '.local/share/QGIS/QGIS3/profiles'
 # basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
@@ -1330,9 +1330,17 @@ class sidewalkreator:
 
                     if self.input_polygon.isGeosValid():
                         # zooming to inputlayer:
-                        self.iface.mapCanvas().setExtent(self.input_layer.extent())
+                        if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
+                            self.iface.mapCanvas().setExtent(layer_4326.extent())
+                        else:
+                            bbox_4326 = get_bbox4326_currCRS(layer_4326.extent(),self.iface.mapCanvas().mapSettings().destinationCrs().authid())
+                            self.iface.mapCanvas().setExtent(bbox_4326)
                         self.iface.mapCanvas().refresh()
 
+                        # setting a default style for input polygons:
+                        inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
+
+                        self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
 
 
                         self.dlg.datafetch.setEnabled(True)
