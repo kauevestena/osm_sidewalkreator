@@ -96,6 +96,8 @@ default_widths = {
 # names of the assets filenames:
 sidewalks_stylefilename = 'sidewalkstyles.qml'
 inputpolygons_stylefilename = 'polygonstyles.qml'
+crossings_stylefilename = 'crossings.qml'
+
 
 
 osm_basemap_str = "crs=EPSG:3857&format&type=xyz&url=http://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png&zmax=19&zmin=0"
@@ -103,7 +105,9 @@ osm_basemap_str = "crs=EPSG:3857&format&type=xyz&url=http://tile.openstreetmap.o
 bing_baseimg_str = 'crs=EPSG:3857&format&type=xyz&url=http://ak.t0.tiles.virtualearth.net/tiles/a%7Bq%7D.jpeg?n%3Dz%26g%3D5880&zmax=19&zmin=0'
 
 
-crossing_centers_layername = 'crossing_centers'
+crossing_centers_layername = 'crossing_points'
+
+crossings_layer_name = 'CROSSINGS'
 
 # little buffer for dissolved protoblocks "within" condition elegibility in all cases (as long as I know)
 protoblocks_buffer = 0.5 # 50 cm

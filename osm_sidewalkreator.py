@@ -846,14 +846,16 @@ class sidewalkreator:
         keep_only_contained_within(inner_crossings_buff,self.dissolved_protoblocks_0)
 
         # clipping the crossing centers:
-        self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:crossing_centers')
+        self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:'+crossing_centers_layername)
 
         """
             now doing computation of crossing points   
         """
 
+        crossings_featlist = []
+
         for feature in self.inner_crossings_layer.getFeatures():
-            
+
             key = feature['crossing_center_id']
 
 
@@ -888,9 +890,23 @@ class sidewalkreator:
             self.inner_crossings_layer.dataProvider().addFeature(pD_feat)           
             self.inner_crossings_layer.dataProvider().addFeature(pE_feat)
 
+            # creating the crossings as line geometry:
+            crossing_pointlist = [pA_crossings.asPoint(),pB.asPoint(),pC,pD.asPoint(),pE_crossings.asPoint()]
+
+            crossing_as_feat = geom_to_feature(QgsGeometry.fromPolylineXY(crossing_pointlist))
+
+            crossings_featlist.append(crossing_as_feat)
+
+        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
+        self.crossings_layer.setCrs(self.custom_localTM_crs)
+
+        crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
+        self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
 
 
-        self.add_layer_canvas(self.inner_crossings_layer)
+
+        # self.add_layer_canvas(self.inner_crossings_layer)
+        self.add_layer_canvas(self.crossings_layer)
         # self.add_layer_canvas(inner_crossings_buff)
         # self.add_layer_canvas(self.protoblocks)
         # self.add_layer_canvas(self.dissolved_protoblocks_0)
