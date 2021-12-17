@@ -97,6 +97,8 @@ default_widths = {
 sidewalks_stylefilename = 'sidewalkstyles.qml'
 inputpolygons_stylefilename = 'polygonstyles.qml'
 crossings_stylefilename = 'crossings.qml'
+kerbs_stylefilename = 'kerbs.qml'
+
 
 
 
@@ -108,6 +110,8 @@ bing_baseimg_str = 'crs=EPSG:3857&format&type=xyz&url=http://ak.t0.tiles.virtual
 crossing_centers_layername = 'crossing_points'
 
 crossings_layer_name = 'CROSSINGS'
+
+kerbs_layer_name = 'KERBS'
 
 # little buffer for dissolved protoblocks "within" condition elegibility in all cases (as long as I know)
 protoblocks_buffer = 0.5 # 50 cm

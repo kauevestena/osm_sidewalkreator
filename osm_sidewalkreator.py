@@ -854,6 +854,8 @@ class sidewalkreator:
 
         crossings_featlist = []
 
+        kerbs_featlist = []
+
         for feature in self.inner_crossings_layer.getFeatures():
 
             key = feature['crossing_center_id']
@@ -874,6 +876,9 @@ class sidewalkreator:
 
             pB = interpolate_by_percent(segment_AC,kerb_perc)
             pD = interpolate_by_percent(segment_EC,kerb_perc)
+
+            kerbs_featlist.append(geom_to_feature(pB))
+            kerbs_featlist.append(geom_to_feature(pD))
 
 
             pA_feat = geom_to_feature(pA_crossings)
@@ -897,16 +902,26 @@ class sidewalkreator:
 
             crossings_featlist.append(crossing_as_feat)
 
+        # creating and styling the crossings and kerbs layers
+
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
         self.crossings_layer.setCrs(self.custom_localTM_crs)
 
         crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
         self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
 
+        self.kerbs_layer = layer_from_featlist(kerbs_featlist,kerbs_layer_name)
+        self.kerbs_layer.setCrs(self.custom_localTM_crs)
+
+
+        kerbs_stylefile_path = os.path.join(assets_path,kerbs_stylefilename)
+        self.kerbs_layer.loadNamedStyle(kerbs_stylefile_path)
+
 
 
         # self.add_layer_canvas(self.inner_crossings_layer)
         self.add_layer_canvas(self.crossings_layer)
+        self.add_layer_canvas(self.kerbs_layer)
         # self.add_layer_canvas(inner_crossings_buff)
         # self.add_layer_canvas(self.protoblocks)
         # self.add_layer_canvas(self.dissolved_protoblocks_0)
