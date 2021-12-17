@@ -322,6 +322,8 @@ class sidewalkreator:
             self.dlg.add_osm_basemap.clicked.connect(self.add_osm_basemap_func)
             self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
             self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
+            self.dlg.split_sidewalks.clicked.connect(self.sidewalks_splitting)
+            
 
 
 
@@ -586,7 +588,16 @@ class sidewalkreator:
         self.dlg.add_bing_base.setEnabled(False)
 
 
-    
+    def sidewalks_splitting(self):
+        # disabling what wouldnt be needed adterwars:
+        self.dlg.split_sidewalks.setEnabled(False)
+
+        for feature in self.protoblocks.getFeatures():
+            polygon_vertex_list = feature.geometry().simplify().asPolygon()[0]
+
+
+
+
 
 
     def draw_crossings(self):
@@ -927,8 +938,8 @@ class sidewalkreator:
         # self.add_layer_canvas(self.dissolved_protoblocks_0)
 
 
-
-        # self.dlg.gencrossings_progressbar.setEnabled(False)
+        # Enabling What Shall be used afterwards:
+        self.dlg.split_sidewalks.setEnabled(True)
 
 
         # self.dlg.gencrossings_progressbar.setValue(100)
