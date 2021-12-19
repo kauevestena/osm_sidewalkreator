@@ -762,3 +762,10 @@ def get_bbox4326_currCRS(inputbbox,current_crs):
     transformer = QgsCoordinateTransform(source_crs, dest_crs,QgsProject.instance())
 
     return transformer.transformBoundingBox(inputbbox)
+
+def select_vertex_pol_nodes(inputpolygonfeature):
+
+    polygon_vertex_list = inputpolygonfeature.geometry().asPolygon()[0]
+
+    for i,node in enumerate(polygon_vertex_list):
+        print(node)

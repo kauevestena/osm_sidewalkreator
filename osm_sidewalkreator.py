@@ -418,6 +418,7 @@ class sidewalkreator:
             (self.dlg.opt_parallel_crossings,'in parallel to\ntransversal seg.','paralelo ao\nseg. transversal'),
             (self.dlg.opt_perp_crossings,'perpen-\ndicularly','perpendi-\ncularmente'),
             (self.dlg.label_inward_d,'distance\ninward','distância\nadentro'),
+            (self.dlg.timeout_label,'Timeout (s)','Esp. até(s)'),
 
 
 
@@ -593,7 +594,7 @@ class sidewalkreator:
         self.dlg.split_sidewalks.setEnabled(False)
 
         for feature in self.protoblocks.getFeatures():
-            polygon_vertex_list = feature.geometry().simplify().asPolygon()[0]
+            select_vertex_pol_nodes(feature)
 
 
 
@@ -1231,6 +1232,8 @@ class sidewalkreator:
         self.dlg.label_inward_d.setEnabled(False)
         self.dlg.opt_parallel_crossings.setEnabled(False)
         self.dlg.opt_perp_crossings.setEnabled(False)
+        self.dlg.timeout_box.setEnabled(False)
+        self.dlg.timeout_label.setEnabled(False)
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
@@ -1388,6 +1391,8 @@ class sidewalkreator:
                         self.dlg.datafetch.setEnabled(True)
                         self.dlg.datafetch_progressbar.setEnabled(True)
                         self.dlg.ch_ignore_buildings.setEnabled(True)
+                        self.dlg.timeout_box.setEnabled(True)
+                        self.dlg.timeout_label.setEnabled(True)
 
                         # self.change_input_labels = False
                         # self.dlg.input_status.setText('Valid Input!')
@@ -1441,6 +1446,9 @@ class sidewalkreator:
         self.dlg.input_layer_selector.setEnabled(False)
         self.dlg.add_osm_basemap.setEnabled(False)
         self.dlg.add_bing_base.setEnabled(False)
+        self.dlg.timeout_box.setEnabled(False)
+        self.dlg.timeout_label.setEnabled(False)
+
 
 
 
@@ -1463,7 +1471,7 @@ class sidewalkreator:
         roads_layername = "osm_road_data"
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
         # acquired file
-        data_geojsonpath = get_osm_data(query_string,roads_layername)
+        data_geojsonpath = get_osm_data(query_string,roads_layername,timeout=self.dlg.timeout_box.value())
 
         self.dlg.datafetch_progressbar.setValue(30)
 
@@ -1500,7 +1508,7 @@ class sidewalkreator:
 
         if not self.dlg.ch_ignore_buildings.isChecked() and use_buildings:
             query_string_buildings = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'building',relation=include_relations)
-            buildings_geojsonpath = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon')
+            buildings_geojsonpath = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon',timeout=self.dlg.timeout_box.value())
             buildings_brutelayer = QgsVectorLayer(buildings_geojsonpath,'brute_buildings','ogr')
 
             self.no_buildings = check_empty_layer(buildings_brutelayer) # asserts if there are buildings in the area
@@ -1543,7 +1551,7 @@ class sidewalkreator:
 
             # mostly a clone of get buildings snippet
             query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True)
-            addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point')
+            addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point',timeout=self.dlg.timeout_box.value())
             self.dlg.datafetch_progressbar.setValue(65)
 
             addrs_brutelayer = QgsVectorLayer(addrs_geojsonpath,'brute_buildings','ogr')

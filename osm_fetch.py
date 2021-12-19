@@ -110,7 +110,7 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features',i
 
     return as_dict
 
-def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False):
+def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
@@ -127,7 +127,7 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
         # TODO: ensure sucess 
         #   (the try statement is an improvement already)
         try:
-            response = requests.get(overpass_url,params={'data':querystring},timeout=30)
+            response = requests.get(overpass_url,params={'data':querystring},timeout=timeout)
 
             if response.status_code == 200:
                 break
