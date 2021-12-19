@@ -763,9 +763,62 @@ def get_bbox4326_currCRS(inputbbox,current_crs):
 
     return transformer.transformBoundingBox(inputbbox)
 
-def select_vertex_pol_nodes(inputpolygonfeature):
+def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
     polygon_vertex_list = inputpolygonfeature.geometry().asPolygon()[0]
+    del polygon_vertex_list[-1] # as the polygon list repeats the firtst node
+
+    centroid = inputpolygonfeature.geometry().centroid() #.asPoint()
+    # print(centroid)
+    prev_size = len(polygon_vertex_list)
+
+    # anglelist = []
+
+    idx_to_remove = []
+
 
     for i,node in enumerate(polygon_vertex_list):
-        print(node)
+
+        prev = i-1
+        next = i+1
+
+        if i == len(polygon_vertex_list)-1:
+            next = 0
+
+
+        pA = polygon_vertex_list[prev]
+        pB = node
+        pC = polygon_vertex_list[next]
+
+        angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+
+        # print(pA,pB,pC)
+
+        if angle > minC_angle and angle < maxC_angle:
+            idx_to_remove.append(i)
+
+        # anglelist.append(int(angle))
+
+    for idx in sorted(idx_to_remove,reverse=True):
+        del  polygon_vertex_list[idx]
+
+    print(prev_size,len(polygon_vertex_list))
+
+
+    for i,node in enumerate(polygon_vertex_list):
+
+        prev = i-1
+        next = i+1
+
+        if i == len(polygon_vertex_list)-1:
+            next = 0
+
+
+        pA = polygon_vertex_list[prev]
+        pB = node
+        pC = polygon_vertex_list[next]
+
+        angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+
+        print(angle)
+        

@@ -593,6 +593,8 @@ class sidewalkreator:
         # disabling what wouldnt be needed adterwars:
         self.dlg.split_sidewalks.setEnabled(False)
 
+        self.add_layer_canvas(self.protoblocks)
+
         for feature in self.protoblocks.getFeatures():
             select_vertex_pol_nodes(feature)
 
