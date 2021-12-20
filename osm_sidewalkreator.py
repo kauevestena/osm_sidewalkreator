@@ -863,12 +863,23 @@ class sidewalkreator:
         self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:'+crossing_centers_layername)
 
         """
-            now doing computation of crossing points   
+            Doing computation of all crossing points:
+
+            * Point A: Intersection of crossing and sidewalk I axis (side I)
+            | Point B: Kerb at side I
+            * Point C: Intersection of crossing and Street geometry (crossing center)
+            | Point D: Kerb at side II
+            * Point E: Intersection of crossing and sidewalk II axis (side II)
+
         """
-
+        
+        # to create crossings layer
         crossings_featlist = []
-
+        # to create kerbs layer
         kerbs_featlist = []
+        # to create crrossing A's&E's layer
+        crossings_A_E_featlist = []
+
 
         for feature in self.inner_crossings_layer.getFeatures():
 
@@ -915,6 +926,11 @@ class sidewalkreator:
             crossing_as_feat = geom_to_feature(QgsGeometry.fromPolylineXY(crossing_pointlist))
 
             crossings_featlist.append(crossing_as_feat)
+
+
+            # to add intersections:
+            crossings_A_E_featlist.append(pA_feat)
+            crossings_A_E_featlist.append(pE_feat)
 
         # creating and styling the crossings and kerbs layers
 
@@ -1087,7 +1103,9 @@ class sidewalkreator:
         
 
 
-        # stuff for later use 
+        # stuff for later use :
+        # finding which block "belongs" to each protoblock
+        create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
         
 
         

@@ -297,7 +297,7 @@ def get_column_names(inputlayer):
 
 def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
     '''
-        create a new field for the layer, and also can return the index of the new field
+        create a new field for the layer, and also return the index of the new field
     '''
 
     with edit(inputlayer):
@@ -822,3 +822,23 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
         print(angle)
         
+
+def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident'):
+
+    field_id = create_new_layerfield(inputlayer,fieldname,QVariant.String)
+
+    with edit(inputlayer):
+
+        for feature in inputlayer.getFeatures():
+
+            contained_ids = []
+            for tested_feature in incident_layer.getFeatures():
+                if feature.geometry().contains(tested_feature.geometry()):
+                    contained_ids.append(str(tested_feature.id()))
+            
+            inputlayer.changeAttributeValue(feature.id(),field_id,' '.join(contained_ids))
+
+
+            
+def add_points_tolinelayer(input_linelayer,pointfeatlist,buffer=1):
+    pass
