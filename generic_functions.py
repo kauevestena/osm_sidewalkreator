@@ -4,7 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint
 import os
 from math import isclose,pi
 
@@ -840,5 +840,23 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
 
 
             
-def add_points_tolinelayer(input_linelayer,pointfeatlist,buffer=1):
-    pass
+def add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
+    # to multipoint to simplify incidence for each feature in inputlayer
+
+    # as_multipoint = QgsMultiPoint()
+    # for geometry in pointgeomlist:
+    #     as_multipoint.addGeometry(QgsPoint(geometry.asPoint()))
+
+    as_pointXYList = [geom.asPoint() for geom in pointgeomlist]
+
+    as_geom = QgsGeometry.fromMultiPointXY(as_pointXYList)
+    
+    for feature in input_linelayer.getFeatures():
+        buffer = feature.geometry().buffer(buffer_d,5)
+
+        centroid = buffer.centroid()
+
+        # incident points on buffer
+        incident_list = buffer.intersection(as_geom)
+
+        print(len(incident_list.asMultiPoint()))

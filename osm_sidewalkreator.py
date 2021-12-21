@@ -878,7 +878,7 @@ class sidewalkreator:
         # to create kerbs layer
         kerbs_featlist = []
         # to create crrossing A's&E's layer
-        crossings_A_E_featlist = []
+        crossings_A_E_pointlist = []
 
 
         for feature in self.inner_crossings_layer.getFeatures():
@@ -929,11 +929,13 @@ class sidewalkreator:
 
 
             # to add intersections:
-            crossings_A_E_featlist.append(pA_feat)
-            crossings_A_E_featlist.append(pE_feat)
+            crossings_A_E_pointlist.append(pA_feat.geometry())
+            crossings_A_E_pointlist.append(pE_feat.geometry())
+
+        # before next steps, adding the intersection points to the sidewalks layer:
+        add_points_tolinelayer(self.whole_sidewalks,crossings_A_E_pointlist)
 
         # creating and styling the crossings and kerbs layers
-
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
         self.crossings_layer.setCrs(self.custom_localTM_crs)
 
@@ -1107,7 +1109,6 @@ class sidewalkreator:
         # finding which block "belongs" to each protoblock
         create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
         
-
         
 
         # disabling what won't be needed afterwards
