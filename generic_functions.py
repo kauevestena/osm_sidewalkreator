@@ -570,12 +570,15 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
     else:
         return inputval,refused_key
 
-def geom_to_feature(inputgeom):
+def geom_to_feature(inputgeom,attrs_list=None):
     # remember that inplace methods generally have a return that isn't the object itself #lessons
 
     ret_feat = QgsFeature()
 
     ret_feat.setGeometry(inputgeom)
+
+    if attrs_list:
+        ret_feat.setAttributes(attrs_list)
 
     return ret_feat
 
@@ -893,7 +896,37 @@ def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1)
     return dissolved_segments_layer
 
 
-def rejoin_splitted_lines(inputlineslayer,incidence_layer):
+def rejoin_splitted_lines(inputlineslayer,incidence_layer,attrs_dict={'highway':QVariant.String,'footway':QVariant.String}):
+
+    rejoined_features = []
 
     for incidence_feature in incidence_layer.getFeatures():
-        pass
+        incident_features = []
+
+        for possible_inc_feature in inputlineslayer.getFeatures():
+
+            if incidence_feature.geometry().contains(possible_inc_feature.geometry()):
+                incident_features.append(possible_inc_feature.geometry())
+
+                attrs = possible_inc_feature.attributes()
+
+        rejoinded_multipart = QgsGeometry.collectGeometry(incident_features)
+
+        rejoined_features.append(geom_to_feature(rejoinded_multipart,attrs))
+
+    return layer_from_featlist(rejoined_features,'rejoined_part1','LineString',attrs_dict=attrs_dict)
+
+def swap_features_layer_another(inputdesiredlayer,layer_with_newfeatures):
+    """
+        swapping features, presuming same type and same fields
+    """
+
+    with edit(inputdesiredlayer):
+
+        # first deleting all features
+        for old_feature in inputdesiredlayer.getFeatures():
+            inputdesiredlayer.deleteFeature(old_feature.id())
+
+        # then inserting from the other
+        for new_feature in layer_with_newfeatures.getFeatures():
+            inputdesiredlayer.addFeature(new_feature)

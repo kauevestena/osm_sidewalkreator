@@ -939,19 +939,23 @@ class sidewalkreator:
         segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,crossings_A_E_pointlist)
         segs_layer.setCrs(self.custom_localTM_crs)
 
+        # thats not the final splitted sidewalks, but a part of the process
         splitted_sidewalks = split_lines(self.whole_sidewalks,segs_layer)
         splitted_sidewalks.setCrs(self.custom_localTM_crs)
 
-        # dissolved_splitted_sidewalks = dissolve_tosinglepart(splitted_sidewalks)
-        # dissolved_splitted_sidewalks.setCrs(self.custom_localTM_crs)
 
-        # as_multiparts = 
+        rejoined_multipart = rejoin_splitted_lines(splitted_sidewalks,self.protoblocks)
+        rejoined_multipart.setCrs(self.custom_localTM_crs)
 
-        # reassembled_sidewalks = merge_touching_lines(splitted_sidewalks,'memory:reassembled')
-        # reassembled_sidewalks.setCrs(self.custom_localTM_crs)
+        rejoined_sidewalks = merge_touching_lines(rejoined_multipart)
+        rejoined_sidewalks.setCrs(self.custom_localTM_crs)
 
 
-        # self.add_layer_canvas(dissolved_splitted_sidewalks)
+        swap_features_layer_another(self.whole_sidewalks,rejoined_sidewalks)
+
+
+        # self.add_layer_canvas(rejoined_sidewalks)
+
 
         # creating and styling the crossings and kerbs layers
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
