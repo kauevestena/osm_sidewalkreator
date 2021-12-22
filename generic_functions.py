@@ -4,7 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY
 import os
 from math import isclose,pi
 
@@ -22,7 +22,7 @@ def generate_buffer(inputlayer,distance,segments=10,dissolve=True,cap_style='FLA
     '''
         interfacing qgis processing operation
 
-        one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter 
+        one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter
         someting like: '( "width" /2)+1.5'
     '''
 
@@ -41,7 +41,7 @@ def generate_buffer(inputlayer,distance,segments=10,dissolve=True,cap_style='FLA
     if join_style.upper() in join_styles:
         parameter_dict['JOIN_STYLE'] = join_styles[join_style.upper()]
 
-    
+
 
     return processing.run('native:buffer',parameter_dict)['OUTPUT']
 
@@ -83,6 +83,13 @@ def dissolve_tosinglepart(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
 
     return processing.run('native:dissolve',parameter_dict)['OUTPUT']
 
+
+def merge_touching_lines(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('native:mergelines',parameter_dict)['OUTPUT']
+
+
 def poligonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
     parameter_dict = {'INPUT': inputlines, 'OUTPUT': outputlayer,'KEEP_FIELDS':keepfields}
 
@@ -118,7 +125,7 @@ def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:R
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
 
-def split_lines(inputlayer,splitterlayer,outputlayer):
+def split_lines(inputlayer,splitterlayer,outputlayer='TEMPORARY_OUTPUT'):
 
     parameter_dict = {'INPUT': inputlayer, 'LINES': splitterlayer, 'OUTPUT': outputlayer}
 
@@ -143,7 +150,7 @@ def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
     areas = []
     ids = []
 
-    
+
     # if one extracts only boundaries, one can still use the area value
     if record_area:
         create_new_layerfield(inputlayer,area_fieldname)
@@ -163,7 +170,7 @@ def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
         inputlayer.deleteFeature(ids[max_area_idx])
 
 
-        
+
 
 
 
@@ -352,7 +359,7 @@ def get_layer_att_table(inputlayer):
     att_lists = []
 
     for feature in inputlayer.getFeatures():
-        
+
         att_lists.append(feature.attributes())
 
     return att_lists
@@ -368,7 +375,7 @@ def wipe_folder_files(inputfolderpath):
 #     # thx https://gis.stackexchange.com/a/310590/49900
 #     # but deprecated
 #     layerinstance = QgsProject.instance()
-    
+
 #     lyref = layerinstance.mapLayersByName(layername)
 
 #     if lyref:
@@ -410,7 +417,7 @@ def qgs_point_geom_from_line_at(inputlinefeature,index=0):
 
 def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
     '''
-        remove lines in wich one of its ends 
+        remove lines in wich one of its ends
         are not connected to any other segment
 
         the "layer_to_check_culdesac" is a whole layer (dissolved) that should be checked for 'within' condition
@@ -442,13 +449,13 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
                 P0_count += 1
             if PF.intersects(feature_B.geometry()):
                 PF_count += 1
-                
-        
+
+
         # print(P0_count,PF_count)
 
 
         if any(count == 1 for count in [P0_count,PF_count]):
-            # after checking, only add if its not a "culdesac" 
+            # after checking, only add if its not a "culdesac"
             if check_for_culdesacs:
                 if not feature_A.geometry().within(checker_geom):
                     feature_ids_to_be_removed.append(feature_A.id())
@@ -470,7 +477,7 @@ def remove_features_byattr(inputlayer,attrname,attrvalue):
         for i,feature in enumerate(inputlayer.getFeatures()):
             if column_values[i] == attrvalue:
                 inputlayer.deleteFeature(feature.id())
-                
+
 
 def add_tms_layer(qms_string,layername):
     # mostly for user add basemaps buttons
@@ -485,7 +492,7 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
     feat_request = QgsFeatureRequest()
 
     if input_spatial_index:
-        # thx, pt 2 https://gis.stackexchange.com/a/59185/49900 
+        # thx, pt 2 https://gis.stackexchange.com/a/59185/49900
         nearest_ids = input_spatial_index.nearestNeighbor(inputgeom,nn_feat_num,max_dist)
 
         feat_request.setFilterFids(nearest_ids)
@@ -539,7 +546,7 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
     '''
         in spite of finding a simple way to obtain the 'orthogonal' distance and ID of the orthonogal feature
     '''
-    
+
     diffs = {} # []
 
     for key in inputdict:
@@ -570,7 +577,7 @@ def geom_to_feature(inputgeom):
 
     ret_feat.setGeometry(inputgeom)
 
-    return ret_feat 
+    return ret_feat
 
 def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
     '''
@@ -592,7 +599,7 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
                 attrs_list.append(QgsField(key,attrs_dict[key]))
 
             ret_layer.dataProvider().addAttributes(attrs_list)
-            
+
             ret_layer.updateFields()
 
         for feature in featlist:
@@ -654,7 +661,7 @@ def points_intersecting_buffer_boundary(input_point,inputlayer,featlist=None,buf
         ret_list.append(feature.geometry().intersection(boundary))
 
 
-    
+
 
     return ret_list
 
@@ -670,7 +677,7 @@ def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index
     '''
         that is: the point that will forms the minor angle, compared to other angles spawn by the other points.
 
-        All angles are formed in conjunction with fixed points A and B 
+        All angles are formed in conjunction with fixed points A and B
     '''
 
     if len(pointlist) == 0:
@@ -734,7 +741,7 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
         if not intersectiongeom.isMultipart():
             return True,intersectiongeom
         else:
-            # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearer to "referencepoint" 
+            # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearer to "referencepoint"
             as_geomcollection = intersectiongeom.asGeometryCollection()
 
 
@@ -744,7 +751,7 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
 
 
     else:
-        # if there's no intersection point it's because the vector length isn't enough in order to make it, so we need to enlarge that vector 
+        # if there's no intersection point it's because the vector length isn't enough in order to make it, so we need to enlarge that vector
         return False,None
 
 def interpolate_by_percent(inputline,percent):
@@ -821,7 +828,7 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
         angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
 
         print(angle)
-        
+
 
 def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident'):
 
@@ -835,22 +842,22 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
             for tested_feature in incident_layer.getFeatures():
                 if feature.geometry().contains(tested_feature.geometry()):
                     contained_ids.append(str(tested_feature.id()))
-            
+
             inputlayer.changeAttributeValue(feature.id(),field_id,' '.join(contained_ids))
 
+def pointlist_to_multipoint(inputpointgeomlist):
 
-            
-def add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
+    as_pointXYList = [geom.asPoint() for geom in inputpointgeomlist]
+
+    return QgsGeometry.fromMultiPointXY(as_pointXYList)
+
+def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
+
     # to multipoint to simplify incidence for each feature in inputlayer
+    as_geom = pointlist_to_multipoint(pointgeomlist)
 
-    # as_multipoint = QgsMultiPoint()
-    # for geometry in pointgeomlist:
-    #     as_multipoint.addGeometry(QgsPoint(geometry.asPoint()))
+    segments_list = []
 
-    as_pointXYList = [geom.asPoint() for geom in pointgeomlist]
-
-    as_geom = QgsGeometry.fromMultiPointXY(as_pointXYList)
-    
     for feature in input_linelayer.getFeatures():
         buffer = feature.geometry().buffer(buffer_d,5)
 
@@ -859,4 +866,34 @@ def add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
         # incident points on buffer
         incident_list = buffer.intersection(as_geom)
 
-        print(len(incident_list.asMultiPoint()))
+
+
+        # creating the segments:
+        for point in incident_list.asMultiPoint():
+
+            desired_vec_len = centroid.distance(QgsGeometry.fromPointXY(point)) + buffer_d
+
+            # using vector to ensure that the line that we will build will really intersect the line
+            curr_vec = vector_from_2_pts(centroid,QgsGeometry.fromPointXY(point),desired_vec_len)
+
+            P_forline = centroid.asPoint() + curr_vec
+
+            segments_list.append(QgsGeometry.fromPolyline([QgsPoint(centroid.asPoint()),QgsPoint(P_forline)]))
+
+    segments_asMultiLineString = QgsGeometry.collectGeometry(segments_list)
+
+    segments_asfeatlist = [geom_to_feature(segments_asMultiLineString)]
+
+    segments_aslayer = layer_from_featlist(segments_asfeatlist,'segments_intersections','LineString')
+
+    dissolved_segments_layer = dissolve_tosinglepart(segments_aslayer)
+
+    # splitted_sidewalks = split_lines(input_linelayer,dissolved_segments_layer)
+
+    return dissolved_segments_layer
+
+
+def rejoin_splitted_lines(inputlineslayer,incidence_layer):
+
+    for incidence_feature in incidence_layer.getFeatures():
+        pass

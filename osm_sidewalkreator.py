@@ -593,6 +593,9 @@ class sidewalkreator:
         # disabling what wouldnt be needed adterwars:
         self.dlg.split_sidewalks.setEnabled(False)
 
+
+        # finding which block "belongs" to each protoblock
+        create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
         self.add_layer_canvas(self.protoblocks)
 
         for feature in self.protoblocks.getFeatures():
@@ -933,7 +936,22 @@ class sidewalkreator:
             crossings_A_E_pointlist.append(pE_feat.geometry())
 
         # before next steps, adding the intersection points to the sidewalks layer:
-        add_points_tolinelayer(self.whole_sidewalks,crossings_A_E_pointlist)
+        segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,crossings_A_E_pointlist)
+        segs_layer.setCrs(self.custom_localTM_crs)
+
+        splitted_sidewalks = split_lines(self.whole_sidewalks,segs_layer)
+        splitted_sidewalks.setCrs(self.custom_localTM_crs)
+
+        # dissolved_splitted_sidewalks = dissolve_tosinglepart(splitted_sidewalks)
+        # dissolved_splitted_sidewalks.setCrs(self.custom_localTM_crs)
+
+        # as_multiparts = 
+
+        # reassembled_sidewalks = merge_touching_lines(splitted_sidewalks,'memory:reassembled')
+        # reassembled_sidewalks.setCrs(self.custom_localTM_crs)
+
+
+        # self.add_layer_canvas(dissolved_splitted_sidewalks)
 
         # creating and styling the crossings and kerbs layers
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
@@ -1103,12 +1121,7 @@ class sidewalkreator:
         self.dissolved_sidewalks = dissolve_tosinglepart(self.whole_sidewalks)
         self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
         
-
-
-        # stuff for later use :
-        # finding which block "belongs" to each protoblock
-        create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
-        
+      
         
 
         # disabling what won't be needed afterwards
