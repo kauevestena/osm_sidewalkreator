@@ -937,20 +937,27 @@ class sidewalkreator:
 
         # before next steps, adding the intersection points to the sidewalks layer:
         segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,crossings_A_E_pointlist)
+
+
         segs_layer.setCrs(self.custom_localTM_crs)
 
-        # thats not the final splitted sidewalks, but a part of the process
+        # self.add_layer_canvas(segs_layer)
+
+
+        # thats not the final splitted sidewalks, but a part of the process...
         splitted_sidewalks = split_lines(self.whole_sidewalks,segs_layer)
         splitted_sidewalks.setCrs(self.custom_localTM_crs)
+        # self.add_layer_canvas(splitted_sidewalks)
 
 
         rejoined_multipart = rejoin_splitted_lines(splitted_sidewalks,self.protoblocks)
         rejoined_multipart.setCrs(self.custom_localTM_crs)
+        # self.add_layer_canvas(rejoined_multipart)
 
         rejoined_sidewalks = merge_touching_lines(rejoined_multipart)
         rejoined_sidewalks.setCrs(self.custom_localTM_crs)
 
-
+        # now swapping features:
         swap_features_layer_another(self.whole_sidewalks,rejoined_sidewalks)
 
 

@@ -856,6 +856,7 @@ def pointlist_to_multipoint(inputpointgeomlist):
 
 def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
 
+    # print(len(pointgeomlist))
     # to multipoint to simplify incidence for each feature in inputlayer
     as_geom = pointlist_to_multipoint(pointgeomlist)
 
@@ -912,7 +913,11 @@ def rejoin_splitted_lines(inputlineslayer,incidence_layer,attrs_dict={'highway':
 
         rejoinded_multipart = QgsGeometry.collectGeometry(incident_features)
 
-        rejoined_features.append(geom_to_feature(rejoinded_multipart,attrs))
+        as_singleline = rejoinded_multipart.mergeLines()
+
+        as_singleline.removeDuplicateNodes(0.000001)
+
+        rejoined_features.append(geom_to_feature(as_singleline,attrs))
 
     return layer_from_featlist(rejoined_features,'rejoined_part1','LineString',attrs_dict=attrs_dict)
 
