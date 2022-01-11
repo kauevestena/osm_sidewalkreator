@@ -62,18 +62,19 @@ def install_pypi(packagename):
 
 # importing or installing third-party libraries
 try:
-    # import geopandas as gpd
     import osm2geojson
+    import ogr2osm
 except:
-    pkg_to_be_installed = ['osm2geojson'] #'geopandas'
+    pkg_to_be_installed = ['osm2geojson','ogr2osm'] #'geopandas'
+    print('installing aditional packages: ',*pkg_to_be_installed)
 
     for packagename in pkg_to_be_installed:
         install_pypi(packagename)
 
 
-# # then again, because its best to raise an error
-# import geopandas as gpd
+# # then again, because its better to raise an error...
 import osm2geojson
+import ogr2osm
 
 # # internal dependencies:
 from .osm_fetch import *
