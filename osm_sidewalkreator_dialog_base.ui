@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>775</width>
+    <width>817</width>
     <height>663</height>
    </rect>
   </property>
@@ -118,7 +118,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>230</x>
+     <x>300</x>
      <y>610</y>
      <width>391</width>
      <height>41</height>
@@ -134,7 +134,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>80</x>
+     <x>110</x>
      <y>610</y>
      <width>131</width>
      <height>31</height>
@@ -323,8 +323,8 @@ Compute Intersections</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>390</x>
-     <y>360</y>
+     <x>410</x>
+     <y>352</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -348,8 +348,8 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>360</x>
-     <y>200</y>
+     <x>380</x>
+     <y>192</y>
      <width>291</width>
      <height>41</height>
     </rect>
@@ -368,8 +368,8 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>240</y>
+     <x>290</x>
+     <y>232</y>
      <width>141</width>
      <height>61</height>
     </rect>
@@ -435,8 +435,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>420</x>
-     <y>260</y>
+     <x>440</x>
+     <y>252</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -466,8 +466,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>540</x>
-     <y>310</y>
+     <x>560</x>
+     <y>302</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -513,8 +513,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>500</x>
-     <y>250</y>
+     <x>520</x>
+     <y>242</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -533,8 +533,8 @@ to Buildings</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>600</x>
-     <y>300</y>
+     <x>620</x>
+     <y>292</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -553,8 +553,8 @@ Radius</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>430</x>
-     <y>300</y>
+     <x>450</x>
+     <y>292</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -573,8 +573,8 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>350</x>
-     <y>310</y>
+     <x>370</x>
+     <y>302</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -607,8 +607,8 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>620</x>
-     <y>260</y>
+     <x>640</x>
+     <y>252</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -644,8 +644,8 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>680</x>
-     <y>250</y>
+     <x>700</x>
+     <y>242</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -691,8 +691,8 @@ Base Img.</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>390</x>
-     <y>440</y>
+     <x>410</x>
+     <y>432</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -781,8 +781,8 @@ dead-end-streets
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>388</y>
+     <x>290</x>
+     <y>380</y>
      <width>491</width>
      <height>44</height>
     </rect>
@@ -961,6 +961,142 @@ dicularly</string>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
    </property>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>274</x>
+     <y>470</y>
+     <width>543</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="voronoi_checkbox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Use Voronoi Polygons Rule</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Alongside with other options</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Max Len. </string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QRadioButton" name="radioButton_2">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>In x
+segments</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QRadioButton" name="radioButton_3">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Only Facades</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QRadioButton" name="radioButton_4">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Don't Split</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="perc_draw_kerbs_box_2">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string> seg.</string>
+        </property>
+        <property name="minimum">
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <number>50</number>
+        </property>
+        <property name="singleStep">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>10</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QDoubleSpinBox" name="d_to_add_inward_box_2">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="prefix">
+         <string/>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
+        <property name="decimals">
+         <number>2</number>
+        </property>
+        <property name="minimum">
+         <double>3.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>10.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
  </widget>
  <customwidgets>
