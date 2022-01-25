@@ -774,9 +774,10 @@ def get_bbox4326_currCRS(inputbbox,current_crs):
     return transformer.transformBoundingBox(inputbbox)
 
 def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
+    # there are some points at protoblocks that are irrelevant, i.e. they're not actual corners
 
     polygon_vertex_list = inputpolygonfeature.geometry().asPolygon()[0]
-    del polygon_vertex_list[-1] # as the polygon list repeats the firtst node
+    del polygon_vertex_list[-1] # as the polygon list repeats the first node
 
     centroid = inputpolygonfeature.geometry().centroid() #.asPoint()
     # print(centroid)
@@ -810,27 +811,30 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
         # anglelist.append(int(angle))
 
     for idx in sorted(idx_to_remove,reverse=True):
+        # TODO: a missing thx here!!!
         del  polygon_vertex_list[idx]
 
-    print(prev_size,len(polygon_vertex_list))
+    return polygon_vertex_list
+
+    # print(prev_size,len(polygon_vertex_list))
 
 
-    for i,node in enumerate(polygon_vertex_list):
+    # for i,node in enumerate(polygon_vertex_list):
 
-        prev = i-1
-        next = i+1
+    #     prev = i-1
+    #     next = i+1
 
-        if i == len(polygon_vertex_list)-1:
-            next = 0
+    #     if i == len(polygon_vertex_list)-1:
+    #         next = 0
 
 
-        pA = polygon_vertex_list[prev]
-        pB = node
-        pC = polygon_vertex_list[next]
+    #     pA = polygon_vertex_list[prev]
+    #     pB = node
+    #     pC = polygon_vertex_list[next]
 
-        angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+    #     angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
 
-        print(angle)
+    #     print(angle)
 
 
 def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident'):

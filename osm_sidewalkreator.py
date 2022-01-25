@@ -324,6 +324,7 @@ class sidewalkreator:
             self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
             self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
             self.dlg.split_sidewalks.clicked.connect(self.sidewalks_splitting)
+            self.dlg.alongside_vor_checkbox.clicked.connect(self.alongside_voronoi_opts)
             
 
 
@@ -332,6 +333,7 @@ class sidewalkreator:
             # cancel means reset AND close
             self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_fields)
             self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.reset_fields)
+            self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
 
 
             # language stuff
@@ -359,7 +361,7 @@ class sidewalkreator:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            self.outputting_files()
 
     ##################################
     ##### THE CLASS SCOPE
@@ -419,10 +421,12 @@ class sidewalkreator:
             (self.dlg.opt_parallel_crossings,'in parallel to\ntransversal seg.','paralelo ao\nseg. transversal'),
             (self.dlg.opt_perp_crossings,'perpen-\ndicularly','perpendi-\ncularmente'),
             (self.dlg.label_inward_d,'distance\ninward','distância\nadentro'),
-            (self.dlg.timeout_label,'Timeout (s)','Esp. até(s)'),
-
-
-
+            (self.dlg.voronoi_checkbox,'Use Voronoi Polygons Rule','Usar Polígonos de Voronoi'),
+            (self.dlg.alongside_vor_checkbox,'Alongside with another option','Junto à Outra Opção'),
+            (self.dlg.maxlensplit_checkbox,'Max Len.','Larg. Máx.'),
+            (self.dlg.segsbynum_checkbox,'In x\nsegments','Em x\nsegmentos'),
+            (self.dlg.onlyfacades_checkbox,'Only Facades','Apenas Faces'),
+            (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
 
 
 
@@ -589,22 +593,74 @@ class sidewalkreator:
 
         self.dlg.add_bing_base.setEnabled(False)
 
+    def prepare_split_options(self):
+        if not self.no_buildings:
+            self.dlg.voronoi_checkbox.setEnabled(True)
+            self.dlg.alongside_vor_checkbox.setEnabled(True)
+        else:
+            self.dlg.maxlensplit_checkbox.setEnabled(True)
+            self.dlg.maxlensplit_box.setEnabled(True)
+            self.dlg.segsbynum_checkbox.setEnabled(True)
+            self.dlg.segsbynum_box.setEnabled(True)
+            self.dlg.onlyfacades_checkbox.setEnabled(True)
+            self.dlg.dontsplit_checkbox.setEnabled(True)
+
+    def alongside_voronoi_opts(self):
+        if self.dlg.alongside_vor_checkbox.isChecked():
+            self.dlg.maxlensplit_checkbox.setEnabled(True)
+            self.dlg.maxlensplit_box.setEnabled(True)
+            self.dlg.segsbynum_checkbox.setEnabled(True)
+            self.dlg.segsbynum_box.setEnabled(True)
+            self.dlg.onlyfacades_checkbox.setEnabled(True)
+            self.dlg.dontsplit_checkbox.setEnabled(True)
+        else:
+            self.dlg.maxlensplit_checkbox.setEnabled(False)
+            self.dlg.maxlensplit_box.setEnabled(False)
+            self.dlg.segsbynum_checkbox.setEnabled(False)
+            self.dlg.segsbynum_box.setEnabled(False)
+            self.dlg.onlyfacades_checkbox.setEnabled(False)
+            self.dlg.dontsplit_checkbox.setEnabled(False)
+
 
     def sidewalks_splitting(self):
-        # disabling what wouldnt be needed adterwars:
+        # disabling what wouldnt be needed adterwards:
         self.dlg.split_sidewalks.setEnabled(False)
+        self.dlg.voronoi_checkbox.setEnabled(False)
+        self.dlg.alongside_vor_checkbox.setEnabled(False)
+        self.dlg.maxlensplit_checkbox.setEnabled(False)
+        self.dlg.maxlensplit_box.setEnabled(False)
+        self.dlg.segsbynum_checkbox.setEnabled(False)
+        self.dlg.segsbynum_box.setEnabled(False)
+        self.dlg.onlyfacades_checkbox.setEnabled(False)
+        self.dlg.dontsplit_checkbox.setEnabled(False)
 
 
-        # finding which block "belongs" to each protoblock
-        create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
-        self.add_layer_canvas(self.protoblocks)
 
-        for feature in self.protoblocks.getFeatures():
-            select_vertex_pol_nodes(feature)
+        # action tree according to checkboxes:
+        if not self.dlg.dontsplit_checkbox.isChecked():
+            # firstly, splitting using protoblocks corners
+
+            # finding which block "belongs" to each protoblock
+            create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
+            self.add_layer_canvas(self.protoblocks)
+
+            #keeping only relevant vertices:
+            for feature in self.protoblocks.getFeatures():
+                select_vertex_pol_nodes(feature)
 
 
+            if self.dlg.voronoi_checkbox.isChecked():
+                pass
 
+                if self.dlg.alongside_vor_checkbox.isChecked():
+                    pass
+            else:
+                pass
 
+        # enabling for aftewards:
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+        self.dlg.output_file_label.setEnabled(True)
+        self.dlg.output_file_selector.setEnabled(True)
 
 
     def draw_crossings(self):
@@ -991,6 +1047,8 @@ class sidewalkreator:
 
         # Enabling What Shall be used afterwards:
         self.dlg.split_sidewalks.setEnabled(True)
+        # configuring the options for the next step:
+        self.prepare_split_options()
 
 
         # self.dlg.gencrossings_progressbar.setValue(100)
@@ -1227,7 +1285,17 @@ class sidewalkreator:
         # self.dlg.gencrossings_progressbar.setHidden(True)
         self.dlg.widths_hint.setHidden(True)
 
-
+        self.dlg.split_sidewalks.setHidden(True)
+        self.dlg.voronoi_checkbox.setHidden(True)
+        self.dlg.alongside_vor_checkbox.setHidden(True)
+        self.dlg.maxlensplit_checkbox.setHidden(True)
+        self.dlg.maxlensplit_box.setHidden(True)
+        self.dlg.segsbynum_checkbox.setHidden(True)
+        self.dlg.segsbynum_box.setHidden(True)
+        self.dlg.onlyfacades_checkbox.setHidden(True)
+        self.dlg.dontsplit_checkbox.setHidden(True)
+        self.dlg.output_file_label.setHidden(True)
+        self.dlg.output_file_selector.setHidden(True)
 
 
         # but enable the warning and the button:
@@ -1258,7 +1326,7 @@ class sidewalkreator:
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
-        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
@@ -1280,6 +1348,17 @@ class sidewalkreator:
         self.dlg.opt_perp_crossings.setEnabled(False)
         self.dlg.timeout_box.setEnabled(False)
         self.dlg.timeout_label.setEnabled(False)
+        self.dlg.split_sidewalks.setEnabled(False)
+        self.dlg.voronoi_checkbox.setEnabled(False)
+        self.dlg.alongside_vor_checkbox.setEnabled(False)
+        self.dlg.maxlensplit_checkbox.setEnabled(False)
+        self.dlg.maxlensplit_box.setEnabled(False)
+        self.dlg.segsbynum_checkbox.setEnabled(False)
+        self.dlg.segsbynum_box.setEnabled(False)
+        self.dlg.onlyfacades_checkbox.setEnabled(False)
+        self.dlg.dontsplit_checkbox.setEnabled(False)
+        self.dlg.output_file_label.setEnabled(False)
+        self.dlg.output_file_selector.setEnabled(False)
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
@@ -1349,6 +1428,18 @@ class sidewalkreator:
         self.dlg.label_inward_d.setHidden(False)
         self.dlg.opt_parallel_crossings.setHidden(False)
         self.dlg.opt_perp_crossings.setHidden(False)
+
+        self.dlg.split_sidewalks.setHidden(False)
+        self.dlg.voronoi_checkbox.setHidden(False)
+        self.dlg.alongside_vor_checkbox.setHidden(False)
+        self.dlg.maxlensplit_checkbox.setHidden(False)
+        self.dlg.maxlensplit_box.setHidden(False)
+        self.dlg.segsbynum_checkbox.setHidden(False)
+        self.dlg.segsbynum_box.setHidden(False)
+        self.dlg.onlyfacades_checkbox.setHidden(False)
+        self.dlg.dontsplit_checkbox.setHidden(False)
+        self.dlg.output_file_label.setHidden(False)
+        self.dlg.output_file_selector.setHidden(False)
 
         # self.dlg.gencrossings_progressbar.setHidden(False)
 
@@ -1779,4 +1870,12 @@ class sidewalkreator:
 
         return intersec_sideA,intersec_sideB
 
+    def outputting_files(self):
+        inputdirpath = self.dlg.output_file_selector.text() #TODO CHECK 
+
+
+        # disabling for the next cycle:
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.dlg.output_file_label.setEnabled(False)
+        self.dlg.output_file_selector.setEnabled(False)
 

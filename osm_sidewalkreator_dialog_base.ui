@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>817</width>
-    <height>663</height>
+    <width>824</width>
+    <height>655</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,8 +19,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>320</x>
-     <y>20</y>
+     <x>370</x>
+     <y>10</y>
      <width>261</width>
      <height>32</height>
     </rect>
@@ -38,8 +38,8 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>20</y>
+     <x>70</x>
+     <y>10</y>
      <width>191</width>
      <height>31</height>
     </rect>
@@ -89,9 +89,9 @@
   <widget class="QLabel" name="input_pol_label">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>60</y>
-     <width>191</width>
+     <x>120</x>
+     <y>50</y>
+     <width>101</width>
      <height>31</height>
     </rect>
    </property>
@@ -99,15 +99,15 @@
     <string>Input Polygon:</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignCenter</set>
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
   <widget class="QgsMapLayerComboBox" name="input_layer_selector">
    <property name="geometry">
     <rect>
-     <x>260</x>
-     <y>60</y>
-     <width>391</width>
+     <x>240</x>
+     <y>50</y>
+     <width>491</width>
      <height>31</height>
     </rect>
    </property>
@@ -134,7 +134,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>110</x>
+     <x>140</x>
      <y>610</y>
      <width>131</width>
      <height>31</height>
@@ -153,8 +153,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>310</x>
-     <y>140</y>
+     <x>360</x>
+     <y>130</y>
      <width>171</width>
      <height>51</height>
     </rect>
@@ -171,8 +171,8 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>320</x>
-     <y>100</y>
+     <x>370</x>
+     <y>90</y>
      <width>231</width>
      <height>21</height>
     </rect>
@@ -187,8 +187,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>530</x>
-     <y>130</y>
+     <x>580</x>
+     <y>120</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -324,7 +324,7 @@ Compute Intersections</string>
    <property name="geometry">
     <rect>
      <x>410</x>
-     <y>352</y>
+     <y>341</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -348,8 +348,8 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>380</x>
-     <y>192</y>
+     <x>430</x>
+     <y>189</y>
      <width>291</width>
      <height>41</height>
     </rect>
@@ -415,8 +415,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>160</y>
+     <x>90</x>
+     <y>150</y>
      <width>161</width>
      <height>41</height>
     </rect>
@@ -497,8 +497,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>550</x>
-     <y>160</y>
+     <x>600</x>
+     <y>150</y>
      <width>118</width>
      <height>23</height>
     </rect>
@@ -660,8 +660,8 @@ add to Width</string>
   <widget class="QPushButton" name="add_osm_basemap">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>100</y>
+     <x>51</x>
+     <y>90</y>
      <width>91</width>
      <height>41</height>
     </rect>
@@ -674,8 +674,8 @@ Base Map</string>
   <widget class="QPushButton" name="add_bing_base">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>100</y>
+     <x>167</x>
+     <y>90</y>
      <width>91</width>
      <height>41</height>
     </rect>
@@ -757,7 +757,7 @@ dead-end-streets
    <property name="geometry">
     <rect>
      <x>390</x>
-     <y>570</y>
+     <y>572</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -917,8 +917,8 @@ dicularly</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>150</y>
+     <x>290</x>
+     <y>140</y>
      <width>51</width>
      <height>21</height>
     </rect>
@@ -944,8 +944,8 @@ dicularly</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>170</y>
+     <x>280</x>
+     <y>160</y>
      <width>71</width>
      <height>21</height>
     </rect>
@@ -965,9 +965,9 @@ dicularly</string>
   <widget class="QWidget" name="horizontalLayoutWidget_2">
    <property name="geometry">
     <rect>
-     <x>274</x>
+     <x>270</x>
      <y>470</y>
-     <width>543</width>
+     <width>562</width>
      <height>91</height>
     </rect>
    </property>
@@ -985,12 +985,12 @@ dicularly</string>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox">
+       <widget class="QCheckBox" name="alongside_vor_checkbox">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Alongside with other options</string>
+         <string>Alongside with another option</string>
         </property>
        </widget>
       </item>
@@ -999,7 +999,7 @@ dicularly</string>
     <item>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <widget class="QRadioButton" name="radioButton">
+       <widget class="QRadioButton" name="maxlensplit_checkbox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -1009,7 +1009,7 @@ dicularly</string>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QRadioButton" name="radioButton_2">
+       <widget class="QRadioButton" name="segsbynum_checkbox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -1020,17 +1020,20 @@ segments</string>
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QRadioButton" name="radioButton_3">
+       <widget class="QRadioButton" name="onlyfacades_checkbox">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
          <string>Only Facades</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="1" column="2">
-       <widget class="QRadioButton" name="radioButton_4">
+       <widget class="QRadioButton" name="dontsplit_checkbox">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -1040,12 +1043,15 @@ segments</string>
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QSpinBox" name="perc_draw_kerbs_box_2">
+       <widget class="QSpinBox" name="segsbynum_box">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="suffix">
-         <string> seg.</string>
+         <string/>
+        </property>
+        <property name="prefix">
+         <string>x: </string>
         </property>
         <property name="minimum">
          <number>2</number>
@@ -1062,7 +1068,7 @@ segments</string>
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QDoubleSpinBox" name="d_to_add_inward_box_2">
+       <widget class="QDoubleSpinBox" name="maxlensplit_box">
         <property name="enabled">
          <bool>false</bool>
         </property>
