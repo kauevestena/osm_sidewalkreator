@@ -134,6 +134,9 @@ class sidewalkreator:
     # if method to split sidewalks using addrs and/or building centroids (HERE NAMED POIS) are avaliable (unavaliable is the most general situation, there's lots of areas without a single one)
     POI_split_avaliable = False
 
+    # ready for "OK" button pressing:
+    ok_ready = False
+
     def __init__(self, iface):
         """Constructor.
 
@@ -363,6 +366,8 @@ class sidewalkreator:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
+            self.ok_ready = True
+
             self.outputting_files()
             self.reset_fields() # so "rebooting" for next execution
 
@@ -472,7 +477,7 @@ class sidewalkreator:
 
         # protoblocks has been moved to here:
 
-        self.protoblocks = poligonize_lines(self.clipped_reproj_datalayer)
+        self.protoblocks = polygonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
 
@@ -1013,7 +1018,7 @@ class sidewalkreator:
         ###################################################### ADDING POINTS
         # before next steps, adding the intersection points to the sidewalks layer:
 
-        self.add_kerb_vertices()
+        self.add_kerb_sidewalk_vertices() 
 
 
         # # # segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,self.crossings_A_E_pointlist)
@@ -1185,6 +1190,19 @@ class sidewalkreator:
         # finally, the sidewalks as boundaries (before any division):
         self.whole_sidewalks = extract_lines_from_polygons(diff_layer_as_singleparts,'memory:'+self.whole_sidewalklayer_name)
         self.whole_sidewalks.setCrs(self.custom_localTM_crs)
+
+
+        # # # # # FOR CONVCAVE/CONVEX TEST
+        # # # # # polygonized version of sidewalks, for latter use:
+        # # # # self.polygonized_sidewalks = polygonize_lines(self.whole_sidewalks)
+        # # # # self.polygonized_sidewalks.setCrs(self.custom_localTM_crs)
+
+        # # # # # convex hulls of sidewalks, for concave checkage:
+        # # # # self.polygonized_sidewalks_convexhulls = convex_hulls(self.whole_sidewalks)
+        # # # # self.polygonized_sidewalks_convexhulls.setCrs(self.custom_localTM_crs)
+
+        # self.add_layer_canvas(self.polygonized_sidewalks_convexhulls)
+
 
         # first, deleting all previous fields:
         remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
@@ -1488,11 +1506,16 @@ class sidewalkreator:
         self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels)
         self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels)
 
-        # also wipe data:
-        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
 
-        # remove temporary layers:
-        self.remove_temporary_layers()
+        # to not exclude created layers and data when the "Ok" button is pressed:
+        if not self.ok_ready:
+            # also wipe data:
+            self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+
+            # remove temporary layers:
+            self.remove_temporary_layers()
+
+        self.ok_ready = False
 
         # and refresh canvas:
         self.iface.mapCanvas().refresh()
@@ -1912,24 +1935,45 @@ class sidewalkreator:
             features = self.whole_sidewalks.getFeatures(request)
 
             for feature in features:
-                segments_list = []
-                centroid  = QgsPoint(feature.geometry().centroid().asPoint())
+                segment_as_list = []
+                centroid  = feature.geometry().centroid().asPoint()
+                # centroid  = QgsPoint(feature.geometry().centroid().asPoint())
 
-                for vertex in rel_vertices_dict[feature.id()]:
+                for i,vertex in enumerate(rel_vertices_dict[feature.id()]):
 
-                    segments_list.append(QgsGeometry.fromPolyline([centroid,QgsPoint(vertex)]))
+                    # segment_as_list.append(QgsGeometry.fromPolyline([centroid,QgsPoint(vertex)]))
 
-                segments_asMultiLineString = QgsGeometry.collectGeometry(segments_list)
-                print(segments_asMultiLineString)
+                    if i == 0 or i == 1:
+                        segment_as_list.append(vertex)
+                        segment_as_list.append(centroid)
+                    elif i == 2:
+                        segment_as_list.append(vertex)
+
+                    else:
+                        break
+
+                # print(segment_as_list)
+
+
+                # segments_asMultiLineString = QgsGeometry.collectGeometry(segment_as_list)
+                # print(segments_asMultiLineString)
+
+                res, geoms, topol_pts = feature.geometry().splitGeometry(segment_as_list,False)
+
+                print(res,'\n', geoms,'\n', topol_pts,'\n\n')
 
 
 
-    def add_kerb_vertices(self):
+
+
+    def add_kerb_sidewalk_vertices(self):
         # trying based on: https://gis.stackexchange.com/a/57024/49900 thx anyway
 
         as_geom = pointlist_to_multipoint(self.crossings_A_E_pointlist)
 
         segments_list = []
+
+        # TODO: check if sidewalk is a concave or convex ring
 
 
         with edit(self.whole_sidewalks):
@@ -1938,6 +1982,8 @@ class sidewalkreator:
 
                 buffer = geom.buffer(1,5)
 
+
+
                 # centroid = buffer.centroid()
 
                 # incident points on buffer
@@ -1945,7 +1991,8 @@ class sidewalkreator:
 
                 # print(len(geom.asPolyline()))
 
-                # print('\n',feature.id())
+                # # print('\n',feature.id())
+
                 for vertex in incident_list:
 
 
@@ -1964,6 +2011,7 @@ class sidewalkreator:
                     # print('closest vertex with context',geom.closestVertexWithContext(vertex))
 
                     _,id = geom.closestVertexWithContext(vertex)
+
 
 
                     # vertex = QgsGeometry(QgsPoint(vertex))

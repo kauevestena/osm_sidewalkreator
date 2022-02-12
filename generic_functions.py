@@ -90,10 +90,16 @@ def merge_touching_lines(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
     return processing.run('native:mergelines',parameter_dict)['OUTPUT']
 
 
-def poligonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
-    parameter_dict = {'INPUT': inputlines, 'OUTPUT': outputlayer,'KEEP_FIELDS':keepfields}
+def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
+    parameter_dict = {'INPUT': inputlines, 'OUTPUT': outputlayer}
 
     return processing.run('native:polygonize',parameter_dict)['OUTPUT']
+
+
+def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'KEEP_FIELDS':keepfields}
+
+    return processing.run('native:convexhull',parameter_dict)['OUTPUT']
 
 def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}
