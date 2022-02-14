@@ -36,7 +36,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
-from qgis import processing
+from processing.gui.AlgorithmExecutor import execute_in_place
 from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest
 
 
@@ -51,6 +51,7 @@ from PyQt5.QtCore import QVariant
 from .resources import *
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
+
 
 
 # for third-party libraries installation
@@ -1015,7 +1016,7 @@ class sidewalkreator:
             self.crossings_A_E_pointlist.append(pE_feat.geometry())
 
 
-        ###################################################### ADDING POINTS
+        ###################################################### ADDING POINTS TO SIDEWALKS
         # before next steps, adding the intersection points to the sidewalks layer:
 
         self.add_kerb_sidewalk_vertices() 
@@ -1926,41 +1927,69 @@ class sidewalkreator:
 
 
     def split_sidewalks_by_protoblocks(self,rel_vertices_dict):
+        
+        # for inplace, thx: https://gis.stackexchange.com/a/412130/49900
+
+
+        self.unselect_all_from_all() # prevent from any selection
+
+        # TODO: remove tiny segments
+
         with edit(self.whole_sidewalks):
             # thx, again: https://gis.stackexchange.com/a/130622/49900
+
 
             request = QgsFeatureRequest()
             request.setFilterFids(list(rel_vertices_dict.keys()))
 
             features = self.whole_sidewalks.getFeatures(request)
 
+            segments_as_list = []
+
+
             for feature in features:
-                segment_as_list = []
                 centroid  = feature.geometry().centroid().asPoint()
-                # centroid  = QgsPoint(feature.geometry().centroid().asPoint())
+                centroid  = QgsPoint(feature.geometry().centroid().asPoint())
 
                 for i,vertex in enumerate(rel_vertices_dict[feature.id()]):
 
-                    # segment_as_list.append(QgsGeometry.fromPolyline([centroid,QgsPoint(vertex)]))
+                    segments_as_list.append(QgsGeometry.fromPolyline([centroid,QgsPoint(vertex)]))
 
-                    if i == 0 or i == 1:
-                        segment_as_list.append(vertex)
-                        segment_as_list.append(centroid)
-                    elif i == 2:
-                        segment_as_list.append(vertex)
+                    # if i == 0 or i == 1:
+                    #     segment_as_list.append(vertex)
+                    #     segment_as_list.append(centroid)
+                    # # elif i == 2:
+                    # #     segment_as_list.append(vertex)
 
-                    else:
-                        break
+                    # else:
+                    #     break
+
+
 
                 # print(segment_as_list)
 
+                # Any similarity between this part and code at "generic_functions.segments_to_add_points_tolinelayer" purely coincidental (or no kkkk)
 
-                # segments_asMultiLineString = QgsGeometry.collectGeometry(segment_as_list)
-                # print(segments_asMultiLineString)
+            segments_asMultiLineString = QgsGeometry.collectGeometry(segments_as_list)
 
-                res, geoms, topol_pts = feature.geometry().splitGeometry(segment_as_list,False)
+            segments_asfeatlist = [geom_to_feature(segments_asMultiLineString)]
 
-                print(res,'\n', geoms,'\n', topol_pts,'\n\n')
+            segments_aslayer = layer_from_featlist(segments_asfeatlist,'segments_intersections','LineString')
+            segments_aslayer.setCrs(self.custom_localTM_crs)
+
+            registry = QgsApplication.instance().processingRegistry()
+            alg = registry.algorithmById("qgis:splitwithlines")
+
+            # self.add_layer_canvas(segments_aslayer)
+
+
+            # Run the algorithm using 'in-place' edits
+            params = {'INPUT': self.whole_sidewalks,'LINES': segments_aslayer}
+            execute_in_place(alg, params)
+
+        # somehow it keep features selected, so:
+        self.unselect_all_from_all()
+
 
 
 
@@ -2057,6 +2086,25 @@ class sidewalkreator:
                 # print(geom)
 
 
+    def unselect_all_from_all(self):
+        # # thx: https://gis.stackexchange.com/a/200412/49900
+
+        # for a in self.iface.attributesToolBar().actions(): 
+        #     if a.objectName() == 'mActionDeselectAll':
+        #         a.trigger()
+        #         break
+        # # this seems to be a better solution, but actually renders some mess...
+
+
+        # thx: https://gis.stackexchange.com/a/82326/49900
+        mc = self.iface.mapCanvas()
+
+        for layer in mc.layers():
+            if layer.type() == layer.VectorLayer:
+                layer.removeSelection()
+
+        mc.refresh()
+
 
 
 
@@ -2070,4 +2118,7 @@ class sidewalkreator:
         self.dlg.output_file_label.setEnabled(False)
         self.dlg.output_file_selector.setEnabled(False)
         self.dlg.output_file_selector.setFilePath("")
+
+
+    
 
