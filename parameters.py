@@ -115,3 +115,6 @@ kerbs_layer_name = 'KERBS'
 
 # little buffer for dissolved protoblocks "within" condition elegibility in all cases (as long as I know)
 protoblocks_buffer = 0.5 # 50 cm
+
+# value to exclude "tiny segments"
+tiny_segments_tol = 0.1

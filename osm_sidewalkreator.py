@@ -1933,7 +1933,6 @@ class sidewalkreator:
 
         self.unselect_all_from_all() # prevent from any selection
 
-        # TODO: remove tiny segments
 
         with edit(self.whole_sidewalks):
             # thx, again: https://gis.stackexchange.com/a/130622/49900
@@ -1987,8 +1986,17 @@ class sidewalkreator:
             params = {'INPUT': self.whole_sidewalks,'LINES': segments_aslayer}
             execute_in_place(alg, params)
 
+
         # somehow it keep features selected, so:
         self.unselect_all_from_all()
+
+        with edit(self.whole_sidewalks):
+            for feature in self.whole_sidewalks.getFeatures():
+                # print(feature.geometry().length())
+                if feature.geometry().length() < tiny_segments_tol:
+                    self.whole_sidewalks.deleteFeature(feature.id())
+
+
 
 
 
