@@ -657,16 +657,24 @@ class sidewalkreator:
 
             #keeping only relevant vertices:
             relevant_vertices = {}
+            self.protoblock_wholesidewalk_inc_dict = {}
             for feature in self.protoblocks.getFeatures():
                 # vertex_list = select_vertex_pol_nodes(feature)
 
                 # incident_sidewalk_number  = int(feature['incident'])
 
-                relevant_vertices[int(feature['incident'])] = select_vertex_pol_nodes(feature)
+                self.protoblock_wholesidewalk_inc_dict[feature.id()] = []
+
+                for incident in feature['incident'].split():
+
+                    relevant_vertices[int(incident)] = select_vertex_pol_nodes(feature)
+
+                    self.protoblock_wholesidewalk_inc_dict[feature.id()].append(int(incident))
 
 
                 # print(feature['incident'],vertex_list)
 
+            print(self.protoblock_wholesidewalk_inc_dict)
             self.split_sidewalks_by_protoblocks(relevant_vertices)
 
             if self.dlg.voronoi_checkbox.isChecked():
@@ -1979,12 +1987,20 @@ class sidewalkreator:
             registry = QgsApplication.instance().processingRegistry()
             alg = registry.algorithmById("qgis:splitwithlines")
 
+            # print(registry)
+            # print(alg)
+
             # self.add_layer_canvas(segments_aslayer)
 
 
             # Run the algorithm using 'in-place' edits
             params = {'INPUT': self.whole_sidewalks,'LINES': segments_aslayer}
             execute_in_place(alg, params)
+
+            # for feature in self.whole_sidewalks.getFeatures():
+
+
+
 
 
         # somehow it keep features selected, so:
@@ -1995,6 +2011,50 @@ class sidewalkreator:
                 # print(feature.geometry().length())
                 if feature.geometry().length() < tiny_segments_tol:
                     self.whole_sidewalks.deleteFeature(feature.id())
+
+        # create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks,'incident_splitted1')
+
+            for feature in self.protoblocks.getFeatures():
+
+                
+                n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
+
+                if n_whole_incidents == 1:
+
+                    contained_feats = []
+                    for tested_feature in self.whole_sidewalks.getFeatures():
+                        if feature.geometry().contains(tested_feature.geometry()):
+                            contained_feats.append(tested_feature)
+
+                    interest_id = self.protoblock_wholesidewalk_inc_dict[feature.id()][0]
+
+                    
+                    # print(len(contained_geoms),len(rel_vertices_dict[interest_id]))
+
+                    # print(contained_feats)
+
+                    """
+                    IF CONTAINED FEATURES ARE BIGGER THAN WHAT SHOULD BE, UNITE THE TINYEST WITH THE REMNANT WITH LESS POINTS
+                    """
+
+
+                    if len(contained_feats) == (len(rel_vertices_dict[interest_id]) + 1):
+                        ids = [c_feat.id() for c_feat in contained_feats]
+                        lenghts = [c_feat.geometry().length() for c_feat in contained_feats]
+                        # lenghts = {c_feat.key():len(c_feat.geometry()) for cfeat in contained_feats}
+
+                        print(lenghts,ids)
+
+
+                # else: # TODO: treat cases with 2 or more per protoblock 
+
+        # for feature in self.whole_sidewalks.getFeatures():
+        #     geom = feature.geometry()
+        #     geom.convertToSingleType()
+        #     print(len(geom.asPolyline()),geom.length())
+            # print(len(feature.geometry().asPolyline()))
+
+
 
 
 
