@@ -101,6 +101,11 @@ def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
 
     return processing.run('native:convexhull',parameter_dict)['OUTPUT']
 
+def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
+
+    return processing.run('native:snapgeometries',parameter_dict)['OUTPUT']
+
 def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}
 

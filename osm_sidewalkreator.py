@@ -1024,10 +1024,29 @@ class sidewalkreator:
             self.crossings_A_E_pointlist.append(pE_feat.geometry())
 
 
+        # creating and styling the crossings and kerbs layers
+        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
+        self.crossings_layer.setCrs(self.custom_localTM_crs)
+
+        crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
+        self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
+
+        self.kerbs_layer = layer_from_featlist(kerbs_featlist,kerbs_layer_name)
+        self.kerbs_layer.setCrs(self.custom_localTM_crs)
+
+
+        kerbs_stylefile_path = os.path.join(assets_path,kerbs_stylefilename)
+        self.kerbs_layer.loadNamedStyle(kerbs_stylefile_path)
+
+
         ###################################################### ADDING POINTS TO SIDEWALKS
         # before next steps, adding the intersection points to the sidewalks layer:
 
-        self.add_kerb_sidewalk_vertices() 
+        # self.add_kerb_sidewalk_vertices()  # it was a good try, but still with troubles
+
+        temporary_snapped_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer)
+
+        swap_features_layer_another(self.whole_sidewalks,temporary_snapped_sidewalks)
 
 
         # # # segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,self.crossings_A_E_pointlist)
@@ -1057,20 +1076,6 @@ class sidewalkreator:
 
         # self.add_layer_canvas(rejoined_sidewalks)
 
-
-        # creating and styling the crossings and kerbs layers
-        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
-        self.crossings_layer.setCrs(self.custom_localTM_crs)
-
-        crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
-        self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
-
-        self.kerbs_layer = layer_from_featlist(kerbs_featlist,kerbs_layer_name)
-        self.kerbs_layer.setCrs(self.custom_localTM_crs)
-
-
-        kerbs_stylefile_path = os.path.join(assets_path,kerbs_stylefilename)
-        self.kerbs_layer.loadNamedStyle(kerbs_stylefile_path)
 
 
 
