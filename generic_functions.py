@@ -51,6 +51,13 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
 
     return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
 
+
+def split_lines_by_max_len(inputlayer,len_val_or_expression,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {'INPUT': inputlayer,'LENGTH':len_val_or_expression, 'OUTPUT': outputlayer}
+
+    return processing.run('native:splitlinesbylength',parameter_dict)['OUTPUT']
+
+
 def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTPUT'):
 
     parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer, 'OUTPUT': outputlayer}

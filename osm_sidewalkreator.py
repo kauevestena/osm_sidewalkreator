@@ -653,7 +653,9 @@ class sidewalkreator:
             create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
             self.add_layer_canvas(self.protoblocks)
 
-
+            # creating field to store splitting distance:
+            self.split_field_name = 'split_len'
+            self.split_len_field_id = create_new_layerfield(self.whole_sidewalks,self.split_field_name)
 
             #keeping only relevant vertices:
             relevant_vertices = {}
@@ -1047,36 +1049,6 @@ class sidewalkreator:
         temporary_snapped_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer)
 
         swap_features_layer_another(self.whole_sidewalks,temporary_snapped_sidewalks)
-
-
-        # # # segs_layer = segments_to_add_points_tolinelayer(self.whole_sidewalks,self.crossings_A_E_pointlist)
-
-
-        # # # segs_layer.setCrs(self.custom_localTM_crs)
-
-        # # # # self.add_layer_canvas(segs_layer)
-
-
-        # # # # thats not the final splitted sidewalks, but a part of the process...
-        # # # splitted_sidewalks = split_lines(self.whole_sidewalks,segs_layer)
-        # # # splitted_sidewalks.setCrs(self.custom_localTM_crs)
-        # # # # self.add_layer_canvas(splitted_sidewalks)
-
-
-        # # # rejoined_multipart = rejoin_splitted_lines(splitted_sidewalks,self.protoblocks)
-        # # # rejoined_multipart.setCrs(self.custom_localTM_crs)
-        # # # # self.add_layer_canvas(rejoined_multipart)
-
-        # # # rejoined_sidewalks = merge_touching_lines(rejoined_multipart)
-        # # # rejoined_sidewalks.setCrs(self.custom_localTM_crs)
-
-        # # # # now swapping features:
-        # # # swap_features_layer_another(self.whole_sidewalks,rejoined_sidewalks)
-
-
-        # self.add_layer_canvas(rejoined_sidewalks)
-
-
 
 
         # self.add_layer_canvas(self.inner_crossings_layer)
@@ -2234,6 +2206,9 @@ class sidewalkreator:
         mc.refresh()
 
 
+    def create_splitting_distances(self,value,isbynumber):
+        # field for splitting using that neat function from processing "split by maximum length"
+        pass
 
 
     def outputting_files(self):
