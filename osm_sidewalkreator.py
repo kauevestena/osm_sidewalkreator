@@ -2012,7 +2012,6 @@ class sidewalkreator:
                 if feature.geometry().length() < tiny_segments_tol:
                     self.whole_sidewalks.deleteFeature(feature.id())
 
-        # create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks,'incident_splitted1')
 
             for feature in self.protoblocks.getFeatures():
 
@@ -2041,9 +2040,65 @@ class sidewalkreator:
                     if len(contained_feats) == (len(rel_vertices_dict[interest_id]) + 1):
                         ids = [c_feat.id() for c_feat in contained_feats]
                         lenghts = [c_feat.geometry().length() for c_feat in contained_feats]
+
                         # lenghts = {c_feat.key():len(c_feat.geometry()) for cfeat in contained_feats}
 
-                        print(lenghts,ids)
+
+                        pos_min_id_feature = lenghts.index(min(lenghts))
+                        min_len_id = ids[pos_min_id_feature]
+
+                        min_len_feat = contained_feats[pos_min_id_feature]
+
+                        touching_features = []
+                        for feature in contained_feats:
+                            if feature.id() != min_len_id:
+                                # if not min_len_feat.geometry().disjoint(feature.geometry()):
+                                if min_len_feat.geometry().touches(feature.geometry()):
+                                    # print(feature.geometry())
+                                    touching_features.append(feature)
+
+                        if len(touching_features) >= 1:
+                            # print(touching_features[0].geometry().combine(min_len_feat.geometry()),'1')
+                            # print(min_len_feat.geometry().combine(touching_features[0].geometry()),'2','\n')
+
+                            chosen_feature = touching_features[0]
+
+
+                            if len(touching_features) > 1:
+                                
+                                n_vertex = []
+                                for touching_feature in touching_features:
+                                    try:
+                                        as_polyline = touching_feature.asPolyline()
+
+                                        n_vertex.append(len(as_polyline))
+                                    except Exception as e:
+                                        try:            
+                                            as_polyline = touching_feature.asPolyline()[0]
+
+                                            n_vertex.append(len(as_polyline))
+                                        except:
+                                            chosen_feature = touching_features[0]
+
+                                            break
+
+                                index_min_vertex = touching_features.index(min(touching_features))
+                                chosen_feature = touching_features[index_min_vertex]
+                             
+                            merged_line = chosen_feature.geometry().combine(min_len_feat.geometry())
+
+                            geom_type = merged_line.wkbType()
+
+                            if geom_type == 5: # '2' is for "MultiLinestring" 
+                                merged_second_method = merged_line.mergeLines(merged_line)
+
+                                if not merged_second_method.isEmpty():
+                                    merged_line = merged_second_method
+                                    geom_type = merged_line.wkbType()
+
+                            if geom_type == 2: # '2' is for "Linestring" 
+                                self.whole_sidewalks.changeGeometry(chosen_feature.id(),merged_line)
+                                self.whole_sidewalks.deleteFeature(min_len_feat.id())
 
 
                 # else: # TODO: treat cases with 2 or more per protoblock 
