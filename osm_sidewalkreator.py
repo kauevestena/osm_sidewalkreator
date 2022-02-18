@@ -2218,17 +2218,33 @@ class sidewalkreator:
         mc.refresh()
 
 
-    def fill_splitting_distances(self,value,isbynumber=False):
+    def fill_splitting_lengths(self,value,isbynumber=False,percent_add=0.01):
         # field for splitting using that neat function from processing "split by maximum length"
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
                 f_length = feature.geometry().length()
 
-                if isbynumber:
-                    split_len = f_length/value
+                if isbynumber: # always an integer, so...
+                    if value > 1:
+                        split_len = (f_length/value)
+                        split_len += split_len*percent_add
+                        split_len = round(split_len,2)
+                    else:
+                        split_len = 2*f_length
+
+
                 else:
-                    number_splits = round(f_length/value)
-                    split_len = f_length/number_splits
+                    if value < (f_length + (f_length*percent_add)):
+                        number_splits = round(f_length/value)
+                        if number_splits > 1:
+                            split_len = (f_length/number_splits )
+
+                            split_len += split_len*percent_add
+                            split_len = round(split_len,2)
+                        else:
+                            split_len = 2*f_length
+                    else:
+                        split_len = 2*f_length
 
 
                 self.whole_sidewalks.changeAttributeValue(feature.id(),self.split_len_field_id,split_len)
@@ -2236,7 +2252,7 @@ class sidewalkreator:
                 
     def splitting_by_distance_or_ndivisions(self,value,isbynumber=False):
 
-        self.fill_splitting_distances(value,isbynumber)
+        self.fill_splitting_lengths(value,isbynumber)
 
         split_expression = f'"{self.split_field_name}"'
 
