@@ -651,7 +651,7 @@ class sidewalkreator:
 
             # finding which block "belongs" to each protoblock
             create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
-            self.add_layer_canvas(self.protoblocks)
+            # self.add_layer_canvas(self.protoblocks)
 
             # creating field to store splitting distance:
             self.split_field_name = 'split_len'
@@ -676,16 +676,28 @@ class sidewalkreator:
 
                 # print(feature['incident'],vertex_list)
 
-            print(self.protoblock_wholesidewalk_inc_dict)
+            # print(self.protoblock_wholesidewalk_inc_dict)
             self.split_sidewalks_by_protoblocks(relevant_vertices)
 
             if self.dlg.voronoi_checkbox.isChecked():
                 pass
 
                 if self.dlg.alongside_vor_checkbox.isChecked():
-                    pass
+                    if self.dlg.maxlensplit_checkbox.isChecked():
+                        pass
+                    elif self.dlg.maxlensplit_checkbox.isChecked():
+                        pass
             else:
-                pass
+                if self.dlg.maxlensplit_checkbox.isChecked():
+                    print('1ok')
+
+                    self.splitting_by_distance_or_ndivisions(self.dlg.maxlensplit_box.value())
+                elif self.dlg.segsbynum_checkbox.isChecked():
+                    print('2ok')
+
+                    self.splitting_by_distance_or_ndivisions(self.dlg.segsbynum_box.value(),True)
+
+
         else: # if we have voronoi and dontsplit:
             if self.dlg.voronoi_checkbox.isChecked():
                 pass
@@ -2206,9 +2218,36 @@ class sidewalkreator:
         mc.refresh()
 
 
-    def create_splitting_distances(self,value,isbynumber):
+    def fill_splitting_distances(self,value,isbynumber=False):
         # field for splitting using that neat function from processing "split by maximum length"
-        pass
+        with edit(self.whole_sidewalks):
+            for feature in self.whole_sidewalks.getFeatures():
+                f_length = feature.geometry().length()
+
+                if isbynumber:
+                    split_len = f_length/value
+                else:
+                    number_splits = round(f_length/value)
+                    split_len = f_length/number_splits
+
+
+                self.whole_sidewalks.changeAttributeValue(feature.id(),self.split_len_field_id,split_len)
+
+                
+    def splitting_by_distance_or_ndivisions(self,value,isbynumber=False):
+
+        self.fill_splitting_distances(value,isbynumber)
+
+        split_expression = f'"{self.split_field_name}"'
+
+        # print(split_expression)
+
+        temporary_splitted_sidewalks = split_lines_by_max_len(self.whole_sidewalks,split_expression)
+
+        # self.add_layer_canvas(temporary_splitted_sidewalks)
+
+        swap_features_layer_another(self.whole_sidewalks,temporary_splitted_sidewalks)
+
 
 
     def outputting_files(self):

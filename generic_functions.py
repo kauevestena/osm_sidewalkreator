@@ -4,7 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty
 import os
 from math import isclose,pi
 
@@ -53,7 +53,13 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
 
 
 def split_lines_by_max_len(inputlayer,len_val_or_expression,outputlayer='TEMPORARY_OUTPUT'):
+
+
+
     parameter_dict = {'INPUT': inputlayer,'LENGTH':len_val_or_expression, 'OUTPUT': outputlayer}
+
+    if type(len_val_or_expression) == str:
+        parameter_dict['LENGTH'] = QgsProperty.fromExpression(len_val_or_expression)
 
     return processing.run('native:splitlinesbylength',parameter_dict)['OUTPUT']
 
