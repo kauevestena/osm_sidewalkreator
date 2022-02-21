@@ -434,7 +434,7 @@ class sidewalkreator:
             (self.dlg.alongside_vor_checkbox,'Alongside with another option','Junto à Outra Opção'),
             (self.dlg.maxlensplit_checkbox,'Max Len.','Larg. Máx.'),
             (self.dlg.segsbynum_checkbox,'In x\nsegments','Em x\nsegmentos'),
-            (self.dlg.onlyfacades_checkbox,'Only Facades','Apenas Faces'),
+            (self.dlg.onlyfacades_checkbox,'Only Facades',' Faces Q.'),
             (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
 
 
@@ -446,11 +446,17 @@ class sidewalkreator:
 
         ]
 
-
-
+        
         for info_set in info_tuples:
             # What an elegant solution!!!
             self.set_text_based_on_language(*info_set)
+
+        preffix_tuples = [
+        (self.dlg.minimum_pois_box,'min. POIs: ','min. pts.: '),
+        ]
+
+        for preffixes in preffix_tuples:
+            self.set_prefix_based_on_language(*preffixes)
 
     def data_clean(self):
 
@@ -605,6 +611,7 @@ class sidewalkreator:
     def prepare_split_options(self):
         if self.POI_split_avaliable:
             self.dlg.voronoi_checkbox.setEnabled(True)
+            self.dlg.minimum_pois_box.setEnabled(True)
             self.dlg.alongside_vor_checkbox.setEnabled(True)
         else:
             self.dlg.maxlensplit_checkbox.setEnabled(True)
@@ -635,6 +642,7 @@ class sidewalkreator:
         # disabling what wouldnt be needed adterwards:
         self.dlg.split_sidewalks.setEnabled(False)
         self.dlg.voronoi_checkbox.setEnabled(False)
+        self.dlg.minimum_pois_box.setEnabled(False)
         self.dlg.alongside_vor_checkbox.setEnabled(False)
         self.dlg.maxlensplit_checkbox.setEnabled(False)
         self.dlg.maxlensplit_box.setEnabled(False)
@@ -1328,6 +1336,7 @@ class sidewalkreator:
 
         self.dlg.split_sidewalks.setHidden(True)
         self.dlg.voronoi_checkbox.setHidden(True)
+        self.dlg.minimum_pois_box.setHidden(True)
         self.dlg.alongside_vor_checkbox.setHidden(True)
         self.dlg.maxlensplit_checkbox.setHidden(True)
         self.dlg.maxlensplit_box.setHidden(True)
@@ -1391,6 +1400,7 @@ class sidewalkreator:
         self.dlg.timeout_label.setEnabled(False)
         self.dlg.split_sidewalks.setEnabled(False)
         self.dlg.voronoi_checkbox.setEnabled(False)
+        self.dlg.minimum_pois_box.setEnabled(False)
         self.dlg.alongside_vor_checkbox.setEnabled(False)
         self.dlg.maxlensplit_checkbox.setEnabled(False)
         self.dlg.maxlensplit_box.setEnabled(False)
@@ -1472,6 +1482,7 @@ class sidewalkreator:
 
         self.dlg.split_sidewalks.setHidden(False)
         self.dlg.voronoi_checkbox.setHidden(False)
+        self.dlg.minimum_pois_box.setHidden(False)
         self.dlg.alongside_vor_checkbox.setHidden(False)
         self.dlg.maxlensplit_checkbox.setHidden(False)
         self.dlg.maxlensplit_box.setHidden(False)
@@ -1873,6 +1884,13 @@ class sidewalkreator:
                 qt_object.setText(en_txt)
             else:
                 qt_object.setText(ptbr_txt)
+
+    def set_prefix_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
+        if extra_control_bool:
+            if self.current_lang == 'en':
+                qt_object.setPrefix(en_txt)
+            else:
+                qt_object.setPrefix(ptbr_txt)
 
 
     def write_to_debug(self,input_stringable,add_newline=True):
@@ -2290,7 +2308,13 @@ class sidewalkreator:
         for feature in self.protoblocks.getFeatures():
             contained_POIs = feature.geometry().intersection(POIs_geom)
 
+
             if not contained_POIs.isEmpty():
+                num_pois = len(contained_POIs.asMultiPoint())
+            else:
+                num_pois = 0
+
+            if num_pois > self.dlg.minimum_pois_box.value():
                 voronoi_polygons = contained_POIs.voronoiDiagram(feature.geometry()).asGeometryCollection()
 
 
