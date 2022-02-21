@@ -64,6 +64,13 @@ def split_lines_by_max_len(inputlayer,len_val_or_expression,outputlayer='TEMPORA
     return processing.run('native:splitlinesbylength',parameter_dict)['OUTPUT']
 
 
+def vec_layers_intersection(inputlayer,overlay_layer,outputlayer='TEMPORARY_OUTPUT'):
+
+    parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlay_layer, 'OUTPUT': outputlayer}
+
+    return processing.run('qgis:intersection',parameter_dict)['OUTPUT']
+
+
 def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTPUT'):
 
     parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer, 'OUTPUT': outputlayer}
@@ -91,7 +98,7 @@ def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
 # # # def check_distances_layers(layer_many_features,layer_one_feature,idx=0):
 
 
-def dissolve_tosinglepart(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+def dissolve_tosinglegeom(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
 
     return processing.run('native:dissolve',parameter_dict)['OUTPUT']
@@ -123,6 +130,15 @@ def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}
 
     return processing.run('native:polygonstolines',parameter_dict)['OUTPUT']
+
+def collected_geoms_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+    '''
+    interface to 
+    https://docs.qgis.org/3.22/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgiscollect
+    '''
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+
+    return processing.run('native:collect',parameter_dict)['OUTPUT']
 
 def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
@@ -609,6 +625,9 @@ def geom_to_feature(inputgeom,attrs_list=None):
 def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
     '''
         creating a layer from a list of features (not geometries)
+
+        geomtype must be one of:
+        [“point”, “linestring”, “polygon”, “multipoint”,”multilinestring”,”multipolygon”]
     '''
 
     lname = 'temp'
@@ -918,7 +937,7 @@ def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1)
 
     segments_aslayer = layer_from_featlist(segments_asfeatlist,'segments_intersections','LineString')
 
-    dissolved_segments_layer = dissolve_tosinglepart(segments_aslayer)
+    dissolved_segments_layer = dissolve_tosinglegeom(segments_aslayer)
 
     # splitted_sidewalks = split_lines(input_linelayer,dissolved_segments_layer)
 

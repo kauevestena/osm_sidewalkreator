@@ -484,7 +484,7 @@ class sidewalkreator:
 
 
         # dissolving so will become just one geometry:
-        self.dissolved_protoblocks_0 = dissolve_tosinglepart(self.protoblocks)
+        self.dissolved_protoblocks_0 = dissolve_tosinglegeom(self.protoblocks)
         self.dissolved_protoblocks_0.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
 
@@ -618,8 +618,8 @@ class sidewalkreator:
         if self.dlg.alongside_vor_checkbox.isChecked():
             self.dlg.maxlensplit_checkbox.setEnabled(True)
             self.dlg.maxlensplit_box.setEnabled(True)
-            self.dlg.segsbynum_checkbox.setEnabled(True)
-            self.dlg.segsbynum_box.setEnabled(True)
+            # self.dlg.segsbynum_checkbox.setEnabled(True)
+            # self.dlg.segsbynum_box.setEnabled(True)
             self.dlg.onlyfacades_checkbox.setEnabled(True)
             self.dlg.dontsplit_checkbox.setEnabled(True)
         else:
@@ -680,13 +680,14 @@ class sidewalkreator:
             self.split_sidewalks_by_protoblocks(relevant_vertices)
 
             if self.dlg.voronoi_checkbox.isChecked():
-                pass
+                self.voronoi_splitting()
 
                 if self.dlg.alongside_vor_checkbox.isChecked():
                     if self.dlg.maxlensplit_checkbox.isChecked():
-                        pass
-                    elif self.dlg.maxlensplit_checkbox.isChecked():
-                        pass
+                        self.splitting_by_distance_or_ndivisions(self.dlg.maxlensplit_box.value())
+
+                    # elif self.dlg.maxlensplit_checkbox.isChecked():
+                    #     pass
             else:
                 if self.dlg.maxlensplit_checkbox.isChecked():
                     print('1ok')
@@ -700,7 +701,8 @@ class sidewalkreator:
 
         else: # if we have voronoi and dontsplit:
             if self.dlg.voronoi_checkbox.isChecked():
-                pass
+                self.voronoi_splitting()
+
 
         # enabling for aftewards:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
@@ -1110,7 +1112,7 @@ class sidewalkreator:
             # then we check distances
 
 
-            dissolved_buildings = dissolve_tosinglepart(self.reproj_buildings)
+            dissolved_buildings = dissolve_tosinglegeom(self.reproj_buildings)
 
             dissolved_feature_geom = get_first_feature_or_geom(dissolved_buildings,True)
 
@@ -1227,7 +1229,7 @@ class sidewalkreator:
 
 
         # to (probably) speed up intersections:
-        self.dissolved_sidewalks = dissolve_tosinglepart(self.whole_sidewalks)
+        self.dissolved_sidewalks = dissolve_tosinglegeom(self.whole_sidewalks)
         self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
 
 
@@ -1498,6 +1500,7 @@ class sidewalkreator:
 
         # control variables:
         self.no_buildings = True
+        self.POI_split_avaliable = False
 
 
         # texts, for appearance:
@@ -1779,7 +1782,12 @@ class sidewalkreator:
 
                 pois_splitting_name = self.string_according_language('addrs_and_buildings_centroids','enderecos_e_centroides')
 
-                self.POIs_for_splitting_layer = mergelayers(layersto_merge,self.custom_localTM_crs,'memory:'+pois_splitting_name)
+                POIs_for_splitting_layer_p0 = mergelayers(layersto_merge,self.custom_localTM_crs)
+
+
+                self.POIs_for_splitting_layer = dissolve_tosinglegeom(POIs_for_splitting_layer_p0,'memory:'+pois_splitting_name)
+
+                self.POIs_for_splitting_layer.setCrs(self.custom_localTM_crs)
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 
@@ -1924,7 +1932,7 @@ class sidewalkreator:
 
 
     def split_sidewalks_by_protoblocks(self,rel_vertices_dict):
-        
+
         # for inplace, thx: https://gis.stackexchange.com/a/412130/49900
 
 
@@ -2004,7 +2012,7 @@ class sidewalkreator:
 
             for feature in self.protoblocks.getFeatures():
 
-                
+
                 n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
 
                 if n_whole_incidents == 1:
@@ -2016,7 +2024,7 @@ class sidewalkreator:
 
                     interest_id = self.protoblock_wholesidewalk_inc_dict[feature.id()][0]
 
-                    
+
                     # print(len(contained_geoms),len(rel_vertices_dict[interest_id]))
 
                     # print(contained_feats)
@@ -2054,7 +2062,7 @@ class sidewalkreator:
 
 
                             if len(touching_features) > 1:
-                                
+
                                 n_vertex = []
                                 for touching_feature in touching_features:
                                     try:
@@ -2062,7 +2070,7 @@ class sidewalkreator:
 
                                         n_vertex.append(len(as_polyline))
                                     except Exception as e:
-                                        try:            
+                                        try:
                                             as_polyline = touching_feature.asPolyline()[0]
 
                                             n_vertex.append(len(as_polyline))
@@ -2073,24 +2081,24 @@ class sidewalkreator:
 
                                 index_min_vertex = touching_features.index(min(touching_features))
                                 chosen_feature = touching_features[index_min_vertex]
-                             
+
                             merged_line = chosen_feature.geometry().combine(min_len_feat.geometry())
 
                             geom_type = merged_line.wkbType()
 
-                            if geom_type == 5: # '2' is for "MultiLinestring" 
+                            if geom_type == 5: # '2' is for "MultiLinestring"
                                 merged_second_method = merged_line.mergeLines(merged_line)
 
                                 if not merged_second_method.isEmpty():
                                     merged_line = merged_second_method
                                     geom_type = merged_line.wkbType()
 
-                            if geom_type == 2: # '2' is for "Linestring" 
+                            if geom_type == 2: # '2' is for "Linestring"
                                 self.whole_sidewalks.changeGeometry(chosen_feature.id(),merged_line)
                                 self.whole_sidewalks.deleteFeature(min_len_feat.id())
 
 
-                # else: # TODO: treat cases with 2 or more per protoblock 
+                # else: # TODO: treat cases with 2 or more per protoblock
 
         # for feature in self.whole_sidewalks.getFeatures():
         #     geom = feature.geometry()
@@ -2165,7 +2173,7 @@ class sidewalkreator:
                         geom.insertVertex(QgsPoint(vertex),1)
                         # print('-1 case')
 
-                        
+
 
                     else:
 
@@ -2201,7 +2209,7 @@ class sidewalkreator:
     def unselect_all_from_all(self):
         # # thx: https://gis.stackexchange.com/a/200412/49900
 
-        # for a in self.iface.attributesToolBar().actions(): 
+        # for a in self.iface.attributesToolBar().actions():
         #     if a.objectName() == 'mActionDeselectAll':
         #         a.trigger()
         #         break
@@ -2219,7 +2227,10 @@ class sidewalkreator:
 
 
     def fill_splitting_lengths(self,value,isbynumber=False,percent_add=0.01):
-        # field for splitting using that neat function from processing "split by maximum length"
+        # field for splitting with that neat function from processing "split by maximum length"
+
+        # percent to add and rounding are protections against creation of very tiny small segments caused by floating point issues
+
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
                 f_length = feature.geometry().length()
@@ -2249,7 +2260,7 @@ class sidewalkreator:
 
                 self.whole_sidewalks.changeAttributeValue(feature.id(),self.split_len_field_id,split_len)
 
-                
+
     def splitting_by_distance_or_ndivisions(self,value,isbynumber=False):
 
         self.fill_splitting_lengths(value,isbynumber)
@@ -2265,6 +2276,70 @@ class sidewalkreator:
         swap_features_layer_another(self.whole_sidewalks,temporary_splitted_sidewalks)
 
 
+    def voronoi_splitting(self):
+        POIs_geom = get_first_feature_or_geom(self.POIs_for_splitting_layer,True)
+
+        # collected_sidewalk_layer = collected_geoms_layer(self.whole_sidewalks)
+
+        # collected_sidewalk_geom = get_first_feature_or_geom(collected_sidewalk_layer,True)
+
+        voronois = []
+
+        # sdwlk_splitted = []
+
+        for feature in self.protoblocks.getFeatures():
+            contained_POIs = feature.geometry().intersection(POIs_geom)
+
+            if not contained_POIs.isEmpty():
+                voronoi_polygons = contained_POIs.voronoiDiagram(feature.geometry()).asGeometryCollection()
+
+
+                # a nifty use of list comprehension for sure
+                voronois += [geom_to_feature(polygon.intersection(feature.geometry())) for polygon in voronoi_polygons]
+            else:
+                voronois += [geom_to_feature(feature.geometry())]
+
+            # voronoi_polygons = voronoi_polygons.collectGeometry(voronoi_polygons)
+
+            # voronoi_multipolygon = voronoi_polygons.collectGeometry(voronoi_polygons.asGeometryCollection())
+
+
+
+            # if generate_voronoi_layer:
+            #     voronois.append(geom_to_feature(voronoi_multipolygon))
+
+            # splitted_sidewalk_parts = contained_sidewalk_pieces.intersection(voronoi_multipolygon).asGeometryCollection()
+
+            # splitted_sidewalk_parts = voronoi_multipolygon.intersection(contained_sidewalk_pieces).asGeometryCollection()
+
+
+            # for segment in splitted_sidewalk_parts:
+            #     if segment.type() == 1:
+            #         sdwlk_splitted.append(geom_to_feature(segment))
+
+
+
+
+            # print(clipped_voronoi)
+
+
+        voronois_as_layer = layer_from_featlist(voronois,'voronois','Polygon')
+
+        voronois_as_layer.setCrs(self.custom_localTM_crs)
+
+        self.add_layer_canvas(voronois_as_layer)
+
+        vor_splitted_sidewalks = vec_layers_intersection(self.whole_sidewalks,voronois_as_layer)
+
+        swap_features_layer_another(self.whole_sidewalks,vor_splitted_sidewalks)
+
+        # splits_as_layer = layer_from_featlist(sdwlk_splitted,'vor_splits','linestring')
+
+        # splits_as_layer.setCrs(self.custom_localTM_crs)
+
+        # self.add_layer_canvas(splits_as_layer)
+
+
 
     def outputting_files(self):
         inputdirpath = self.dlg.output_file_selector.filePath()
@@ -2278,5 +2353,5 @@ class sidewalkreator:
         self.dlg.output_file_selector.setFilePath("")
 
 
-    
+
 
