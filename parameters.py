@@ -88,7 +88,15 @@ default_widths = {
     'services' : 0,
     'footway' : 0,
     'track' : 0,
-    
+    "tertiary_link" : 0,
+    "trunk_link" : 0,
+    "primary_link" : 0,
+    'corridor' : 0 ,
+    'steps' : 0,
+    'street_lamp' : 0,
+    'motorway_link' : 0,
+    'secondary_link' : 0,
+
     # '' : ,
     }
 

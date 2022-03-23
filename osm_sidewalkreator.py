@@ -58,6 +58,9 @@ from .osm_sidewalkreator_dialog import sidewalkreatorDialog
 import subprocess
 import sys
 
+# for output folder unique naming
+import datetime
+
 
 def install_pypi(packagename):
     subprocess.check_call([sys.executable, "-m", "pip", "install", packagename])
@@ -331,6 +334,7 @@ class sidewalkreator:
             self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
             self.dlg.split_sidewalks.clicked.connect(self.sidewalks_splitting)
             self.dlg.alongside_vor_checkbox.clicked.connect(self.alongside_voronoi_opts)
+            self.dlg.output_folder_selector.fileChanged.connect(self.change_folderselector_name)
 
 
 
@@ -715,7 +719,7 @@ class sidewalkreator:
         # enabling for aftewards:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         self.dlg.output_file_label.setEnabled(True)
-        self.dlg.output_file_selector.setEnabled(True)
+        self.dlg.output_folder_selector.setEnabled(True)
 
 
     def draw_crossings(self):
@@ -1305,7 +1309,7 @@ class sidewalkreator:
         self.dlg.input_layer_selector.setEnabled(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
-        self.dlg.output_file_selector.setEnabled(False)
+        self.dlg.output_folder_selector.setEnabled(False)
 
         self.dlg.dead_end_iters_label.setEnabled(False)
         self.dlg.dead_end_iters_box.setEnabled(False)
@@ -1345,7 +1349,7 @@ class sidewalkreator:
         self.dlg.onlyfacades_checkbox.setHidden(True)
         self.dlg.dontsplit_checkbox.setHidden(True)
         self.dlg.output_file_label.setHidden(True)
-        self.dlg.output_file_selector.setHidden(True)
+        self.dlg.output_folder_selector.setHidden(True)
 
 
         # but enable the warning and the button:
@@ -1382,7 +1386,7 @@ class sidewalkreator:
         self.dlg.ch_ignore_buildings.setChecked(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
-        self.dlg.output_file_selector.setEnabled(False)
+        self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setChecked(False)
@@ -1409,7 +1413,7 @@ class sidewalkreator:
         self.dlg.onlyfacades_checkbox.setEnabled(False)
         self.dlg.dontsplit_checkbox.setEnabled(False)
         self.dlg.output_file_label.setEnabled(False)
-        self.dlg.output_file_selector.setEnabled(False)
+        self.dlg.output_folder_selector.setEnabled(False)
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
 
@@ -1491,7 +1495,7 @@ class sidewalkreator:
         self.dlg.onlyfacades_checkbox.setHidden(False)
         self.dlg.dontsplit_checkbox.setHidden(False)
         self.dlg.output_file_label.setHidden(False)
-        self.dlg.output_file_selector.setHidden(False)
+        self.dlg.output_folder_selector.setHidden(False)
 
         # self.dlg.gencrossings_progressbar.setHidden(False)
 
@@ -2364,17 +2368,38 @@ class sidewalkreator:
         # self.add_layer_canvas(splits_as_layer)
 
 
+    def change_folderselector_name(self):
+
+        inputdirpath = self.dlg.output_folder_selector.filePath()
+
+        # TODO: check only in the last part of the folderpath
+
+        if not 'sidewalkreator' in inputdirpath:
+            outfoldername = f'sidewalkreator_out_{int(datetime.datetime.utcnow().timestamp())}'
+
+            outfolderpath = os.path.join(inputdirpath,outfoldername)
+
+            self.dlg.output_folder_selector.setFilePath(outfolderpath)
+
 
     def outputting_files(self):
-        inputdirpath = self.dlg.output_file_selector.filePath()
 
+        # base and path stuff:
+        inputdirpath = self.dlg.output_folder_selector.filePath()
 
+        # outfoldername = f'sidewalkreator_out_{int(datetime.datetime.utcnow().timestamp())}'
+
+        # outfolderpath = os.path.join(inputdirpath,outfoldername)
+
+        # self.dlg.output_folder_selector.setFilePath(outfolderpath)
+
+        os.makedirs(inputdirpath)
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.output_file_label.setEnabled(False)
-        self.dlg.output_file_selector.setEnabled(False)
-        self.dlg.output_file_selector.setFilePath("")
+        self.dlg.output_folder_selector.setEnabled(False)
+        self.dlg.output_folder_selector.setFilePath("")
 
 
 
