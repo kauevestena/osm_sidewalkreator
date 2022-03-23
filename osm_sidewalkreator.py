@@ -2387,13 +2387,28 @@ class sidewalkreator:
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
-        # outfoldername = f'sidewalkreator_out_{int(datetime.datetime.utcnow().timestamp())}'
-
-        # outfolderpath = os.path.join(inputdirpath,outfoldername)
-
-        # self.dlg.output_folder_selector.setFilePath(outfolderpath)
-
         os.makedirs(inputdirpath)
+
+
+
+        # converting final layers
+        sidewalks_path = os.path.join(inputdirpath,self.string_according_language('sidewalks4326.geojson','calcadas4326.geojson'))
+        crossings_path = os.path.join(inputdirpath,self.string_according_language('crossings4326.geojson','travessias4326.geojson'))
+        kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
+        inputpol_layer_path = os.path.join(inputdirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
+
+
+        # also the bounding polygon:
+        # inpol_feat = geom_to_feature(self.input_polygon)
+
+        # input_polygon_layer = layer_from_featlist([inpol_feat],'input_polygon','polygon',output_type=inputpol_layer_path)
+
+        sidewalks_4326 = reproject_layer(self.whole_sidewalks,output_mode=sidewalks_path)
+        crossings_4326 = reproject_layer(self.crossings_layer,output_mode=crossings_path)
+        kerbs_4326 = reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
+        input_polygon4326 = reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
+
+
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)

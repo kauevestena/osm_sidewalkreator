@@ -159,8 +159,7 @@ def cliplayer_v2(inputlayer,overlay_lyr,outputlayer):
     return processing.run('qgis:clip',parameter_dict)['OUTPUT']
 
 def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:Reprojected'):
-    parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,
-                 'OUTPUT': output_mode}
+    parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,'OUTPUT': output_mode}
 
     return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
 
@@ -622,7 +621,7 @@ def geom_to_feature(inputgeom,attrs_list=None):
 
     return ret_feat
 
-def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None):
+def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None,output_type = 'memory'):
     '''
         creating a layer from a list of features (not geometries)
 
@@ -635,7 +634,7 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
     if layername:
         lname = layername
 
-    ret_layer =  QgsVectorLayer(geomtype, lname, "memory")
+    ret_layer =  QgsVectorLayer(geomtype, lname, output_type)
 
     with edit(ret_layer):
         if attrs_dict:
