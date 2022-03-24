@@ -715,6 +715,14 @@ class sidewalkreator:
             if self.dlg.voronoi_checkbox.isChecked():
                 self.voronoi_splitting()
 
+        # # # adjuting the fields of thr output layers
+        # sidewalks:
+        remove_layerfields(self.whole_sidewalks,[self.split_field_name])
+        # kerbs:
+        create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
+        # crossings: 
+        create_filled_newlayerfield(self.crossings_layer,'highway','footway',QVariant.String)
+        create_filled_newlayerfield(self.crossings_layer,'footway','crossing',QVariant.String)
 
         # enabling for aftewards:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
@@ -2375,7 +2383,8 @@ class sidewalkreator:
         # TODO: check only in the last part of the folderpath
 
         if not 'sidewalkreator' in inputdirpath:
-            outfoldername = f'sidewalkreator_out_{int(datetime.datetime.utcnow().timestamp())}'
+            out_description = self.string_according_language('out','saidas')
+            outfoldername = f'sidewalkreator_{out_description}_{int(datetime.datetime.utcnow().timestamp())}'
 
             outfolderpath = os.path.join(inputdirpath,outfoldername)
 
@@ -2407,7 +2416,6 @@ class sidewalkreator:
         crossings_4326 = reproject_layer(self.crossings_layer,output_mode=crossings_path)
         kerbs_4326 = reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
         input_polygon4326 = reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
-
 
 
         # disabling for the next cycle:
