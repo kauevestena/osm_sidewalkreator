@@ -69,9 +69,9 @@ def install_pypi(packagename):
 # importing or installing third-party libraries
 try:
     import osm2geojson
-    import ogr2osm
+    # import ogr2osm
 except:
-    pkg_to_be_installed = ['osm2geojson','ogr2osm'] #'geopandas'
+    pkg_to_be_installed = ['osm2geojson'] #,'ogr2osm'] #'geopandas'
     print('installing aditional packages: ',*pkg_to_be_installed)
 
     for packagename in pkg_to_be_installed:
@@ -80,7 +80,7 @@ except:
 
 # # then again, because its better to raise an error...
 import osm2geojson
-import ogr2osm
+# import ogr2osm
 
 # # internal dependencies:
 from .osm_fetch import *
@@ -2406,6 +2406,7 @@ class sidewalkreator:
         kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
         inputpol_layer_path = os.path.join(inputdirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
 
+        outlayers_gjsonpaths = [crossings_path,kerbs_path,sidewalks_path]
 
         # also the bounding polygon:
         # inpol_feat = geom_to_feature(self.input_polygon)
@@ -2417,6 +2418,21 @@ class sidewalkreator:
         kerbs_4326 = reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
         input_polygon4326 = reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
 
+
+        '''
+        # merging all the 3 output geojsons, since:
+            - QGIS does not support Points and LineStrings in the same layer (or any combination of 2 types of geometry, includinf multi types), so we are doing merging as a python dict, outside QGIS API
+            - GEOJSON does support that each feature has its own type
+            - JOSM handle snappings properly if everything is in the same GEOJSON
+        # '''
+
+        output_geojson_path = os.path.join(inputdirpath,self.string_according_language('sidewalkreator_output.geojson','saidas_sidewalkreator.geojson'))
+
+        merge_geojsons(outlayers_gjsonpaths,output_geojson_path)
+
+        time.sleep(0.1)
+
+        delete_filelist_that_exists(outlayers_gjsonpaths)
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)

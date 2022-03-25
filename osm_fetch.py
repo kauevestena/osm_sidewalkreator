@@ -1,3 +1,8 @@
+'''
+    osm_fetch.py created for import and convert the desired OSM data
+'''
+
+
 import requests, os, time, json
 # import codecs
 # import geopandas as gpd
@@ -9,16 +14,13 @@ from qgis.core import QgsApplication
 # doing some stuff again to avoid circular imports:
 # homepath = os.path.expanduser('~')
 
-# user_profile = 'default' #TODO: read from session
-
-# basepathp1 = '.local/share/QGIS/QGIS3/profiles'
-# basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
-
 profilepath = QgsApplication.qgisSettingsDirPath()
 base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
 basepath = os.path.join(profilepath,base_pluginpath_p2)
 
-
+'''
+## MAJOR TODO: evaluate the use of "import gdal" to use gdal ogr api and osm driver to convert the .osm files, leaving zero external dependencies...
+'''
 
 def delete_filelist_that_exists(filepathlist):
     for filepath in filepathlist:

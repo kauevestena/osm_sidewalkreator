@@ -5,7 +5,7 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty
-import os
+import os, json
 from math import isclose,pi
 
 
@@ -343,7 +343,7 @@ def get_column_names(inputlayer):
 
 def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
     '''
-        create a new field for the layer, and also return the index of the new field
+        create a new field for the layer, and also return the index of the new field 
     '''
 
     with edit(inputlayer):
@@ -981,3 +981,34 @@ def swap_features_layer_another(inputdesiredlayer,layer_with_newfeatures):
         # then inserting from the other
         for new_feature in layer_with_newfeatures.getFeatures():
             inputdesiredlayer.addFeature(new_feature)
+
+def read_json(inputpath):
+    with open(inputpath) as reader:
+        data = reader.read()
+
+    return json.loads(data)
+
+def dump_json(inputdict,outputpath):
+    with open(outputpath,'w+') as json_handle:
+        json.dump(inputdict,json_handle)
+
+def merge_geojsons(input_pathlist,outputpath):
+    '''
+        simple function to merge geojsons without using any library.
+
+        Same CRS for all files is required.
+    '''
+
+    ref_dict = None
+
+    for i,path in enumerate(input_pathlist):
+
+
+        if i == 0:
+            ref_dict = read_json(path)
+
+        else:
+            ref_dict['features'] += read_json(path)['features']
+
+
+    dump_json(ref_dict,outputpath)
