@@ -2359,13 +2359,13 @@ class sidewalkreator:
             # print(clipped_voronoi)
 
 
-        voronois_as_layer = layer_from_featlist(voronois,'voronois','Polygon')
+        self.voronois_as_layer = layer_from_featlist(voronois,'voronois','Polygon')
 
-        voronois_as_layer.setCrs(self.custom_localTM_crs)
+        self.voronois_as_layer.setCrs(self.custom_localTM_crs)
 
-        self.add_layer_canvas(voronois_as_layer)
+        self.add_layer_canvas(self.voronois_as_layer)
 
-        vor_splitted_sidewalks = vec_layers_intersection(self.whole_sidewalks,voronois_as_layer)
+        vor_splitted_sidewalks = vec_layers_intersection(self.whole_sidewalks,self.voronois_as_layer)
 
         swap_features_layer_another(self.whole_sidewalks,vor_splitted_sidewalks)
 
@@ -2382,13 +2382,14 @@ class sidewalkreator:
 
         # TODO: check only in the last part of the folderpath
 
-        if not 'sidewalkreator' in inputdirpath:
-            out_description = self.string_according_language('out','saidas')
-            outfoldername = f'sidewalkreator_{out_description}_{int(datetime.datetime.utcnow().timestamp())}'
+        if inputdirpath != '':
+            if not 'sidewalkreator' in inputdirpath:
+                out_description = self.string_according_language('out','saidas')
+                outfoldername = f'sidewalkreator_{out_description}_{int(datetime.datetime.utcnow().timestamp())}'
 
-            outfolderpath = os.path.join(inputdirpath,outfoldername)
+                outfolderpath = os.path.join(inputdirpath,outfoldername)
 
-            self.dlg.output_folder_selector.setFilePath(outfolderpath)
+                self.dlg.output_folder_selector.setFilePath(outfolderpath)
 
 
     def outputting_files(self):
@@ -2397,14 +2398,21 @@ class sidewalkreator:
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
         os.makedirs(inputdirpath)
+    
+        aux_foldername = self.string_according_language('arquivos_auxiliares','auxiliary_files')
 
+        aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
+
+        os.makedirs(aux_files_dirpath)
 
 
         # converting final layers
         sidewalks_path = os.path.join(inputdirpath,self.string_according_language('sidewalks4326.geojson','calcadas4326.geojson'))
         crossings_path = os.path.join(inputdirpath,self.string_according_language('crossings4326.geojson','travessias4326.geojson'))
         kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
-        inputpol_layer_path = os.path.join(inputdirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
+
+
+        inputpol_layer_path = os.path.join(aux_files_dirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
 
         outlayers_gjsonpaths = [crossings_path,kerbs_path,sidewalks_path]
 
@@ -2413,16 +2421,20 @@ class sidewalkreator:
 
         # input_polygon_layer = layer_from_featlist([inpol_feat],'input_polygon','polygon',output_type=inputpol_layer_path)
 
-        sidewalks_4326 = reproject_layer(self.whole_sidewalks,output_mode=sidewalks_path)
-        crossings_4326 = reproject_layer(self.crossings_layer,output_mode=crossings_path)
-        kerbs_4326 = reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
-        input_polygon4326 = reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
+        # sidewalks_4326 = 
+        reproject_layer(self.whole_sidewalks,output_mode=sidewalks_path)
+        # crossings_4326 = 
+        reproject_layer(self.crossings_layer,output_mode=crossings_path)
+        # kerbs_4326 = 
+        reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
+        # input_polygon4326 = 
+        reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
 
 
         '''
         # merging all the 3 output geojsons, since:
             - QGIS does not support Points and LineStrings in the same layer (or any combination of 2 types of geometry, includinf multi types), so we are doing merging as a python dict, outside QGIS API
-            - GEOJSON does support that each feature has its own type
+            - GEOJSON supports that each feature have its own type
             - JOSM handle snappings properly if everything is in the same GEOJSON
         # '''
 
@@ -2434,11 +2446,34 @@ class sidewalkreator:
 
         delete_filelist_that_exists(outlayers_gjsonpaths)
 
+
+        # auxiliary files:
+        if self.dlg.voronoi_checkbox.isChecked():
+            voronoi_outpath  = os.path.join(aux_files_dirpath,'voronois.geojson')
+            reproject_layer(self.voronois_as_layer,output_mode=voronoi_outpath)
+        
+        protoblocks_outpath = os.path.join(aux_files_dirpath,'voronois.geojson')
+        reproject_layer(self.protoblocks,output_mode=protoblocks_outpath)
+
+
+        # generating a file containing the recommended changeset comment:
+        changeset_comment_path = os.path.join(inputdirpath,self.string_according_language('changeset_comment.txt','comentario_changeset.txt'))
+
+        with open(changeset_comment_path,'w+') as changesetext_handler:
+            chgset_text_en = "Sidewalks and Crossings created by the QGIS Plugin 'OSM SidewalKreator', the user was advised to check the resulting data before the upload #SidewalKreator #LabGeoLivreUFPR #mapealivreUFPR"
+            
+            chgset_text_ptbr = "Calçadas (sidewalks) e cruzamentos  criados pelo plugin para QGIS 'OSM SidewalKreator', o usuário foi alertado que deve conferir as feições resultantes antes de qualquer upload #SidewalKreator #LabGeoLivreUFPR #mapealivreUFPR"
+
+            changesetext_handler.write(self.string_according_language(chgset_text_en,chgset_text_ptbr))
+
+        parameters_dump = {'ignore_buildings':self.dlg.ch_ignore_buildings.isChecked(),'timeout':self.dlg.timeout_box.value(),'iters_for_DE_streets':self.dlg.dead_end_iters_box.value()}
+
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.output_file_label.setEnabled(False)
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")
+
 
 
 

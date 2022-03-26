@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>856</width>
+    <width>867</width>
     <height>655</height>
    </rect>
   </property>
@@ -107,7 +107,7 @@
     <rect>
      <x>240</x>
      <y>50</y>
-     <width>491</width>
+     <width>471</width>
      <height>31</height>
     </rect>
    </property>
@@ -159,7 +159,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>392</x>
+     <x>357</x>
      <y>130</y>
      <width>171</width>
      <height>51</height>
@@ -177,7 +177,7 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>370</x>
+     <x>335</x>
      <y>90</y>
      <width>231</width>
      <height>21</height>
@@ -193,7 +193,7 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>580</x>
+     <x>545</x>
      <y>120</y>
      <width>171</width>
      <height>21</height>
@@ -354,7 +354,7 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>430</x>
+     <x>395</x>
      <y>189</y>
      <width>291</width>
      <height>41</height>
@@ -503,7 +503,7 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>600</x>
+     <x>565</x>
      <y>150</y>
      <width>118</width>
      <height>23</height>
@@ -614,7 +614,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>640</x>
-     <y>252</y>
+     <y>250</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -651,7 +651,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>700</x>
-     <y>242</y>
+     <y>240</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -923,7 +923,7 @@ dicularly</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>326</x>
+     <x>291</x>
      <y>140</y>
      <width>51</width>
      <height>21</height>
@@ -950,7 +950,7 @@ dicularly</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>315</x>
+     <x>280</x>
      <y>160</y>
      <width>71</width>
      <height>21</height>
@@ -1146,6 +1146,22 @@ segments</string>
      </layout>
     </item>
    </layout>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>730</x>
+     <y>0</y>
+     <width>140</width>
+     <height>230</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap>assets/logos/logos.png</pixmap>
+   </property>
   </widget>
  </widget>
  <customwidgets>
