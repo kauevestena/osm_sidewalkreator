@@ -2363,7 +2363,7 @@ class sidewalkreator:
 
         self.voronois_as_layer.setCrs(self.custom_localTM_crs)
 
-        self.add_layer_canvas(self.voronois_as_layer)
+        # self.add_layer_canvas(self.voronois_as_layer)
 
         vor_splitted_sidewalks = vec_layers_intersection(self.whole_sidewalks,self.voronois_as_layer)
 
@@ -2466,7 +2466,21 @@ class sidewalkreator:
 
             changesetext_handler.write(self.string_according_language(chgset_text_en,chgset_text_ptbr))
 
-        parameters_dump = {'ignore_buildings':self.dlg.ch_ignore_buildings.isChecked(),'timeout':self.dlg.timeout_box.value(),'iters_for_DE_streets':self.dlg.dead_end_iters_box.value()}
+        parameters_dump = {'ignore_buildings':self.dlg.ch_ignore_buildings.isChecked(),'timeout (s)':self.dlg.timeout_box.value(),'iters_for_DE_streets':self.dlg.dead_end_iters_box.value(),'check_overlapping':self.dlg.check_if_overlaps_buildings.isChecked(),'distance to add (both sides) to street width (m)':self.dlg.d_to_add_box.value(),'curve radius (m)':self.dlg.curve_radius_box.value(),'draw kerbs at (%)':self.dlg.curve_radius_box.value(),'inward distance (m)':self.dlg.d_to_add_inward_box.value(),'crossings in parallel to transversal segments ':self.dlg.opt_parallel_crossings.isChecked(),'crossings drawn perpendicularly':self.dlg.opt_perp_crossings.isChecked(),'use voronoi polygons':self.dlg.voronoi_checkbox.isChecked(),'minimum_POIS':self.dlg.minimum_pois_box.value(),'split by facades':self.dlg.onlyfacades_checkbox.isChecked(),'dont split at all':self.dlg.dontsplit_checkbox.isChecked()}
+
+        if self.dlg.check_if_overlaps_buildings.isChecked():
+            parameters_dump['min_distance_to_buildings (m)'] = self.dlg.min_d_buildings_box.value()
+            parameters_dump['min street width (m)'] = self.dlg.min_width_box.value()
+
+        if self.dlg.maxlensplit_checkbox.isChecked():
+            parameters_dump['split by maxlength'] = self.dlg.maxlensplit_box.value()
+
+        if self.dlg.segsbynum_checkbox.isChecked():
+            parameters_dump['split by x segments'] = self.dlg.segsbynum_box.value()
+
+        parameters_dump_outpath = os.path.join(aux_files_dirpath,'parameters_dump.json')
+
+        dump_json(parameters_dump,parameters_dump_outpath)
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
