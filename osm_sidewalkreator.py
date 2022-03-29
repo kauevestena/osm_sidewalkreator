@@ -62,33 +62,6 @@ import sys
 import datetime
 
 
-def install_pypi(packagename):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", packagename])
-
-
-# importing or installing third-party libraries
-try:
-    import osm2geojson
-    # import ogr2osm
-except:
-    pkg_to_be_installed = ['osm2geojson'] #,'ogr2osm'] #'geopandas'
-    print('installing aditional packages: ',*pkg_to_be_installed)
-
-    for packagename in pkg_to_be_installed:
-        install_pypi(packagename)
-
-
-# # then again, because its better to raise an error...
-import osm2geojson
-# import ogr2osm
-
-# # internal dependencies:
-from .osm_fetch import *
-from .generic_functions import *
-from .parameters import *
-
-
-
 ############################
 ##### GLOBAL-SCOPE
 ###########################
@@ -98,12 +71,15 @@ from .parameters import *
 # homepath = os.environ['HOME']
 # homepath = os.path.expanduser('~')
 
-# user_profile = 'default' #TODO: read from session
 
 # TODO: adapt for windows aswell (actually we may only need to test the current solution)
 
 # basepathp1 = '.local/share/QGIS/QGIS3/profiles'
 # basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
+
+# # internal dependencies, part1:
+from .generic_functions import *
+from .parameters import *
 
 profilepath = QgsApplication.qgisSettingsDirPath()
 base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
@@ -119,6 +95,30 @@ assets_path = os.path.join(basepath,'assets')
 basic_folderpathlist = [temps_path,reports_path,assets_path]
 for folderpath in basic_folderpathlist:
     create_dir_ifnotexists(folderpath)
+
+
+# importing or installing third-party libraries
+try:
+    import osm2geojson
+except:
+    try:
+        # at first, try to install by pypi, using the up-to-date-version
+        subprocess.check_call([sys.executable, "-m", "pip", "install", 'osm2geojson'])
+    except:
+        # if does not work use the frozen (whl) package
+        import sys
+        whl_path = os.path.join(basepath,'dependencies/osm2geojson-0.1.33-py3-none-any.whl')
+        sys.path.append(whl_path)
+        import osm2geojson
+
+
+# # then again, because its better to raise an error...
+import osm2geojson
+# import ogr2osm
+
+
+# # internal dependencies, part2:
+from .osm_fetch import *
 
 class sidewalkreator:
     """QGIS Plugin Implementation."""
