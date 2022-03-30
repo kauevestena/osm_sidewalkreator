@@ -97,7 +97,7 @@ for folderpath in basic_folderpathlist:
     create_dir_ifnotexists(folderpath)
 
 
-# importing or installing third-party libraries
+# importing osm2geojson directly or use the whl version:
 try:
     import osm2geojson
 except:
@@ -2397,13 +2397,15 @@ class sidewalkreator:
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
-        os.makedirs(inputdirpath)
+        # os.makedirs(inputdirpath)
+        create_dir_ifnotexists(inputdirpath)
     
         aux_foldername = self.string_according_language('arquivos_auxiliares','auxiliary_files')
 
         aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
 
-        os.makedirs(aux_files_dirpath)
+        # os.makedirs(aux_files_dirpath)
+        create_dir_ifnotexists(aux_files_dirpath)
 
 
         # converting final layers

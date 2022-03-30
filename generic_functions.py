@@ -14,7 +14,8 @@ crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
 def create_dir_ifnotexists(folderpath):
     if not os.path.exists(folderpath):
-        os.makedirs(folderpath)
+        if not folderpath == '':
+            os.makedirs(folderpath)
 
 
 def generate_buffer(inputlayer,distance,segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
