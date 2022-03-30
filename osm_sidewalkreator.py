@@ -101,15 +101,15 @@ for folderpath in basic_folderpathlist:
 try:
     import osm2geojson
 except:
-    try:
-        # at first, try to install by pypi, using the up-to-date-version
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 'osm2geojson'])
-    except:
-        # if does not work use the frozen (whl) package
-        import sys
-        whl_path = os.path.join(basepath,'dependencies/osm2geojson-0.1.33-py3-none-any.whl')
-        sys.path.append(whl_path)
-        import osm2geojson
+    # # try:
+    # #     # at first, try to install by pypi, using the up-to-date-version
+    # #     subprocess.check_call([sys.executable, "-m", "pip", "install", 'osm2geojson'])
+    # # except:
+    # if does not work use the frozen (whl) package
+    import sys
+    whl_path = os.path.join(basepath,'dependencies/osm2geojson-0.1.33-py3-none-any.whl')
+    sys.path.append(whl_path)
+    import osm2geojson
 
 
 # # then again, because its better to raise an error...

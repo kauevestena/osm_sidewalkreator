@@ -1,4 +1,4 @@
-packaged using instructions from here:
+packaged from *osm2geojson* repo (https://github.com/aspectumapp/osm2geojson) using instructions from:
 
 
     https://realpython.com/pypi-publish-python-package/
