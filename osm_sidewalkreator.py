@@ -141,6 +141,10 @@ class sidewalkreator:
     # ready for "OK" button pressing:
     ok_ready = False
 
+    # if the plugin is ready to export results (avoid one problem when user click again at the plugin icon)
+    export_ready = False
+
+
     def __init__(self, iface):
         """Constructor.
 
@@ -369,11 +373,12 @@ class sidewalkreator:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
             self.ok_ready = True
 
-            self.outputting_files()
+
+            if self.export_ready:
+                self.outputting_files()
+
             self.reset_fields() # so "rebooting" for next execution
 
     ##################################
@@ -728,6 +733,9 @@ class sidewalkreator:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         self.dlg.output_file_label.setEnabled(True)
         self.dlg.output_folder_selector.setEnabled(True)
+
+        # global control variables:
+        self.export_ready = True
 
 
     def draw_crossings(self):
@@ -1521,9 +1529,10 @@ class sidewalkreator:
         if self.ignore_sidewalks_already_drawn:
             self.ignore_sidewalks_already_drawn = False
 
-        # control variables:
         self.no_buildings = True
         self.POI_split_avaliable = False
+
+        self.export_ready = False
 
 
         # texts, for appearance:
@@ -2400,7 +2409,7 @@ class sidewalkreator:
         # os.makedirs(inputdirpath)
         create_dir_ifnotexists(inputdirpath)
     
-        aux_foldername = self.string_according_language('arquivos_auxiliares','auxiliary_files')
+        aux_foldername = self.string_according_language('auxiliary_files','arquivos_auxiliares')
 
         aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
 
