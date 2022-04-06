@@ -37,7 +37,8 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from processing.gui.AlgorithmExecutor import execute_in_place
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis
+from qgis.utils import iface
 
 
 # pure Qt imports, keep at minimun =P
@@ -2511,6 +2512,8 @@ class sidewalkreator:
         self.dlg.output_file_label.setEnabled(False)
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")
+
+        iface.messageBar().pushMessage("Sucess", "You Can Now Proceed To JOSM, importing the output JSON and changeset comment!!!", level=Qgis.Success,duration=30)
 
 
 
