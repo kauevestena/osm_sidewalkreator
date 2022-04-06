@@ -361,8 +361,17 @@ def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
 
     # then filling:
     with edit(inputlayer):
-        for feature in inputlayer.getFeatures():
-            inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
+        if isinstance(fieldvalue,dict):
+            dkey = next(iter(fieldvalue))
+            print(dkey,fieldvalue[dkey])
+            # by now only length is implemented
+            if dkey == 'geometry':
+                if fieldvalue[dkey] == "length":
+                    for feature in inputlayer.getFeatures():
+                        inputlayer.changeAttributeValue(feature.id(),field_index,feature.geometry().length())
+        else:
+            for feature in inputlayer.getFeatures():
+                inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
 
 def create_fill_id_field(inputlayer,fieldname = 'id_on_layer'):
 

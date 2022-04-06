@@ -723,6 +723,10 @@ class sidewalkreator:
         # # # adjuting the fields of thr output layers
         # sidewalks:
         remove_layerfields(self.whole_sidewalks,[self.split_field_name])
+
+        # removing previous layerfields:
+        remove_layerfields(self.kerbs_layer,get_column_names(self.kerbs_layer))
+
         # kerbs:
         create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
         # crossings: 
@@ -1072,6 +1076,10 @@ class sidewalkreator:
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
         self.crossings_layer.setCrs(self.custom_localTM_crs)
 
+        # adding crossing len to check for "bad" crossings:
+        # create_new_layerfield(self.crossings_layer,'length')
+        create_filled_newlayerfield(self.crossings_layer,'length',{'geometry':'length'},QVariant.Double)
+
         crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
         self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
 
@@ -1234,6 +1242,7 @@ class sidewalkreator:
 
         # first, deleting all previous fields:
         remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
+
         '''
             tags to denote it's a sidewalk
             footway=sidewalk
@@ -2402,6 +2411,10 @@ class sidewalkreator:
 
 
     def outputting_files(self):
+        # removing length from crossings, as we do not want to export'em
+        remove_layerfields(self.crossings_layer,['length'])
+
+
 
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
