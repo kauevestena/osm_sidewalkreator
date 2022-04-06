@@ -661,6 +661,8 @@ class sidewalkreator:
         self.dlg.onlyfacades_checkbox.setEnabled(False)
         self.dlg.dontsplit_checkbox.setEnabled(False)
 
+        #  just the variable
+        self.split_field_name = 'split_len'
 
 
         # action tree according to checkboxes:
@@ -672,13 +674,19 @@ class sidewalkreator:
             # self.add_layer_canvas(self.protoblocks)
 
             # creating field to store splitting distance:
-            self.split_field_name = 'split_len'
             self.split_len_field_id = create_new_layerfield(self.whole_sidewalks,self.split_field_name)
 
             #keeping only relevant vertices:
             relevant_vertices = {}
             self.protoblock_wholesidewalk_inc_dict = {}
-            for feature in self.protoblocks.getFeatures():
+
+            self.protoblocks_idx_perc = {}
+
+            number_protoblocks = len([feature.id() for feature in self.protoblocks.getFeatures()])
+
+            for i,feature in enumerate(self.protoblocks.getFeatures()):
+                self.dlg.split_progressbar.setValue(round(100*i/number_protoblocks))
+                self.protoblocks_idx_perc[feature.id()]=i
                 # vertex_list = select_vertex_pol_nodes(feature)
 
                 # incident_sidewalk_number  = int(feature['incident'])
@@ -691,13 +699,19 @@ class sidewalkreator:
 
                     self.protoblock_wholesidewalk_inc_dict[feature.id()].append(int(incident))
 
+            self.protoblocks_idx_perc = {key: round(100*self.protoblocks_idx_perc[key]/len(self.protoblocks_idx_perc.keys())) for key in self.protoblocks_idx_perc.keys()}
 
-                # print(feature['incident'],vertex_list)
+
+            # print(feature['incident'],vertex_list)
 
             # print(self.protoblock_wholesidewalk_inc_dict)
+            
             self.split_sidewalks_by_protoblocks(relevant_vertices)
 
             if self.dlg.voronoi_checkbox.isChecked():
+                self.dlg.split_progressbar.setValue(0)
+
+            
                 self.voronoi_splitting()
 
                 if self.dlg.alongside_vor_checkbox.isChecked():
@@ -707,23 +721,25 @@ class sidewalkreator:
                     # elif self.dlg.maxlensplit_checkbox.isChecked():
                     #     pass
             else:
+                self.dlg.split_progressbar.setValue(0)
                 if self.dlg.maxlensplit_checkbox.isChecked():
-                    print('1ok')
 
                     self.splitting_by_distance_or_ndivisions(self.dlg.maxlensplit_box.value())
                 elif self.dlg.segsbynum_checkbox.isChecked():
-                    print('2ok')
 
                     self.splitting_by_distance_or_ndivisions(self.dlg.segsbynum_box.value(),True)
 
 
         else: # if we have voronoi and dontsplit:
+            self.dlg.split_progressbar.setValue(0)
+
             if self.dlg.voronoi_checkbox.isChecked():
                 self.voronoi_splitting()
 
         # # # adjuting the fields of thr output layers
         # sidewalks:
-        remove_layerfields(self.whole_sidewalks,[self.split_field_name])
+        if self.split_field_name in get_column_names(self.whole_sidewalks):
+            remove_layerfields(self.whole_sidewalks,[self.split_field_name])
 
         # removing previous layerfields:
         remove_layerfields(self.kerbs_layer,get_column_names(self.kerbs_layer))
@@ -738,6 +754,9 @@ class sidewalkreator:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         self.dlg.output_file_label.setEnabled(True)
         self.dlg.output_folder_selector.setEnabled(True)
+
+        # saying that is complete:
+        self.dlg.split_progressbar.setValue(100)
 
         # global control variables:
         self.export_ready = True
@@ -1419,6 +1438,7 @@ class sidewalkreator:
         self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.dead_end_iters_label.setEnabled(False)
+        self.dlg.dead_end_iters_box.setEnabled(False)
         self.dlg.generate_crossings.setEnabled(False)
         self.dlg.perc_draw_kerbs_box.setEnabled(False)
         self.dlg.perc_draw_kerbs_label.setEnabled(False)
@@ -2060,6 +2080,7 @@ class sidewalkreator:
 
 
             for feature in self.protoblocks.getFeatures():
+                self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
 
 
                 n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
@@ -2337,6 +2358,8 @@ class sidewalkreator:
         # sdwlk_splitted = []
 
         for feature in self.protoblocks.getFeatures():
+            self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
+
             contained_POIs = feature.geometry().intersection(POIs_geom)
 
 

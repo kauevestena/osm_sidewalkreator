@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>867</width>
+    <width>992</width>
     <height>655</height>
    </rect>
   </property>
@@ -1150,8 +1150,8 @@ segments</string>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>730</x>
-     <y>0</y>
+     <x>850</x>
+     <y>10</y>
      <width>140</width>
      <height>230</height>
     </rect>
@@ -1161,6 +1161,25 @@ segments</string>
    </property>
    <property name="pixmap">
     <pixmap>assets/logos/logos.png</pixmap>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="split_progressbar">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>660</x>
+     <y>578</y>
+     <width>118</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>0</number>
+   </property>
+   <property name="invertedAppearance">
+    <bool>false</bool>
    </property>
   </widget>
  </widget>
