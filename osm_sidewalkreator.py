@@ -2500,7 +2500,7 @@ class sidewalkreator:
             voronoi_outpath  = os.path.join(aux_files_dirpath,'voronois.geojson')
             reproject_layer(self.voronois_as_layer,output_mode=voronoi_outpath)
         
-        protoblocks_outpath = os.path.join(aux_files_dirpath,'voronois.geojson')
+        protoblocks_outpath = os.path.join(aux_files_dirpath,'protoblocks.geojson')
         reproject_layer(self.protoblocks,output_mode=protoblocks_outpath)
 
 
