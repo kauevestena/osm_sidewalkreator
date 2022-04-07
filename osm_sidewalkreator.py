@@ -651,6 +651,8 @@ class sidewalkreator:
     def sidewalks_splitting(self):
         # disabling what wouldnt be needed adterwards:
         self.dlg.split_sidewalks.setEnabled(False)
+        self.dlg.split_progressbar.setEnabled(False)
+
         self.dlg.voronoi_checkbox.setEnabled(False)
         self.dlg.minimum_pois_box.setEnabled(False)
         self.dlg.alongside_vor_checkbox.setEnabled(False)
@@ -1131,6 +1133,8 @@ class sidewalkreator:
 
         # Enabling What Shall be used afterwards:
         self.dlg.split_sidewalks.setEnabled(True)
+        self.dlg.split_progressbar.setEnabled(True)
+
         # configuring the options for the next step:
         self.prepare_split_options()
 
@@ -1384,6 +1388,8 @@ class sidewalkreator:
         self.dlg.widths_hint.setHidden(True)
 
         self.dlg.split_sidewalks.setHidden(True)
+        self.dlg.split_progressbar.setHidden(True)
+
         self.dlg.voronoi_checkbox.setHidden(True)
         self.dlg.minimum_pois_box.setHidden(True)
         self.dlg.alongside_vor_checkbox.setHidden(True)
@@ -1449,6 +1455,8 @@ class sidewalkreator:
         self.dlg.timeout_box.setEnabled(False)
         self.dlg.timeout_label.setEnabled(False)
         self.dlg.split_sidewalks.setEnabled(False)
+        self.dlg.split_progressbar.setEnabled(False)
+
         self.dlg.voronoi_checkbox.setEnabled(False)
         self.dlg.minimum_pois_box.setEnabled(False)
         self.dlg.alongside_vor_checkbox.setEnabled(False)
@@ -1465,6 +1473,7 @@ class sidewalkreator:
 
         # self.dlg.gencrossings_progressbar.setValue(0)
         self.dlg.datafetch_progressbar.setValue(0)
+        self.dlg.split_progressbar.setValue(0)
 
 
         self.dlg.min_d_buildings_box.setEnabled(False)
@@ -1521,6 +1530,8 @@ class sidewalkreator:
         self.dlg.opt_perp_crossings.setHidden(False)
 
         self.dlg.split_sidewalks.setHidden(False)
+        self.dlg.split_progressbar.setHidden(False)
+
 
 
         self.dlg.perc_draw_kerbs_box.setHidden(False)
@@ -1530,7 +1541,6 @@ class sidewalkreator:
         self.dlg.opt_parallel_crossings.setHidden(False)
         self.dlg.opt_perp_crossings.setHidden(False)
 
-        self.dlg.split_sidewalks.setHidden(False)
         self.dlg.voronoi_checkbox.setHidden(False)
         self.dlg.minimum_pois_box.setHidden(False)
         self.dlg.alongside_vor_checkbox.setHidden(False)
@@ -2363,7 +2373,8 @@ class sidewalkreator:
             contained_POIs = feature.geometry().intersection(POIs_geom)
 
 
-            if not contained_POIs.isEmpty():
+            if not contained_POIs.isEmpty() and contained_POIs.isMultipart():
+                print(contained_POIs.isMultipart())
                 num_pois = len(contained_POIs.asMultiPoint())
             else:
                 num_pois = 0
