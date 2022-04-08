@@ -10,6 +10,8 @@ from pathlib import Path
 
     you just need to include in the list "exclude_patternslist" the patterns that should not be included in the release 
 
+    it will export the zip file to a folder named "sidewalkreator_release" to the homefolder
+
 """
 
 

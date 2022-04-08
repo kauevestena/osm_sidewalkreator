@@ -1022,3 +1022,8 @@ def merge_geojsons(input_pathlist,outputpath):
 
 
     dump_json(ref_dict,outputpath)
+
+def write_generic_file(outpath:str,inputlist:list,mode='w+'):
+    with open(outpath,mode) as filewriter:
+        for item in inputlist:
+            filewriter.write(item+'\n')

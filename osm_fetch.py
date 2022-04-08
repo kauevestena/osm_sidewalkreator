@@ -34,18 +34,23 @@ def join_to_a_outfolder(filename,foldername='temporary'):
 
 
 
-def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highway",node=False,way=True,relation=False,print_querystring=False):
+def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_key="highway",node=False,way=True,relation=False,print_querystring=False,interest_value = None,dump_path=None):
 
     node_part = way_part = relation_part = ''
 
     query_bbox = f'{min_lat},{min_lgt},{max_lat},{max_lgt}'
 
+    interest_value_part = ''
+
+    if interest_value:
+        interest_value_part = f'="{interest_value}"'
+
     if node:
-        node_part = f'node["{interest_tag}"]({query_bbox});'
+        node_part = f'node["{interest_key}"{interest_value_part}]({query_bbox});'
     if way:
-        way_part = f'way["{interest_tag}"]({query_bbox});'
+        way_part = f'way["{interest_key}"{interest_value_part}]({query_bbox});'
     if relation:
-        relation_part = f'relation["{interest_tag}"]({query_bbox});'
+        relation_part = f'relation["{interest_key}"{interest_value_part}]({query_bbox});'
 
     overpass_query = f"""
     (  
@@ -61,6 +66,10 @@ def osm_query_string_by_bbox(min_lat,min_lgt,max_lat,max_lgt,interest_tag="highw
 
     if print_querystring:
         print(overpass_query)
+
+    if dump_path:
+        with open(dump_path,'w+') as querydumper:
+            querydumper.write(overpass_query)
 
     return overpass_query
 

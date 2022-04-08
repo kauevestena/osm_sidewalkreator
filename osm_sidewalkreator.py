@@ -621,6 +621,7 @@ class sidewalkreator:
     def prepare_split_options(self):
         if self.POI_split_avaliable:
             self.dlg.voronoi_checkbox.setEnabled(True)
+            self.dlg.voronoi_checkbox.setChecked(True)
             self.dlg.minimum_pois_box.setEnabled(True)
             self.dlg.alongside_vor_checkbox.setEnabled(True)
         else:
@@ -1814,7 +1815,7 @@ class sidewalkreator:
             """
 
             # mostly a clone of get buildings snippet
-            query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True)
+            query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True,way=False)
             addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point',timeout=self.dlg.timeout_box.value())
             self.dlg.datafetch_progressbar.setValue(65)
 
@@ -2368,6 +2369,8 @@ class sidewalkreator:
         # sdwlk_splitted = []
 
         for feature in self.protoblocks.getFeatures():
+
+            # the progressbar:
             self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
 
             contained_POIs = feature.geometry().intersection(POIs_geom)
@@ -2464,7 +2467,6 @@ class sidewalkreator:
         # os.makedirs(aux_files_dirpath)
         create_dir_ifnotexists(aux_files_dirpath)
 
-
         # converting final layers
         sidewalks_path = os.path.join(inputdirpath,self.string_according_language('sidewalks4326.geojson','calcadas4326.geojson'))
         crossings_path = os.path.join(inputdirpath,self.string_according_language('crossings4326.geojson','travessias4326.geojson'))
@@ -2539,6 +2541,20 @@ class sidewalkreator:
 
         parameters_dump_outpath = os.path.join(aux_files_dirpath,'parameters_dump.json')
 
+        # dumping overpass queries for the output layers:
+        # so you may can then 
+        overpass_sidewalks_path = os.path.join(inputdirpath,'overpass_sidewalks.txt')
+        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='sidewalk',dump_path=overpass_sidewalks_path)
+
+        overpass_kerbs_path = os.path.join(inputdirpath,'overpass_kerbs.txt')
+        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='barrier',interest_value='kerb',dump_path=overpass_kerbs_path,node=True,way=False)
+
+        overpass_crossings_path = os.path.join(inputdirpath,'overpass_crossings.txt')
+        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='crossing',dump_path=overpass_kerbs_path,node=True,way=False)
+
+
+        
+
         dump_json(parameters_dump,parameters_dump_outpath)
 
         # disabling for the next cycle:
@@ -2548,6 +2564,9 @@ class sidewalkreator:
         self.dlg.output_folder_selector.setFilePath("")
 
         iface.messageBar().pushMessage("Sucess", "You Can Now Proceed To JOSM, importing the output JSON and changeset comment!!!", level=Qgis.Success,duration=30)
+
+
+
 
 
 
