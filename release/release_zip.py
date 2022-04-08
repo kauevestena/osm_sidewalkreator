@@ -8,7 +8,7 @@ from pathlib import Path
 
     RELEASE SYSTEM FOR THE PLUGIN
 
-    you just need to include the patterns that should not be included in the release in the list "exclude_patternslist"
+    you just need to include in the list "exclude_patternslist" the patterns that should not be included in the release 
 
 """
 
