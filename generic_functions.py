@@ -272,6 +272,9 @@ def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
         return custom_crs
 
 def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
+    '''
+        pass None to "outputpath" in order to use an only memory layer
+    '''
 
     # https://docs.qgis.org/3.16/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
 
@@ -279,6 +282,12 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
 
 
     parameter_dict = { 'INPUT' : inputlayer, 'OPERATION' : operation, 'OUTPUT' : outputpath }
+
+    if not outputpath:
+        if layername:
+            parameter_dict['OUTPUT'] = f'memory:{layername}'
+        else:
+            parameter_dict['OUTPUT'] = 'TEMPORARY_OUTPUT'
 
     # option 1: creating from wkt
     # proj_wkt = custom_local_projection(lgt_0,return_wkt=True)
@@ -288,13 +297,13 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
     new_crs = custom_local_projection(lgt_0,lat_0=lat_0)
     parameter_dict['TARGET_CRS'] = new_crs
 
-
-    processing.run('native:reprojectlayer', parameter_dict)
+    if not outputpath:
+        ret_lyr = processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
+    else:
+        processing.run('native:reprojectlayer', parameter_dict)
+        ret_lyr = QgsVectorLayer(outputpath,layername,'ogr')
 
     # fixing no set layer crs:
-
-    ret_lyr = QgsVectorLayer(outputpath,layername,'ogr')
-
     ret_lyr.setCrs(new_crs)
 
     return ret_lyr, new_crs

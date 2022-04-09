@@ -121,7 +121,7 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features',i
 
     return as_dict
 
-def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30):
+def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30,return_as_string=False):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
@@ -155,61 +155,58 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
     if print_response:
         print(response)
 
+    if return_as_string:
+        xml_filecontent = response.text
 
-    # the outpaths for temporary files
-    xmlfilepath = join_to_a_outfolder(tempfilesname+'_osm.xml')
-    geojsonfilepath = join_to_a_outfolder(tempfilesname+'_osm.geojson')
+    else:
+        # the outpaths for temporary files
+        xmlfilepath = join_to_a_outfolder(tempfilesname+'_osm.xml')
 
-    print('xml will be written to: ',xmlfilepath)
+        geojsonfilepath = join_to_a_outfolder(tempfilesname+'_osm.geojson')
 
-    # the xml file writing part:
-    with open(xmlfilepath,'w+') as handle:
-        handle.write(response.text)
+        print('xml will be written to: ',xmlfilepath)
 
-    print('geojson will be written to: ',geojsonfilepath)
 
-    # # # # # the command-line call
-    # # # # # old method: using osmtogeojson app
-    # # # # runstring = f'osmtogeojson "{xmlfilepath}" > "{geojsonfilepath}"'
-    # # # # out = subprocess.run(runstring,shell=True)
 
-    # # new method : osm2geojson library
-    # codecs.
-    with open(xmlfilepath, 'r', encoding='utf-8') as data:
-        xml_filecontent = data.read()
+        # the xml file writing part:
+        with open(xmlfilepath,'w+') as handle:
+            handle.write(response.text)
 
+        print('geojson will be written to: ',geojsonfilepath)
+
+        # # # # # the command-line call
+        # # # # # old method: using osmtogeojson app
+        # # # # runstring = f'osmtogeojson "{xmlfilepath}" > "{geojsonfilepath}"'
+        # # # # out = subprocess.run(runstring,shell=True)
+
+        # # new method : osm2geojson library
+        # codecs.
+        with open(xmlfilepath, 'r', encoding='utf-8') as data:
+            xml_filecontent = data.read()
+
+    # converting OSM XML to Geojson:
     geojson_datadict = osm2geojson.xml2geojson(xml_filecontent, filter_used_refs=False, log_level='INFO')
-    with open(geojsonfilepath.replace('.geojson','_unfiltered.geojson'),'w+') as geojson_handle:
-        json.dump(geojson_datadict,geojson_handle)
+
+    if not return_as_string:
+        with open(geojsonfilepath.replace('.geojson','_unfiltered.geojson'),'w+') as geojson_handle:
+            json.dump(geojson_datadict,geojson_handle)
 
     filtered_geojson_dict = filter_gjsonfeats_bygeomtype(geojson_datadict,geomtype)
 
-    # dumping geojson file:
-    with open(geojsonfilepath,'w+') as geojson_handle:
-        json.dump(filtered_geojson_dict,geojson_handle)
+
 
 
     print('conversion sucessfull!!')
-    # reading as a geodataframe
-    # as_gdf = gpd.read_file(geojsonfilepath)
 
-    # cleaning up, if wanted
-    # if delete_temp_files:
-    #     delete_filelist_that_exists([xmlfilepath,geojsonfilepath])
+    if return_as_string:
+        return json.dumps(filtered_geojson_dict)
 
-    return geojsonfilepath
+    else:
+        # dumping geojson file:
+        with open(geojsonfilepath,'w+') as geojson_handle:
+            json.dump(filtered_geojson_dict,geojson_handle)
 
-    # # return only polygons, we have no interest on broken features
-    # if interest_geom_type:
-    #     new_gdf = as_gdf[as_gdf['geometry'].geom_type == interest_geom_type]
+        return geojsonfilepath
 
-    #     #overwrite file with only selected features
-
-    #     print('saving subset with only ',interest_geom_type)
-    #     new_gdf.to_file(geojsonfilepath,driver='GeoJSON')
-
-    #     return new_gdf
-    # else:
-    #     return as_gdf
 
 

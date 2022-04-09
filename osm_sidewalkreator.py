@@ -187,12 +187,12 @@ class sidewalkreator:
         # self.dlg.opt_ptbr.checked.connect(self.change_language)
 
 
-        self.session_debugpath = os.path.join(reports_path,'session_debug.txt')
+        # self.session_debugpath = os.path.join(reports_path,'session_debug.txt')
 
-        with open(self.session_debugpath,'w+') as session_report:
-            session_report.write('session_report:\n')
-            # session_report.write(session_debugpath+'\n')
-            # session_report.write(homepath)
+        # with open(self.session_debugpath,'w+') as session_report:
+        #     session_report.write('session_report:\n')
+        #     # session_report.write(session_debugpath+'\n')
+        #     # session_report.write(homepath)
 
 
 
@@ -1603,7 +1603,7 @@ class sidewalkreator:
         # .next()
 
         if self.input_layer:
-            self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
+            # self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
 
 
             # assuring 4326 as EPSG code for layer
@@ -1666,8 +1666,8 @@ class sidewalkreator:
                         self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
 
 
-                        for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
-                            self.write_to_debug(item)
+                        # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
+                        #     self.write_to_debug(item)
             else:
                 # self.dlg.input_status.setText('no geometries on input!!')
                 self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
@@ -1696,8 +1696,8 @@ class sidewalkreator:
 
         remove_layerlist(layernamelist)
 
-        if folderpath:
-            wipe_folder_files(folderpath)
+        # if folderpath:
+        #     wipe_folder_files(folderpath)
 
 
 
@@ -1733,36 +1733,35 @@ class sidewalkreator:
 
 
         # OSM query
-        roads_layername = "osm_road_data"
         query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
         # acquired file
-        data_geojsonpath = get_osm_data(query_string,roads_layername,timeout=self.dlg.timeout_box.value())
+
+        data_geojson_string = get_osm_data(query_string,roads_layername,timeout=self.dlg.timeout_box.value(),return_as_string=True)
 
         self.dlg.datafetch_progressbar.setValue(30)
 
 
-        clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
+        # clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
 
-        clip_polygon_path = path_from_layer(self.input_layer)
+        # clip_polygon_path = path_from_layer(self.input_layer)
 
-        self.write_to_debug(clip_polygon_path)
+        # self.write_to_debug(clip_polygon_path)
 
         # adding as layer
-        osm_data_layer = QgsVectorLayer(data_geojsonpath,roads_layername,"ogr")
+        osm_data_layer = QgsVectorLayer(data_geojson_string,roads_layername,"ogr")
 
-        cliplayer(osm_data_layer,self.input_layer,clipped_path)
+        clipped_datalayer = cliplayer_v2(osm_data_layer,self.input_layer,'memory:clipped_roads_wgs84')
 
         self.dlg.datafetch_progressbar.setValue(35)
 
 
 
-        clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
+        # clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
+        # self.clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
+
 
         # # Custom CRS, to use metric stuff with minimal distortion
-        self.clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
-
-
-        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,self.clipped_reproj_path,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
+        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,None,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
 
         self.dlg.datafetch_progressbar.setValue(40)
 
@@ -1773,8 +1772,8 @@ class sidewalkreator:
 
         if not self.dlg.ch_ignore_buildings.isChecked() and use_buildings:
             query_string_buildings = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'building',relation=include_relations)
-            buildings_geojsonpath = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon',timeout=self.dlg.timeout_box.value())
-            buildings_brutelayer = QgsVectorLayer(buildings_geojsonpath,'brute_buildings','ogr')
+            buildings_geojson_string = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon',timeout=self.dlg.timeout_box.value(),return_as_string=True)
+            buildings_brutelayer = QgsVectorLayer(buildings_geojson_string,'brute_buildings','ogr')
 
             self.no_buildings = check_empty_layer(buildings_brutelayer) # asserts if there are buildings in the area
 
@@ -1786,10 +1785,10 @@ class sidewalkreator:
 
                 self.dlg.check_if_overlaps_buildings.setChecked(True) # set as default option, since sidewalks can overlap buildings
 
-                reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
+                # reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.dlg.datafetch_progressbar.setValue(50)
 
-                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,reproj_buildings_path,buildings_layername,lgt_0=self.bbox_center.x())
+                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,None,buildings_layername,lgt_0=self.bbox_center.x())
                 self.dlg.datafetch_progressbar.setValue(55)
 
                 if draw_buildings:
@@ -1816,10 +1815,10 @@ class sidewalkreator:
 
             # mostly a clone of get buildings snippet
             query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True,way=False)
-            addrs_geojsonpath = get_osm_data(query_string_addrs,'osm_addrs_data','Point',timeout=self.dlg.timeout_box.value())
+            addrs_geojson_str = get_osm_data(query_string_addrs,'osm_addrs_data','Point',timeout=self.dlg.timeout_box.value(),return_as_string=True)
             self.dlg.datafetch_progressbar.setValue(65)
 
-            addrs_brutelayer = QgsVectorLayer(addrs_geojsonpath,'brute_buildings','ogr')
+            addrs_brutelayer = QgsVectorLayer(addrs_geojson_str,'brute_buildings','ogr')
 
             self.no_addrs = check_empty_layer(addrs_brutelayer)
 
@@ -1827,8 +1826,8 @@ class sidewalkreator:
 
 
             if not self.no_addrs:
-                reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
-                self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,reproj_addrs_path,'addrs_points',lgt_0=self.bbox_center.x())
+                # reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
+                self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,None,'addrs_points',lgt_0=self.bbox_center.x())
                 # self.add_layer_canvas(self.reproj_addrs)
 
             self.dlg.datafetch_progressbar.setValue(75)
@@ -1955,11 +1954,11 @@ class sidewalkreator:
                 qt_object.setPrefix(ptbr_txt)
 
 
-    def write_to_debug(self,input_stringable,add_newline=True):
-        with open(self.session_debugpath,'a+') as session_report:
-            session_report.write(str(input_stringable))
-            if add_newline:
-                session_report.write('\n')
+    # def write_to_debug(self,input_stringable,add_newline=True):
+    #     with open(self.session_debugpath,'a+') as session_report:
+    #         session_report.write(str(input_stringable))
+    #         if add_newline:
+    #             session_report.write('\n')
 
     def two_intersections_byvector_with_sidewalks(self,vector,centerpoint,print_points=False):
 
