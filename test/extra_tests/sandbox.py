@@ -1,20 +1,8 @@
-# import subprocess
-# import sys
+empty_layer_w_empty_feature = QgsVectorLayer()
+empty_input_feature = QgsFeature()
+empty_input_feature.setFields(empty_layer_w_empty_feature.fields())
 
+with edit(empty_layer_w_empty_feature):
+    empty_layer_w_empty_feature.addFeature(empty_input_feature)
 
-# whl_path = '/home/kaue/osm2geojson/dist/osm2geojson-0.1.33-py3-none-any.whl'
-
-# sys.path.append(whl_path)
-
-
-# import os
-
-# import osm2geojson
-
-try:
-    print(a)
-except:
-    try:
-        print(v)
-    except:
-        print('erro')
+empty_feature = QgsFeature()

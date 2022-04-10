@@ -146,6 +146,18 @@ class sidewalkreator:
     export_ready = False
 
 
+    # an empty layer for some stuff:
+    empty_layer = QgsVectorLayer()
+
+    # # empty layer with one empty feature:
+    # empty_layer_w_empty_feature = QgsVectorLayer()
+
+    # with edit(empty_layer_w_empty_feature):
+    #     empty_layer_w_empty_feature.addFeature(QgsFeature())
+
+    # empty_feature = QgsFeature()
+
+
     def __init__(self, iface):
         """Constructor.
 
@@ -355,6 +367,8 @@ class sidewalkreator:
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
             self.dlg.opt_en.clicked.connect(self.go_back_to_english)
             self.dlg.input_layer_selector.layerChanged.connect(self.get_input_layer)
+            self.dlg.input_layer_feature_selector.featureChanged.connect(self.get_input_feature)
+
 
 
 
@@ -446,6 +460,7 @@ class sidewalkreator:
             (self.dlg.segsbynum_checkbox,'In x\nsegments','Em x\nsegmentos'),
             (self.dlg.onlyfacades_checkbox,'Only Facades',' Faces Q.'),
             (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
+            (self.dlg.input_feature_text,"input feature:\n(-1: none)",'Feição de Entrada\n(-1: nenhuma)'),
 
 
 
@@ -796,6 +811,8 @@ class sidewalkreator:
 
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
+
+            # obtaining the two delimiting points:
 
             P0 = qgs_point_geom_from_line_at(feature_A)    # first point
             PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
@@ -1429,6 +1446,11 @@ class sidewalkreator:
 
 
     def reset_fields(self):
+        # stuff of feature selector:
+        self.dlg.input_layer_feature_selector.setFeature(-1)
+        self.dlg.input_layer_feature_selector.setEnabled(False)
+        self.dlg.input_feature_field.setText('')
+
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
@@ -1595,35 +1617,64 @@ class sidewalkreator:
         self.iface.mapCanvas().refresh()
 
 
-
     def get_input_layer(self):
-        # self.input_layer = QgsMapLayerComboBox.currentLayer()
         self.input_layer = self.dlg.input_layer_selector.currentLayer()
+
+        if self.input_layer:
+            if not self.input_layer.isTemporary():
+                self.input_layer_4326 = reproject_layer(self.input_layer)
+
+                self.dlg.input_layer_feature_selector.setLayer(self.input_layer_4326)
+                #     self.dlg.input_layer_feature_selector.setDisplayExpression('$id')
+
+                self.input_feature = self.dlg.input_layer_feature_selector.feature()
+
+
+                self.dlg.input_layer_feature_selector.setEnabled(True)
+                self.dlg.input_layer_selector.setEnabled(False)
+
+                self.dlg.input_feature_field.setText(self.dlg.input_layer_feature_selector.displayExpression())
+
+            else:
+                self.dlg.input_status.setText(self.string_according_language('temporary layers are not allowed','layers temporários não são permitidos'))
+
+
+
+            
+
+
+
+    def get_input_feature(self):
+        # self.input_layer = QgsMapLayerComboBox.currentLayer()
+        # self.input_layer = self.dlg.input_layer_selector.currentLayer()
 
         # .next()
 
         if self.input_layer:
             # self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
 
+            self.input_feature = self.dlg.input_layer_feature_selector.feature()
+
 
             # assuring 4326 as EPSG code for layer
-            layer_4326 = reproject_layer(self.input_layer)
+            # layer_4326 = reproject_layer(self.input_layer)
+
+
+            # input_feature = QgsFeature()
+
+
+            # iterat = layer_4326.getFeatures()
+
+            # iterat.nextFeature(input_feature)
 
 
 
-            input_feature = QgsFeature()
-
-
-            iterat = layer_4326.getFeatures()
-
-            iterat.nextFeature(input_feature)
-
-            if input_feature.hasGeometry():
+            if self.input_feature.hasGeometry():
                 # TODO: beware of qgis bugs...
 
 
-                if input_feature.isValid():
-                    self.input_polygon = input_feature.geometry()
+                if self.input_feature.isValid():
+                    self.input_polygon = self.input_feature.geometry()
 
                     # self.write_to_debug(self.input_polygon.toWkt())
 
@@ -1639,11 +1690,15 @@ class sidewalkreator:
 
 
                     if self.input_polygon.isGeosValid():
+
                         # zooming to inputlayer:
                         if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
-                            self.iface.mapCanvas().setExtent(layer_4326.extent())
+                            self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
                         else:
-                            bbox_4326 = get_bbox4326_currCRS(layer_4326.extent(),self.iface.mapCanvas().mapSettings().destinationCrs().authid())
+                            bbox_4326 = get_bbox4326_currCRS(
+                                # self.input_layer_4326.extent(),
+                                self.input_feature.geometry().boundingBox(),
+                                self.iface.mapCanvas().mapSettings().destinationCrs().authid())
                             self.iface.mapCanvas().setExtent(bbox_4326)
                         self.iface.mapCanvas().refresh()
 

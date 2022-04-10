@@ -19,7 +19,7 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>370</x>
+     <x>340</x>
      <y>10</y>
      <width>261</width>
      <height>32</height>
@@ -38,7 +38,7 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>70</x>
+     <x>30</x>
      <y>10</y>
      <width>191</width>
      <height>31</height>
@@ -89,14 +89,14 @@
   <widget class="QLabel" name="input_pol_label">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>0</x>
      <y>50</y>
-     <width>161</width>
+     <width>151</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>Input Polygon:</string>
+    <string>Input Polygon Layer:</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -105,9 +105,9 @@
   <widget class="QgsMapLayerComboBox" name="input_layer_selector">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>160</x>
      <y>50</y>
-     <width>471</width>
+     <width>331</width>
      <height>31</height>
     </rect>
    </property>
@@ -177,8 +177,8 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>335</x>
-     <y>90</y>
+     <x>330</x>
+     <y>100</y>
      <width>231</width>
      <height>21</height>
     </rect>
@@ -193,8 +193,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>545</x>
-     <y>120</y>
+     <x>540</x>
+     <y>128</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -1182,8 +1182,56 @@ segments</string>
     <bool>false</bool>
    </property>
   </widget>
+  <widget class="QgsFeaturePickerWidget" name="input_layer_feature_selector">
+   <property name="geometry">
+    <rect>
+     <x>630</x>
+     <y>50</y>
+     <width>201</width>
+     <height>31</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="input_feature_text">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>50</y>
+     <width>121</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>input feature:
+(-1: none)</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="input_feature_field">
+   <property name="geometry">
+    <rect>
+     <x>660</x>
+     <y>30</y>
+     <width>121</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QgsFeaturePickerWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfeaturepickerwidget.h</header>
+  </customwidget>
   <customwidget>
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>
