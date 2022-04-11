@@ -1015,7 +1015,7 @@ def merge_geojsons(input_pathlist,outputpath):
     '''
         simple function to merge geojsons without using any library.
 
-        Same CRS for all files is required.
+        Same CRS for all files is assumed.
     '''
 
     ref_dict = None
