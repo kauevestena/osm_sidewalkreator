@@ -146,16 +146,7 @@ class sidewalkreator:
     export_ready = False
 
 
-    # an empty layer for some stuff:
-    empty_layer = QgsVectorLayer()
 
-    # # empty layer with one empty feature:
-    # empty_layer_w_empty_feature = QgsVectorLayer()
-
-    # with edit(empty_layer_w_empty_feature):
-    #     empty_layer_w_empty_feature.addFeature(QgsFeature())
-
-    # empty_feature = QgsFeature()
 
 
     def __init__(self, iface):
@@ -1232,13 +1223,13 @@ class sidewalkreator:
 
         # print(buffer_distance_string)
 
-        proto_dissolved_buffer_step1 = generate_buffer(self.splitted_lines,buffer_distance_string)
+        self.proto_undissolved_buffer_step1 = generate_buffer(self.splitted_lines,buffer_distance_string,dissolve=False)
 
         # rounding directly, as it avoids small polygons aswell
         # TODO: check if it's the best approach, or to do it feature-wise
         self.curveradius = self.dlg.curve_radius_box.value()
 
-        proto_dissolved_buffer_step2 = generate_buffer(proto_dissolved_buffer_step1,self.curveradius)
+        proto_dissolved_buffer_step2 = generate_buffer(dissolve_tosinglegeom(self.proto_undissolved_buffer_step1),self.curveradius)
 
         dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.curveradius)
 
@@ -2516,10 +2507,10 @@ class sidewalkreator:
     
         aux_foldername = self.string_according_language('auxiliary_files','arquivos_auxiliares')
 
-        aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
+        self.aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
 
-        # os.makedirs(aux_files_dirpath)
-        create_dir_ifnotexists(aux_files_dirpath)
+        # os.makedirs(self.aux_files_dirpath)
+        create_dir_ifnotexists(self.aux_files_dirpath)
 
         # converting final layers
         sidewalks_path = os.path.join(inputdirpath,self.string_according_language('sidewalks4326.geojson','calcadas4326.geojson'))
@@ -2527,7 +2518,7 @@ class sidewalkreator:
         kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
 
 
-        inputpol_layer_path = os.path.join(aux_files_dirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
+        inputpol_layer_path = os.path.join(self.aux_files_dirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
 
         outlayers_gjsonpaths = [crossings_path,kerbs_path,sidewalks_path]
 
@@ -2564,10 +2555,10 @@ class sidewalkreator:
 
         # auxiliary files:
         if self.dlg.voronoi_checkbox.isChecked():
-            voronoi_outpath  = os.path.join(aux_files_dirpath,'voronois.geojson')
+            voronoi_outpath  = os.path.join(self.aux_files_dirpath,'voronois.geojson')
             reproject_layer(self.voronois_as_layer,output_mode=voronoi_outpath)
         
-        protoblocks_outpath = os.path.join(aux_files_dirpath,'protoblocks.geojson')
+        protoblocks_outpath = os.path.join(self.aux_files_dirpath,'protoblocks.geojson')
         reproject_layer(self.protoblocks,output_mode=protoblocks_outpath)
 
 
@@ -2593,7 +2584,9 @@ class sidewalkreator:
         if self.dlg.segsbynum_checkbox.isChecked():
             parameters_dump['split by x segments'] = self.dlg.segsbynum_box.value()
 
-        parameters_dump_outpath = os.path.join(aux_files_dirpath,'parameters_dump.json')
+        parameters_dump_outpath = os.path.join(self.aux_files_dirpath,'parameters_dump.json')
+        dump_json(parameters_dump,parameters_dump_outpath)
+
 
         # dumping overpass queries for the output layers:
         # so you may can then 
@@ -2606,10 +2599,11 @@ class sidewalkreator:
         overpass_crossings_path = os.path.join(inputdirpath,'overpass_crossings.txt')
         osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='crossing',dump_path=overpass_kerbs_path,node=True,way=False)
 
-
-        
-
-        dump_json(parameters_dump,parameters_dump_outpath)
+        # dumping extra layers:
+        extra_layers = {'inner_crossings':self.inner_crossings_layer,'raw_buffers':self.proto_undissolved_buffer_step1}
+    
+        for key in extra_layers:
+            self.reproject_and_export(key,extra_layers[key])
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -2617,9 +2611,22 @@ class sidewalkreator:
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")
 
-        iface.messageBar().pushMessage("Sucess", "You Can Now Proceed To JOSM, importing the output JSON and changeset comment!!!", level=Qgis.Success,duration=30)
 
+        # the sucess message in the QGIS GUI:
+        sucess_category = self.string_according_language("Sucess",'Sucesso')
 
+        sucess_message = self.string_according_language("You Can Now Proceed To JOSM, importing the output GEOJSON and changeset comment!!!",'Você pode proceder ao JOSM e importar o GEOJSON de saída e o comentário para o changeset!!!')
+
+        iface.messageBar().pushMessage(sucess_category,sucess_message, level=Qgis.Success,duration=30)
+
+    def reproject_and_export(self,layername,inputlayer,outfolderpath=None):
+
+        if not outfolderpath:
+            outfolderpath = self.aux_files_dirpath
+
+        outpath = os.path.join(outfolderpath,layername+'.geojson')
+
+        reproject_layer(inputlayer,output_mode=outpath)
 
 
 
