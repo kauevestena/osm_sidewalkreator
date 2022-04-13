@@ -1708,7 +1708,7 @@ class sidewalkreator:
 
         # .next()
 
-        if self.input_layer:
+        if self.input_layer_4326:
             # self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
 
             self.input_feature = self.dlg.input_layer_feature_selector.feature()
@@ -1765,7 +1765,7 @@ class sidewalkreator:
 
                         self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
 
-
+                        # enabling itens for next step
                         self.dlg.datafetch.setEnabled(True)
                         self.dlg.datafetch_progressbar.setEnabled(True)
                         self.dlg.ch_ignore_buildings.setEnabled(True)
@@ -1864,7 +1864,13 @@ class sidewalkreator:
         # adding as layer
         osm_data_layer = QgsVectorLayer(data_geojson_string,roads_layername,"ogr")
 
-        clipped_datalayer = cliplayer_v2(osm_data_layer,self.input_layer,'memory:clipped_roads_wgs84')
+        # creating an layer with only the input polygon:
+        cleaned_input_feature = geom_to_feature(self.input_feature.geometry())
+
+        self.only_inputfeature_layer = layer_from_featlist([cleaned_input_feature],'input_feature','Polygon',CRS=crs_4326)
+
+
+        clipped_datalayer = cliplayer_v2(osm_data_layer,self.only_inputfeature_layer,'memory:clipped_roads_wgs84')
 
         self.dlg.datafetch_progressbar.setValue(35)
 
@@ -2643,8 +2649,6 @@ class sidewalkreator:
         temp_kerbs_layer = layer_from_featlist(new_kerbs_list)
         temp_kerbs_layer.setCrs(self.custom_localTM_crs)
 
-        self.add_layer_canvas(temp_kerbs_layer)
-
         create_filled_newlayerfield(temp_kerbs_layer,'barrier','kerb',QVariant.String)
 
         swap_features_layer_another(self.kerbs_layer,temp_kerbs_layer)
@@ -2685,8 +2689,12 @@ class sidewalkreator:
         reproject_layer(self.crossings_layer,output_mode=crossings_path)
         # kerbs_4326 =
         reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
+
+
+        # outputting the input polygon:
+
         # input_polygon4326 =
-        reproject_layer(self.input_layer,output_mode=inputpol_layer_path)
+        reproject_layer(self.only_inputfeature_layer,output_mode=inputpol_layer_path)
 
 
         '''

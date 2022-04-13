@@ -640,7 +640,7 @@ def geom_to_feature(inputgeom,attrs_list=None):
 
     return ret_feat
 
-def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None,output_type = 'memory'):
+def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None,output_type = 'memory',CRS=None):
     '''
         creating a layer from a list of features (not geometries)
 
@@ -670,6 +670,9 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
             ret_layer.dataProvider().addFeature(feature)
 
         ret_layer.updateExtents()
+
+    if CRS:
+        ret_layer.setCrs(CRS)
 
     return ret_layer
 
