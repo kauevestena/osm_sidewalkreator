@@ -2630,7 +2630,26 @@ class sidewalkreator:
         # removing length from crossings, as we do not want to export'em
         remove_layerfields(self.crossings_layer,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
 
+        # creating again the Kerbs layer, so if the user delete any crossing, there will be no loose kerbs:
+        new_kerbs_list = []
+        for feature in self.crossings_layer.getFeatures():
+            as_polyline = feature.geometry().asPolyline()
+            # 0 1 2 3 4 index 1 and 3 are kerbs
+            pB = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[1]))
+            pD = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[3]))
 
+            new_kerbs_list += [pB,pD]
+
+        temp_kerbs_layer = layer_from_featlist(new_kerbs_list)
+        temp_kerbs_layer.setCrs(self.custom_localTM_crs)
+
+        self.add_layer_canvas(temp_kerbs_layer)
+
+        create_filled_newlayerfield(temp_kerbs_layer,'barrier','kerb',QVariant.String)
+
+        swap_features_layer_another(self.kerbs_layer,temp_kerbs_layer)
+
+        self.kerbs_layer.setCrs(self.custom_localTM_crs)
 
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
