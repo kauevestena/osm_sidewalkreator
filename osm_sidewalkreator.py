@@ -1729,58 +1729,63 @@ class sidewalkreator:
 
             if self.input_feature.hasGeometry():
                 # TODO: beware of qgis bugs...
+                if not self.input_feature.geometry().isMultipart():
+
+                    if self.input_feature.isValid():
+                        self.input_polygon = self.input_feature.geometry()
+
+                        # self.write_to_debug(self.input_polygon.toWkt())
+
+                        bbox = self.input_polygon.boundingBox()
+
+                        # in order to create a local custom projection
+                        self.bbox_center = bbox.center()
+
+                        self.minLgt = bbox.xMinimum()
+                        self.minLat = bbox.yMinimum()
+                        self.maxLgt = bbox.xMaximum()
+                        self.maxLat = bbox.yMaximum()
 
 
-                if self.input_feature.isValid():
-                    self.input_polygon = self.input_feature.geometry()
+                        if self.input_polygon.isGeosValid():
 
-                    # self.write_to_debug(self.input_polygon.toWkt())
+                            # zooming to inputlayer:
+                            if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
+                                self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
+                            else:
+                                bbox_4326 = get_bbox4326_currCRS(
+                                    # self.input_layer_4326.extent(),
+                                    self.input_feature.geometry().boundingBox(),
+                                    self.iface.mapCanvas().mapSettings().destinationCrs().authid())
+                                self.iface.mapCanvas().setExtent(bbox_4326)
+                            self.iface.mapCanvas().refresh()
 
-                    bbox = self.input_polygon.boundingBox()
+                            # setting a default style for input polygons:
+                            inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
 
-                    # in order to create a local custom projection
-                    self.bbox_center = bbox.center()
+                            self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
 
-                    self.minLgt = bbox.xMinimum()
-                    self.minLat = bbox.yMinimum()
-                    self.maxLgt = bbox.xMaximum()
-                    self.maxLat = bbox.yMaximum()
+                            # enabling itens for next step
+                            self.dlg.datafetch.setEnabled(True)
+                            self.dlg.datafetch_progressbar.setEnabled(True)
+                            self.dlg.ch_ignore_buildings.setEnabled(True)
+                            self.dlg.timeout_box.setEnabled(True)
+                            self.dlg.timeout_label.setEnabled(True)
 
-
-                    if self.input_polygon.isGeosValid():
-
-                        # zooming to inputlayer:
-                        if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
-                            self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
-                        else:
-                            bbox_4326 = get_bbox4326_currCRS(
-                                # self.input_layer_4326.extent(),
-                                self.input_feature.geometry().boundingBox(),
-                                self.iface.mapCanvas().mapSettings().destinationCrs().authid())
-                            self.iface.mapCanvas().setExtent(bbox_4326)
-                        self.iface.mapCanvas().refresh()
-
-                        # setting a default style for input polygons:
-                        inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
-
-                        self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
-
-                        # enabling itens for next step
-                        self.dlg.datafetch.setEnabled(True)
-                        self.dlg.datafetch_progressbar.setEnabled(True)
-                        self.dlg.ch_ignore_buildings.setEnabled(True)
-                        self.dlg.timeout_box.setEnabled(True)
-                        self.dlg.timeout_label.setEnabled(True)
-
-                        # self.change_input_labels = False
-                        # self.dlg.input_status.setText('Valid Input!')
-                        self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
-                        # self.dlg.input_status_of_data.setText('waiting for data...')
-                        self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
+                            # self.change_input_labels = False
+                            # self.dlg.input_status.setText('Valid Input!')
+                            self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
+                            # self.dlg.input_status_of_data.setText('waiting for data...')
+                            self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
 
 
-                        # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
-                        #     self.write_to_debug(item)
+                            # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
+                            #     self.write_to_debug(item)
+                else:
+                    self.set_text_based_on_language(self.dlg.input_status,'Multi-Part Geometries are not Supported!!','Geometrias Multi-Parte não são suportadas!!')
+                    self.dlg.datafetch.setEnabled(False)
+                    self.dlg.ch_ignore_buildings.setEnabled(False)
+
             else:
                 # self.dlg.input_status.setText('no geometries on input!!')
                 self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
