@@ -810,6 +810,10 @@ class sidewalkreator:
         # and storing the employed distance inward:
         inward_distances = {}
 
+        # fieldname to store a distance to check crossings lenghts:
+        self.len_checking_fieldname = self.string_according_language('ortho_len_dif','dif_dist_orto')
+        self.crossings_len_fieldname = self.string_according_language('length','comprimento')
+        self.above_tol_fieldname = self.string_according_language('above_tol','acima_da_tolerancia')
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
@@ -1131,7 +1135,18 @@ class sidewalkreator:
             # creating the crossings as line geometry:
             crossing_pointlist = [pA_crossings.asPoint(),pB.asPoint(),pC,pD.asPoint(),pE_crossings.asPoint()]
 
-            crossing_as_feat = geom_to_feature(QgsGeometry.fromPolylineXY(crossing_pointlist))
+            crossing_geom = QgsGeometry.fromPolylineXY(crossing_pointlist)
+
+            crossing_as_feat = geom_to_feature(crossing_geom,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
+
+            ortholen = self.dlg.d_to_add_box.value() + belonging_line[widths_fieldname]
+
+            tolerance_factor = self.dlg.perc_tol_crossings_box.value()
+            tol_len = ortholen * (1 + tolerance_factor/100) 
+
+            dif_from_ortholen = round(crossing_geom.length() - ortholen,3)
+
+            crossing_as_feat.setAttributes([round(crossing_geom.length(),3),dif_from_ortholen,(crossing_geom.length()>tol_len)])
 
             crossings_featlist.append(crossing_as_feat)
 
@@ -1142,12 +1157,13 @@ class sidewalkreator:
 
 
         # creating and styling the crossings and kerbs layers
-        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString")
+        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString",{'length':QVariant.Double,self.len_checking_fieldname:QVariant.Double,self.above_tol_fieldname:QVariant.Bool})
         self.crossings_layer.setCrs(self.custom_localTM_crs)
 
         # adding crossing len to check for "bad" crossings:
         # create_new_layerfield(self.crossings_layer,'length')
-        create_filled_newlayerfield(self.crossings_layer,'length',{'geometry':'length'},QVariant.Double)
+
+        # create_filled_newlayerfield(self.crossings_layer,'length',{'geometry':'length'},QVariant.Double)
 
         crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
         self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
@@ -2612,7 +2628,7 @@ class sidewalkreator:
 
     def outputting_files(self):
         # removing length from crossings, as we do not want to export'em
-        remove_layerfields(self.crossings_layer,['length'])
+        remove_layerfields(self.crossings_layer,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
 
 
 
