@@ -488,7 +488,7 @@ And It's OK!!
     <number>2</number>
    </property>
    <property name="minimum">
-    <double>3.000000000000000</double>
+    <double>1.000000000000000</double>
    </property>
    <property name="maximum">
     <double>10.000000000000000</double>
@@ -787,13 +787,49 @@ dead-end-streets
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>260</x>
      <y>380</y>
-     <width>491</width>
+     <width>589</width>
      <height>44</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <item>
+     <widget class="QSpinBox" name="perc_tol_crossings_box">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="suffix">
+       <string>%</string>
+      </property>
+      <property name="minimum">
+       <number>10</number>
+      </property>
+      <property name="maximum">
+       <number>50</number>
+      </property>
+      <property name="singleStep">
+       <number>5</number>
+      </property>
+      <property name="value">
+       <number>25</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="perc_tol_crossings_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>len.
+tol.</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
     <item>
      <widget class="QSpinBox" name="perc_draw_kerbs_box">
       <property name="enabled">

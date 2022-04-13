@@ -48,6 +48,9 @@ d_to_add_interp_d = 2
 # percent of middle-crossing segment to draw Kerbs
 perc_draw_kerbs = 30
 
+# percent of tolerance to drive a point innerly in segment
+perc_tol_crossings = 25
+
 # percent of length to interpolate if passes half the length
 perc_to_interpolate = 0.4
 
@@ -128,3 +131,7 @@ protoblocks_buffer = 0.5 # 50 cm
 # value to exclude "tiny segments"
 tiny_segments_tol = 0.1
 
+# (draw_crossings context) increment in meters if the length of the crossing is bigger than the max len
+increment_inward = 0.5
+# max iterations in the 
+max_crossings_iterations = 20

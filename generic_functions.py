@@ -372,7 +372,7 @@ def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
     with edit(inputlayer):
         if isinstance(fieldvalue,dict):
             dkey = next(iter(fieldvalue))
-            print(dkey,fieldvalue[dkey])
+            # print(dkey,fieldvalue[dkey])
             # by now only length is implemented
             if dkey == 'geometry':
                 if fieldvalue[dkey] == "length":
@@ -802,6 +802,7 @@ def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
 
 def check_sidewalk_intersection(intersectiongeom,referencepoint):
     if not intersectiongeom.isEmpty():
+        
         if not intersectiongeom.isMultipart():
             return True,intersectiongeom
         else:
