@@ -425,7 +425,7 @@ class sidewalkreator:
             (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
             (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
             (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
-            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,that stuff shall be handled properly...)","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)"),
+            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,this stuff shall be handled properly...)","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)"),
             (self.dlg.check_if_overlaps_buildings,'Check if Overlaps\n Buildings\n(much slower)','Testar se Sobrepõe\nEdificações\n(mais lento)'),
             (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
@@ -1098,6 +1098,10 @@ class sidewalkreator:
 
             pA_crossings,pE_crossings,new_pC_geom = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry(),belonging_line,inward_distances[key],is_at_beginning)
 
+            if not any([pA_crossings,pE_crossings]):
+                # skip this crossing, as some problem was returned
+                continue
+
             # stuff for kerb points ("B" and "D") computation
 
             if not new_pC_geom:
@@ -1106,8 +1110,25 @@ class sidewalkreator:
                 pC = new_pC_geom
 
 
+            # if isinstance(pA_crossings,QgsGeometry):
             segment_AC = QgsGeometry.fromPolylineXY([pA_crossings.asPoint(),pC])
+            pA_feat = geom_to_feature(pA_crossings)
+
+            # else:
+            #     segment_AC = QgsGeometry.fromPolylineXY([pA_crossings,pC])
+            #     pA_feat = geom_to_feature(pointXY_to_geometry(pA_crossings))
+
+
+
+            # if isinstance(pE_crossings,QgsGeometry):
             segment_EC = QgsGeometry.fromPolylineXY([pE_crossings.asPoint(),pC])
+            pE_feat = geom_to_feature(pE_crossings)
+
+            # else:
+            #     segment_EC = QgsGeometry.fromPolylineXY([pE_crossings,pC])
+            #     pE_feat = geom_to_feature(pointXY_to_geometry(pE_crossings))
+
+
 
             kerb_perc = self.dlg.perc_draw_kerbs_box.value()
 
@@ -1117,16 +1138,16 @@ class sidewalkreator:
             kerbs_featlist.append(geom_to_feature(pB))
             kerbs_featlist.append(geom_to_feature(pD))
 
-
-            pA_feat = geom_to_feature(pA_crossings)
+            # pA OK
             pB_feat = geom_to_feature(pB)
+            # pC OK
             pD_feat = geom_to_feature(pD)
-            pE_feat = geom_to_feature(pE_crossings)
+            # pE OK
 
 
             # print(pA_feat,pE_feat)
 
-            pA_feat = geom_to_feature(pA_crossings)
+            # pA_feat = geom_to_feature(pA_crossings)
             self.inner_crossings_layer.dataProvider().addFeature(pA_feat)
             self.inner_crossings_layer.dataProvider().addFeature(pB_feat)
             self.inner_crossings_layer.dataProvider().addFeature(pD_feat)
@@ -1134,7 +1155,7 @@ class sidewalkreator:
 
             # creating the crossings as line geometry:
             crossing_pointlist = [pA_crossings.asPoint(),pB.asPoint(),pC,pD.asPoint(),pE_crossings.asPoint()]
-
+         
             crossing_geom = QgsGeometry.fromPolylineXY(crossing_pointlist)
 
             crossing_as_feat = geom_to_feature(crossing_geom,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
@@ -1356,7 +1377,8 @@ class sidewalkreator:
         self.dissolved_sidewalks = dissolve_tosinglegeom(self.whole_sidewalks)
         self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
 
-
+        # with open('/home/kaue/test_wkt_sidewalks.txt','w+') as writer:
+        #     writer.write(self.dissolved_sidewalks_geom.asWkt())
 
 
         # disabling what won't be needed afterwards
@@ -1708,96 +1730,99 @@ class sidewalkreator:
 
         # .next()
 
-        if self.input_layer_4326:
-            # self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
+        try:
+            if self.input_layer_4326:
+                # self.write_to_debug(self.input_layer.dataProvider().dataSourceUri())
 
-            self.input_feature = self.dlg.input_layer_feature_selector.feature()
-
-
-            # assuring 4326 as EPSG code for layer
-            # layer_4326 = reproject_layer(self.input_layer)
+                self.input_feature = self.dlg.input_layer_feature_selector.feature()
 
 
-            # input_feature = QgsFeature()
+                # assuring 4326 as EPSG code for layer
+                # layer_4326 = reproject_layer(self.input_layer)
 
 
-            # iterat = layer_4326.getFeatures()
-
-            # iterat.nextFeature(input_feature)
+                # input_feature = QgsFeature()
 
 
+                # iterat = layer_4326.getFeatures()
 
-            if self.input_feature.hasGeometry():
-                # TODO: beware of qgis bugs...
-                if not self.input_feature.geometry().isMultipart():
-
-                    if self.input_feature.isValid():
-                        self.input_polygon = self.input_feature.geometry()
-
-                        # self.write_to_debug(self.input_polygon.toWkt())
-
-                        bbox = self.input_polygon.boundingBox()
-
-                        # in order to create a local custom projection
-                        self.bbox_center = bbox.center()
-
-                        self.minLgt = bbox.xMinimum()
-                        self.minLat = bbox.yMinimum()
-                        self.maxLgt = bbox.xMaximum()
-                        self.maxLat = bbox.yMaximum()
+                # iterat.nextFeature(input_feature)
 
 
-                        if self.input_polygon.isGeosValid():
 
-                            # zooming to inputlayer:
-                            if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
-                                self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
-                            else:
-                                bbox_4326 = get_bbox4326_currCRS(
-                                    # self.input_layer_4326.extent(),
-                                    self.input_feature.geometry().boundingBox(),
-                                    self.iface.mapCanvas().mapSettings().destinationCrs().authid())
-                                self.iface.mapCanvas().setExtent(bbox_4326)
-                            self.iface.mapCanvas().refresh()
+                if self.input_feature.hasGeometry():
+                    # TODO: beware of qgis bugs...
+                    if not self.input_feature.geometry().isMultipart():
 
-                            # setting a default style for input polygons:
-                            inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
+                        if self.input_feature.isValid():
+                            self.input_polygon = self.input_feature.geometry()
 
-                            self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
+                            # self.write_to_debug(self.input_polygon.toWkt())
 
-                            # enabling itens for next step
-                            self.dlg.datafetch.setEnabled(True)
-                            self.dlg.datafetch_progressbar.setEnabled(True)
-                            self.dlg.ch_ignore_buildings.setEnabled(True)
-                            self.dlg.timeout_box.setEnabled(True)
-                            self.dlg.timeout_label.setEnabled(True)
+                            bbox = self.input_polygon.boundingBox()
 
-                            # self.change_input_labels = False
-                            # self.dlg.input_status.setText('Valid Input!')
-                            self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
-                            # self.dlg.input_status_of_data.setText('waiting for data...')
-                            self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
+                            # in order to create a local custom projection
+                            self.bbox_center = bbox.center()
+
+                            self.minLgt = bbox.xMinimum()
+                            self.minLat = bbox.yMinimum()
+                            self.maxLgt = bbox.xMaximum()
+                            self.maxLat = bbox.yMaximum()
 
 
-                            # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
-                            #     self.write_to_debug(item)
+                            if self.input_polygon.isGeosValid():
+
+                                # zooming to inputlayer:
+                                if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
+                                    self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
+                                else:
+                                    bbox_4326 = get_bbox4326_currCRS(
+                                        # self.input_layer_4326.extent(),
+                                        self.input_feature.geometry().boundingBox(),
+                                        self.iface.mapCanvas().mapSettings().destinationCrs().authid())
+                                    self.iface.mapCanvas().setExtent(bbox_4326)
+                                self.iface.mapCanvas().refresh()
+
+                                # setting a default style for input polygons:
+                                inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
+
+                                self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
+
+                                # enabling itens for next step
+                                self.dlg.datafetch.setEnabled(True)
+                                self.dlg.datafetch_progressbar.setEnabled(True)
+                                self.dlg.ch_ignore_buildings.setEnabled(True)
+                                self.dlg.timeout_box.setEnabled(True)
+                                self.dlg.timeout_label.setEnabled(True)
+
+                                # self.change_input_labels = False
+                                # self.dlg.input_status.setText('Valid Input!')
+                                self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
+                                # self.dlg.input_status_of_data.setText('waiting for data...')
+                                self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
+
+
+                                # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
+                                #     self.write_to_debug(item)
+                    else:
+                        self.set_text_based_on_language(self.dlg.input_status,'Multi-Part Geometries are not Supported!!','Geometrias Multi-Parte não são suportadas!!')
+                        self.dlg.datafetch.setEnabled(False)
+                        self.dlg.ch_ignore_buildings.setEnabled(False)
+
                 else:
-                    self.set_text_based_on_language(self.dlg.input_status,'Multi-Part Geometries are not Supported!!','Geometrias Multi-Parte não são suportadas!!')
+                    # self.dlg.input_status.setText('no geometries on input!!')
+                    self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
                     self.dlg.datafetch.setEnabled(False)
                     self.dlg.ch_ignore_buildings.setEnabled(False)
 
             else:
-                # self.dlg.input_status.setText('no geometries on input!!')
-                self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
+
+                # self.dlg.input_status.setText('waiting a valid for input...')
+                self.set_text_based_on_language(self.dlg.input_status,'Waiting for a valid input...','Aguardando entrada válida...')
                 self.dlg.datafetch.setEnabled(False)
                 self.dlg.ch_ignore_buildings.setEnabled(False)
-
-        else:
-
-            # self.dlg.input_status.setText('waiting a valid for input...')
-            self.set_text_based_on_language(self.dlg.input_status,'Waiting for a valid input...','Aguardando entrada válida...')
-            self.dlg.datafetch.setEnabled(False)
-            self.dlg.ch_ignore_buildings.setEnabled(False)
+        except:
+            print('no input layer at this moment.')
 
 
 
@@ -2112,6 +2137,7 @@ class sidewalkreator:
             # we may iterate, as the intersection can give more than one point or no point at all
 
             p_sideA = center_point + (vector * coef_sideA)
+
             p_sideB = center_point - (vector * coef_sideB)
 
             line_sideA = QgsGeometry.fromPolylineXY([center_point,p_sideA])
@@ -2119,6 +2145,18 @@ class sidewalkreator:
 
             line_sideB = QgsGeometry.fromPolylineXY([center_point,p_sideB])
             intersec_sideB_0 = self.dissolved_sidewalks_geom.intersection(line_sideB)
+
+            # print(intersec_sideA_0)
+            # print(intersec_sideB_0)
+
+            # featlist = [
+            #     geom_to_feature(intersec_sideA_0),
+            #     geom_to_feature(intersec_sideB_0),
+            # ]
+
+            # temp_testlayer = layer_from_featlist(featlist,'test_features','multilinestring',CRS=self.custom_localTM_crs)
+
+            # self.add_layer_canvas(temp_testlayer)
 
             # print(linefeature.id(),line_sideA.length(),line_sideB.length())
 
@@ -2191,6 +2229,10 @@ class sidewalkreator:
 
 
             iter_num += 1
+
+            if iter_num > max_crossings_iterations:
+                # to stop iterating indefenitely and just skip the crossinf
+                return None,None,False
 
 
         if print_points:

@@ -810,16 +810,61 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
             return True,intersectiongeom
         else:
             # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearer to "referencepoint"
+            print(intersectiongeom.asWkt())
+            print(intersectiongeom.wkbType())
+
             as_geomcollection = intersectiongeom.asGeometryCollection()
 
+            # print([item.type() for item in as_geomcollection])
 
-            distances = [referencepoint.distance(point.asPoint()) for point in as_geomcollection]
 
-            return True,as_geomcollection[distances.index(min(distances))]
+            if intersectiongeom.wkbType() == 4:
+
+                distances = [referencepoint.distance(point.asPoint()) for point in as_geomcollection]
+
+                return True,as_geomcollection[distances.index(min(distances))]
+
+
+            elif intersectiongeom.wkbType() == 5:
+
+                points = []
+
+                for line in as_geomcollection:
+                    for point in line.asPolyline():
+                        points.append(point)
+
+                distances = [referencepoint.distance(point) for point in points]
+
+                # print(points,'\n')
+                # print(distances,'\n')
+
+
+                return True,pointXY_to_geometry(points[distances.index(min(distances))])
+
+            elif intersectiongeom.wkbType() == 7:
+
+                points = []
+
+                for entity in as_geomcollection:
+                    if   entity.wkbType() == 2:
+                        for point in entity.asPolyline():
+                            points.append(point)
+                    elif entity.wkbType() == 1:
+                        points.append(entity.asPoint())
+                    else:
+                        print(entity.wkbType())
+
+                distances = [referencepoint.distance(point) for point in points]
+
+                # print(points,'\n')
+                # print(distances,'\n')
+
+
+                return True,pointXY_to_geometry(points[distances.index(min(distances))])
 
 
     else:
-        # if there's no intersection point it's because the vector length isn't enough in order to make it, so we need to enlarge that vector
+        # if there's no intersection point it's because the vector length big isn't enough in order to make it, so we need to enlarge that vector
         return False,None
 
 def interpolate_by_percent(inputline,percent):
@@ -922,6 +967,9 @@ def pointlist_to_multipoint(inputpointgeomlist):
     as_pointXYList = [geom.asPoint() for geom in inputpointgeomlist]
 
     return QgsGeometry.fromMultiPointXY(as_pointXYList)
+
+def pointXY_to_geometry(inputpointXY):
+    return QgsGeometry(QgsPoint(inputpointXY))
 
 def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
 

@@ -308,7 +308,7 @@ Compute Intersections</string>
    </property>
    <property name="text">
     <string>Some Sidewalks are already drawn!!! You must reshape your input polygon!!!
-(in a future release,that stuff shall be handled properly...)</string>
+(in a future release,this stuff shall be handled properly...)</string>
    </property>
    <property name="textFormat">
     <enum>Qt::PlainText</enum>
