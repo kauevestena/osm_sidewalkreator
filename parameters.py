@@ -64,17 +64,17 @@ default_widths = {
 
 
     # most common:
-    'motorway' : 22,
-    'trunk' :  18,
-    'primary' : 12,
-    'residential': 6,
-    'secondary' : 10,
-    'tertiary' : 8,
-    'unclassified': 4,
+    'motorway' : 22.0,
+    'trunk' :  18.0,
+    'primary' : 12.0,
+    'residential': 6.0,
+    'secondary' : 10.0,
+    'tertiary' : 8.0,
+    'unclassified': 4.0,
 
     # unclear/uncanny/rare cases:
-    'road' : 6,
-    'living_street': 4,
+    'road' : 6.0,
+    'living_street': 4.0,
 
 
     # values that must be igored:

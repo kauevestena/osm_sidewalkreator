@@ -218,6 +218,9 @@
      <height>211</height>
     </rect>
    </property>
+   <property name="inputMethodHints">
+    <set>Qt::ImhNone</set>
+   </property>
    <property name="rowCount">
     <number>0</number>
    </property>

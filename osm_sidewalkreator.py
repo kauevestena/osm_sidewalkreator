@@ -478,11 +478,18 @@ class sidewalkreator:
     def data_clean(self):
 
         # getting table values, before table deactivation
-        higway_valuestable_dict = {}
+        highway_valuestable_dict = {}
 
         for i,val in enumerate(self.unique_highway_values):
             # self.dlg.higway_values_table
-            higway_valuestable_dict[val] = float(self.dlg.higway_values_table.item(i,1).text())
+            try:
+                width_value = float(self.dlg.higway_values_table.item(i,1).text())
+            except:
+                # if the user input value not convertible to float, just use the value from
+                print('invalid input value: ',self.dlg.higway_values_table.item(i,1).text(),', using default: ',default_widths[val])
+                width_value = default_widths[val]
+
+            highway_valuestable_dict[val] = width_value
 
 
         # disabling what should not be used afterwards
@@ -493,8 +500,8 @@ class sidewalkreator:
 
         # removing undesired tag values:
         for i,value in enumerate(self.unique_highway_values):
-            # if a too small value is set, then also remove it
-            if float(self.dlg.higway_values_table.item(i,1).text()) < 0.5:
+            # if a too small value is set (including negatives, lol), then also remove it:
+            if highway_valuestable_dict[value] < 0.5:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
                 # creating the 'protoblocks' layer, is a poligonization of the streets layers
@@ -562,7 +569,7 @@ class sidewalkreator:
                 # only fill if no value is present
                 if not feature_attrs_list[widths_index]:
                     highway_tag_val = feature_attrs_list[higway_index]
-                    self.splitted_lines.changeAttributeValue(feature.id(),widths_index,higway_valuestable_dict[highway_tag_val])
+                    self.splitted_lines.changeAttributeValue(feature.id(),widths_index,highway_valuestable_dict[highway_tag_val])
                     """
                         THX: https://gis.stackexchange.com/a/133669/49900
 
@@ -581,7 +588,7 @@ class sidewalkreator:
         self.add_layer_canvas(self.splitted_lines)
 
 
-        # always cleaning stuff user does not need anymore
+        # always cleaning stuff that user does not need anymore
         remove_layerlist([osm_higway_layer_finalname])
 
         # enabling next button and stuff:
@@ -814,6 +821,8 @@ class sidewalkreator:
         self.len_checking_fieldname = self.string_according_language('ortho_len_dif','dif_dist_orto')
         self.crossings_len_fieldname = self.string_according_language('length','comprimento')
         self.above_tol_fieldname = self.string_according_language('above_tol','acima_da_tolerancia')
+        self.nearest_centerpoint_fieldname= self.string_according_language('nearest_centerpoint','ponto_central_maisprox')
+
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
@@ -827,7 +836,7 @@ class sidewalkreator:
 
             featurelen = feature_A.geometry().length()
 
-            featurewidth = feature_A[widths_fieldname]
+            featurewidth = float(feature_A[widths_fieldname]) #on Windows, sometimes interpreted as string...
 
             feature_osm_id = feature_A['id']
 
@@ -1172,14 +1181,19 @@ class sidewalkreator:
             crossings_featlist.append(crossing_as_feat)
 
 
-            # to add intersections:
-            self.crossings_A_E_pointlist.append(pA_feat.geometry())
-            self.crossings_A_E_pointlist.append(pE_feat.geometry())
+            # to add intersections: # DEPRECATED
+            # self.crossings_A_E_pointlist.append(pA_feat.geometry())
+            # self.crossings_A_E_pointlist.append(pE_feat.geometry())
+
+        
 
 
         # creating and styling the crossings and kerbs layers
         self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString",{'length':QVariant.Double,self.len_checking_fieldname:QVariant.Double,self.above_tol_fieldname:QVariant.Bool})
         self.crossings_layer.setCrs(self.custom_localTM_crs)
+
+
+        
 
         # adding crossing len to check for "bad" crossings:
         # create_new_layerfield(self.crossings_layer,'length')
@@ -1269,7 +1283,16 @@ class sidewalkreator:
                     d_to_nearest_building = feature.geometry().distance(dissolved_feature_geom)
 
                     # actually projected distance (half the width plus half the "distance to be add", avaliable at the GUI):
-                    ac_prj_d = feature['width']/2 + self.dlg.d_to_add_box.value()/2
+                    if not isinstance(feature['width'],str):
+                        ac_prj_d = feature['width']/2 + self.dlg.d_to_add_box.value()/2
+                    else:
+                        try:
+                            feat_width = float(feature['width'])
+                            ac_prj_d = feat_width/2 + self.dlg.d_to_add_box.value()/2
+
+                        except:
+                            print(feature['width'])
+                            continue
 
                     # discounting the minimum distance, so it will always be considered
                     dif = (d_to_nearest_building - self.dlg.min_d_buildings_box.value()) - ac_prj_d
