@@ -37,7 +37,7 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from processing.gui.AlgorithmExecutor import execute_in_place
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis, NULL
 from qgis.utils import iface
 
 
@@ -1189,11 +1189,50 @@ class sidewalkreator:
 
 
         # creating and styling the crossings and kerbs layers
-        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString",{'length':QVariant.Double,self.len_checking_fieldname:QVariant.Double,self.above_tol_fieldname:QVariant.Bool})
+        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString",{'length':QVariant.Double,self.len_checking_fieldname:QVariant.Double,self.above_tol_fieldname:QVariant.Bool,self.nearest_centerpoint_fieldname:QVariant.Double})
         self.crossings_layer.setCrs(self.custom_localTM_crs)
 
 
-        
+        # finding the nearest crossing center, so in case of too short segments or double lanes, one can automatically filter out:
+
+        # creating the layer
+        crossing_id_fieldname = 'crossing_id'
+
+        center_crossings_featlist = []
+        for feature in self.crossings_layer.getFeatures():
+            as_polyline = feature.geometry().asPolyline()
+            # 0 1 2 3 4 index 2 are centerpoints
+            pC_feat = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[2]),[feature.id()])
+
+            # pC_feat.setAttributes([feature.id()])
+
+            center_crossings_featlist.append(pC_feat)
+
+        center_crossings_layer = layer_from_featlist(center_crossings_featlist,'centerpoints',attrs_dict={crossing_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
+
+        # spatial index and testing:
+        centerpoint_spatial_index = gen_layer_spatial_index(center_crossings_layer)
+
+        nearest_dist_dict = {}
+
+        for feature in center_crossings_layer.getFeatures():
+            as_pointXY = feature.geometry().asPoint()
+
+            knn_list = centerpoint_spatial_index.nearestNeighbor(as_pointXY,2,knn_max_dist)
+
+            distances = [round(as_pointXY.distance(*centerpoint_spatial_index.geometry(id).asPoint()),3) for id in knn_list]
+
+            crossing_id = feature[crossing_id_fieldname]
+
+            if distances:
+                if len(distances) >= 2:
+                    nearest_dist_dict[crossing_id] = max(distances)
+                else:
+                   nearest_dist_dict[crossing_id] = NULL
+            else:
+                nearest_dist_dict[crossing_id] = NULL
+
+        create_filled_newlayerfield(self.crossings_layer,self.nearest_centerpoint_fieldname,{'attr_by_id':nearest_dist_dict},QVariant.Double)
 
         # adding crossing len to check for "bad" crossings:
         # create_new_layerfield(self.crossings_layer,'length')
@@ -2704,7 +2743,7 @@ class sidewalkreator:
 
     def outputting_files(self):
         # removing length from crossings, as we do not want to export'em
-        remove_layerfields(self.crossings_layer,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
+        remove_layerfields(self.crossings_layer,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname,self.nearest_centerpoint_fieldname])
 
         # creating again the Kerbs layer, so if the user delete any crossing, there will be no loose kerbs:
         new_kerbs_list = []

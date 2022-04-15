@@ -135,3 +135,6 @@ tiny_segments_tol = 0.1
 increment_inward = 0.5
 # max iterations in the 
 max_crossings_iterations = 20
+
+# max distance for distance search in knn
+knn_max_dist = 50

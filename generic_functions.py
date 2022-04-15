@@ -378,6 +378,16 @@ def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
                 if fieldvalue[dkey] == "length":
                     for feature in inputlayer.getFeatures():
                         inputlayer.changeAttributeValue(feature.id(),field_index,feature.geometry().length())
+            if dkey == 'attr_by_id':
+                inner_dict = fieldvalue[dkey]
+
+
+                for feature in inputlayer.getFeatures():
+                    if feature.id() in inner_dict:
+                        inputlayer.changeAttributeValue(feature.id(),field_index,inner_dict[feature.id()])
+
+
+
         else:
             for feature in inputlayer.getFeatures():
                 inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
