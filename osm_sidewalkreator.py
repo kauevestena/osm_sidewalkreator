@@ -454,6 +454,9 @@ class sidewalkreator:
             (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
             (self.dlg.input_feature_text,"input feature:\n(-1: none)",'Feição de Entrada\n(-1: nenhuma)'),
 
+            (self.dlg.min_seg_len_label,"min segment\nlength",'comprimento\nmin. (seg.)'),
+            (self.dlg.ch_remove_abovetol,"remove above tolerance",'remover se acima da tol.'),
+
 
 
             # (self.dlg.,'',''),
@@ -792,6 +795,11 @@ class sidewalkreator:
         self.dlg.opt_parallel_crossings.setEnabled(False)
         self.dlg.opt_perp_crossings.setEnabled(False)
 
+        self.dlg.min_seg_len_label.setEnabled(False)
+        self.dlg.min_seg_len_box.setEnabled(False)
+        self.dlg.ch_remove_abovetol.setEnabled(False)
+
+
         # analyzing if the endpoits of splitted lines are elegible for
         #   iterating again each street segment:
 
@@ -1099,6 +1107,10 @@ class sidewalkreator:
 
             belonging_line = endpoints_belonging[key]
 
+            if belonging_line.geometry().length() < self.dlg.min_seg_len_box.value():
+                # if the length of the street segment isn't big enough, just dont add the crossing
+                continue
+
             # define if is at beginning or not, to maybe reinterpolate point C
             is_at_beginning = 'P0' in key
 
@@ -1144,8 +1156,7 @@ class sidewalkreator:
             pB = interpolate_by_percent(segment_AC,kerb_perc)
             pD = interpolate_by_percent(segment_EC,kerb_perc)
 
-            kerbs_featlist.append(geom_to_feature(pB))
-            kerbs_featlist.append(geom_to_feature(pD))
+
 
             # pA OK
             pB_feat = geom_to_feature(pB)
@@ -1176,9 +1187,19 @@ class sidewalkreator:
 
             dif_from_ortholen = round(crossing_geom.length() - ortholen,3)
 
-            crossing_as_feat.setAttributes([round(crossing_geom.length(),3),dif_from_ortholen,(crossing_geom.length()>tol_len)])
+            above_tol = (crossing_geom.length()>tol_len)
+
+            if self.dlg.ch_remove_abovetol.isChecked():
+                if above_tol:
+                    continue
+
+            crossing_as_feat.setAttributes([round(crossing_geom.length(),3),dif_from_ortholen,above_tol])
 
             crossings_featlist.append(crossing_as_feat)
+
+
+            kerbs_featlist.append(geom_to_feature(pB))
+            kerbs_featlist.append(geom_to_feature(pD))
 
 
             # to add intersections: # DEPRECATED
@@ -1464,6 +1485,10 @@ class sidewalkreator:
         self.dlg.label_inward_d.setEnabled(True)
         self.dlg.opt_parallel_crossings.setEnabled(True)
         self.dlg.opt_perp_crossings.setEnabled(True)
+
+        self.dlg.min_seg_len_label.setEnabled(True)
+        self.dlg.min_seg_len_box.setEnabled(True)
+        self.dlg.ch_remove_abovetol.setEnabled(True)
         # self.dlg.gencrossings_progressbar.setEnabled(True)
 
 
@@ -1537,6 +1562,11 @@ class sidewalkreator:
         self.dlg.label_inward_d.setHidden(True)
         self.dlg.opt_parallel_crossings.setHidden(True)
         self.dlg.opt_perp_crossings.setHidden(True)
+
+        self.dlg.min_seg_len_label.setHidden(True)
+        self.dlg.min_seg_len_box.setHidden(True)
+        self.dlg.ch_remove_abovetol.setHidden(True)
+
         # self.dlg.gencrossings_progressbar.setHidden(True)
         self.dlg.widths_hint.setHidden(True)
 
@@ -1593,6 +1623,8 @@ class sidewalkreator:
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
+        self.dlg.ch_remove_abovetol.setChecked(False)
+        self.dlg.ch_remove_abovetol.setEnabled(False)
         self.dlg.higway_values_table.setEnabled(False)
         self.dlg.clean_data.setEnabled(False)
         self.dlg.output_folder_selector.setEnabled(False)
@@ -1608,6 +1640,11 @@ class sidewalkreator:
         self.dlg.perc_draw_kerbs_label.setEnabled(False)
         self.dlg.perc_tol_crossings_box.setEnabled(False)
         self.dlg.perc_tol_crossings_label.setEnabled(False)
+
+        self.dlg.min_seg_len_label.setEnabled(False)
+        self.dlg.min_seg_len_box.setEnabled(False)
+        self.dlg.ch_remove_abovetol.setEnabled(False)
+
         self.dlg.d_to_add_inward_box.setEnabled(False)
         self.dlg.label_inward_d.setEnabled(False)
         self.dlg.opt_parallel_crossings.setEnabled(False)
@@ -1657,6 +1694,8 @@ class sidewalkreator:
         self.dlg.perc_draw_kerbs_box.setValue(perc_draw_kerbs)
         self.dlg.perc_tol_crossings_box.setValue(perc_tol_crossings)
         self.dlg.d_to_add_inward_box.setValue(d_to_add_interp_d)
+        self.dlg.min_seg_len_box.setValue(20)
+
 
 
         #hidden elements
@@ -1701,6 +1740,11 @@ class sidewalkreator:
         self.dlg.perc_draw_kerbs_label.setHidden(False)
         self.dlg.perc_tol_crossings_box.setHidden(False)
         self.dlg.perc_tol_crossings_label.setHidden(False)
+
+        self.dlg.min_seg_len_label.setHidden(False)
+        self.dlg.min_seg_len_box.setHidden(False)
+        self.dlg.ch_remove_abovetol.setHidden(False)
+
         self.dlg.d_to_add_inward_box.setHidden(False)
         self.dlg.label_inward_d.setHidden(False)
         self.dlg.opt_parallel_crossings.setHidden(False)
@@ -2072,6 +2116,10 @@ class sidewalkreator:
                 self.POIs_for_splitting_layer = dissolve_tosinglegeom(POIs_for_splitting_layer_p0,'memory:'+pois_splitting_name)
 
                 self.POIs_for_splitting_layer.setCrs(self.custom_localTM_crs)
+
+                pois_stylepath = os.path.join(assets_path,'addrs_centroids.qml')
+
+                self.POIs_for_splitting_layer.loadNamedStyle(pois_stylepath)
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 

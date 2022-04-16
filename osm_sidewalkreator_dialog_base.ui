@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>992</width>
-    <height>655</height>
+    <width>1010</width>
+    <height>657</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -159,8 +159,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>357</x>
-     <y>130</y>
+     <x>367</x>
+     <y>118</y>
      <width>171</width>
      <height>51</height>
     </rect>
@@ -177,8 +177,8 @@
   <widget class="QLabel" name="input_status">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>100</y>
+     <x>280</x>
+     <y>88</y>
      <width>351</width>
      <height>21</height>
     </rect>
@@ -193,8 +193,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>540</x>
-     <y>128</y>
+     <x>550</x>
+     <y>116</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -333,7 +333,7 @@ Compute Intersections</string>
    <property name="geometry">
     <rect>
      <x>410</x>
-     <y>341</y>
+     <y>314</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -357,8 +357,8 @@ Compute Intersections</string>
   <widget class="QLabel" name="widths_hint">
    <property name="geometry">
     <rect>
-     <x>395</x>
-     <y>189</y>
+     <x>405</x>
+     <y>177</y>
      <width>291</width>
      <height>41</height>
     </rect>
@@ -378,7 +378,7 @@ for Each Segment...</string>
    <property name="geometry">
     <rect>
      <x>290</x>
-     <y>232</y>
+     <y>212</y>
      <width>141</width>
      <height>61</height>
     </rect>
@@ -445,7 +445,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>440</x>
-     <y>252</y>
+     <y>232</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -475,8 +475,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>560</x>
-     <y>302</y>
+     <x>570</x>
+     <y>280</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -506,8 +506,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>565</x>
-     <y>150</y>
+     <x>575</x>
+     <y>138</y>
      <width>118</width>
      <height>23</height>
     </rect>
@@ -523,7 +523,7 @@ And It's OK!!
    <property name="geometry">
     <rect>
      <x>520</x>
-     <y>242</y>
+     <y>222</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -542,8 +542,8 @@ to Buildings</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>620</x>
-     <y>292</y>
+     <x>630</x>
+     <y>270</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -562,8 +562,8 @@ Radius</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>292</y>
+     <x>460</x>
+     <y>270</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -582,8 +582,8 @@ add to Width</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>370</x>
-     <y>302</y>
+     <x>380</x>
+     <y>280</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -617,7 +617,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>640</x>
-     <y>250</y>
+     <y>230</y>
      <width>69</width>
      <height>26</height>
     </rect>
@@ -654,7 +654,7 @@ add to Width</string>
    <property name="geometry">
     <rect>
      <x>700</x>
-     <y>240</y>
+     <y>220</y>
      <width>101</width>
      <height>41</height>
     </rect>
@@ -701,7 +701,7 @@ Base Img.</string>
    <property name="geometry">
     <rect>
      <x>410</x>
-     <y>432</y>
+     <y>437</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -787,183 +787,14 @@ dead-end-streets
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>260</x>
-     <y>380</y>
-     <width>589</width>
-     <height>44</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_3">
-    <item>
-     <widget class="QSpinBox" name="perc_tol_crossings_box">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="suffix">
-       <string>%</string>
-      </property>
-      <property name="minimum">
-       <number>10</number>
-      </property>
-      <property name="maximum">
-       <number>50</number>
-      </property>
-      <property name="singleStep">
-       <number>5</number>
-      </property>
-      <property name="value">
-       <number>25</number>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="perc_tol_crossings_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>len.
-tol.</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QSpinBox" name="perc_draw_kerbs_box">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="suffix">
-       <string>%</string>
-      </property>
-      <property name="minimum">
-       <number>20</number>
-      </property>
-      <property name="maximum">
-       <number>50</number>
-      </property>
-      <property name="singleStep">
-       <number>5</number>
-      </property>
-      <property name="value">
-       <number>30</number>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="perc_draw_kerbs_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Kerbs
-at</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QDoubleSpinBox" name="d_to_add_inward_box">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="prefix">
-       <string/>
-      </property>
-      <property name="suffix">
-       <string> m</string>
-      </property>
-      <property name="decimals">
-       <number>2</number>
-      </property>
-      <property name="minimum">
-       <double>0.000000000000000</double>
-      </property>
-      <property name="maximum">
-       <double>4.000000000000000</double>
-      </property>
-      <property name="singleStep">
-       <double>0.500000000000000</double>
-      </property>
-      <property name="value">
-       <double>2.000000000000000</double>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="label_inward_d">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>distance
-inward</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
-       <widget class="QRadioButton" name="opt_parallel_crossings">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>in parallel to
-transversal seg.</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="opt_perp_crossings">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="layoutDirection">
-         <enum>Qt::LeftToRight</enum>
-        </property>
-        <property name="text">
-         <string>perpen-
-dicularly</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-   </layout>
-  </widget>
   <widget class="QSpinBox" name="timeout_box">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="geometry">
     <rect>
-     <x>291</x>
-     <y>140</y>
+     <x>300</x>
+     <y>130</y>
      <width>51</width>
      <height>21</height>
     </rect>
@@ -989,8 +820,8 @@ dicularly</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>160</y>
+     <x>290</x>
+     <y>150</y>
      <width>71</width>
      <height>21</height>
     </rect>
@@ -1189,7 +1020,7 @@ segments</string>
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>850</x>
+     <x>860</x>
      <y>10</y>
      <width>140</width>
      <height>631</height>
@@ -1263,6 +1094,240 @@ segments</string>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
    </property>
+  </widget>
+  <widget class="QWidget" name="gridLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>350</y>
+     <width>577</width>
+     <height>88</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QSpinBox" name="perc_draw_kerbs_box">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string>%</string>
+        </property>
+        <property name="minimum">
+         <number>20</number>
+        </property>
+        <property name="maximum">
+         <number>50</number>
+        </property>
+        <property name="singleStep">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>30</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="perc_draw_kerbs_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Kerbs
+at</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="d_to_add_inward_box">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="prefix">
+         <string/>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
+        <property name="decimals">
+         <number>2</number>
+        </property>
+        <property name="minimum">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>4.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="value">
+         <double>2.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_inward_d">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>distance
+inward</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QRadioButton" name="opt_parallel_crossings">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>in parallel to
+transversal seg.</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="opt_perp_crossings">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>perpen-
+dicularly</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <item>
+       <widget class="QLabel" name="min_seg_len_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>min segment
+length</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="min_seg_len_box">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="prefix">
+         <string/>
+        </property>
+        <property name="suffix">
+         <string> m</string>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="minimum">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>50.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>20.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="perc_tol_crossings_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>tolerance above
+orthogonal len.</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="perc_tol_crossings_box">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string>%</string>
+        </property>
+        <property name="minimum">
+         <number>5</number>
+        </property>
+        <property name="maximum">
+         <number>50</number>
+        </property>
+        <property name="singleStep">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>25</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ch_remove_abovetol">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>remove above tolerance</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
  </widget>
  <customwidgets>
