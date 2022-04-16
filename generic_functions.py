@@ -617,10 +617,15 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
 
     diffs = {} # []
 
+    inputval = float(inputval)
+
     for key in inputdict:
         # always avoid to compare floats equally
-        if not isclose(inputval,inputdict[key],abs_tol=tol):
-            diffs[key] = inputdict[key]-inputval #.append(inputdict[key]-inputval)
+
+        desired_value = float(inputdict[key])
+
+        if not isclose(inputval,desired_value,abs_tol=tol):
+            diffs[key] = desired_value-inputval #.append(inputdict[key]-inputval)
         else:
             refused_key = key
 

@@ -1180,7 +1180,7 @@ class sidewalkreator:
 
             crossing_as_feat = geom_to_feature(crossing_geom,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
 
-            ortholen = self.dlg.d_to_add_box.value() + belonging_line[widths_fieldname]
+            ortholen = self.dlg.d_to_add_box.value() + float(belonging_line[widths_fieldname])
 
             tolerance_factor = self.dlg.perc_tol_crossings_box.value()
             tol_len = ortholen * (1 + tolerance_factor/100) 
@@ -2227,7 +2227,7 @@ class sidewalkreator:
 
         # a tolerance for a max length check
         tolerance_factor = self.dlg.perc_tol_crossings_box.value()
-        max_len = (self.dlg.d_to_add_box.value() + linefeature[widths_fieldname]) * (1 + tolerance_factor/100) 
+        max_len = (self.dlg.d_to_add_box.value() + float(linefeature[widths_fieldname])) * (1 + tolerance_factor/100) 
 
         # correct datatype (QgsPoint/QGSPointXY)
         if centerpoint.isMultipart():
