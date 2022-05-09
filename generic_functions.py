@@ -146,12 +146,17 @@ def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=F
 
     return processing.run('native:centroids',parameter_dict)['OUTPUT']
 
+def gen_voronoi_polygons_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',buffer_perc=300):
+    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'BUFFER':buffer_perc}
+
+    return processing.run('qgis:voronoipolygons',parameter_dict)['OUTPUT']
+
 def get_intersections(inputlayer,intersect_layer,outputlayer):
     parameter_dict = {'INPUT': inputlayer, 'INTERSECT': intersect_layer, 'OUTPUT': outputlayer}
 
     return processing.run('qgis:lineintersections',parameter_dict)['OUTPUT']
 
-def cliplayer_v2(inputlayer,overlay_lyr,outputlayer):
+def cliplayer_v2(inputlayer,overlay_lyr,outputlayer='TEMPORARY_OUTPUT'):
     """
         the first one was intended for datafiles, not memeory layers
     """

@@ -1,4 +1,6 @@
-a = {'b':1,'c':2}
+def return_string():
+    return "aa"
 
-if 'b' in a:
-    print(a['b'])
+a = {return_string():1}
+
+print(a)

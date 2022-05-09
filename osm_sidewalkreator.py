@@ -555,6 +555,17 @@ class sidewalkreator:
 
         self.filtered_intersection_points.setCrs(self.custom_localTM_crs)
 
+        # creating a voronoi polygons layer for the road_intersections, that may be used for validation projects
+        road_intersection_voronois_0 = gen_voronoi_polygons_layer(self.filtered_intersection_points)
+        road_intersection_voronois_0.setCrs(self.custom_localTM_crs)
+
+        # TODO: check if will always work properly without being on same CRS
+        self.road_intersection_voronois = cliplayer_v2(road_intersection_voronois_0,self.only_inputfeature_layer)
+        self.road_intersection_voronois.setCrs(self.custom_localTM_crs)
+
+
+        # self.add_layer_canvas(self.road_intersection_voronois)
+
 
         #### checking if there's a "width" column, adding if not:
         if not widths_fieldname in get_column_names(self.splitted_lines):
@@ -2917,7 +2928,7 @@ class sidewalkreator:
         osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='crossing',dump_path=overpass_kerbs_path,node=True,way=False)
 
         # dumping extra layers:
-        extra_layers = {'inner_crossings':self.inner_crossings_layer,'raw_buffers':self.proto_undissolved_buffer_step1}
+        extra_layers = {self.string_according_language('inner_crossings','cruzamentos interiores'):self.filtered_intersection_points,self.string_according_language('raw_buffers','buffers_originais'):self.proto_undissolved_buffer_step1,self.string_according_language('crossing_centers_voronois','voronois_intersecoes_ruas'):self.road_intersection_voronois}
 
         for key in extra_layers:
             self.reproject_and_export(key,extra_layers[key])
@@ -2932,7 +2943,7 @@ class sidewalkreator:
         # the sucess message in the QGIS GUI:
         sucess_category = self.string_according_language("Sucess",'Sucesso')
 
-        sucess_message = self.string_according_language("You Can Now Proceed To JOSM, importing the output GEOJSON and changeset comment!!!",'Você pode proceder ao JOSM e importar o GEOJSON de saída e o comentário para o changeset!!!')
+        sucess_message = self.string_according_language("You Can Now Proceed To JOSM, import the output GEOJSON and changeset comment!!!",'Você pode proceder ao JOSM e importar o GEOJSON de saída e o comentário para o changeset!!!')
 
         iface.messageBar().pushMessage(sucess_category,sucess_message, level=Qgis.Success,duration=30)
 
