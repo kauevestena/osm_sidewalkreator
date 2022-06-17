@@ -3,7 +3,6 @@
 '''
 
 
-from tempfile import tempdir
 import requests, os, time, json
 # import codecs
 # import geopandas as gpd
@@ -122,7 +121,7 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features',i
 
     return as_dict
 
-def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30,return_as_string=False,geojson_outpath=None):
+def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30,return_as_string=False):
     '''
         get the osmdata and stores in a geodataframe, also generates temporary files
     '''
@@ -156,41 +155,39 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
     if print_response:
         print(response)
 
-    if return_as_string or geojson_outpath:
+    if return_as_string:
         xml_filecontent = response.text
 
     else:
-        if not geojson_outpath:
-            # the outpaths for temporary files
-            if tempfilesname:
-                xmlfilepath = join_to_a_outfolder(tempfilesname+'_osm.xml')
+        # the outpaths for temporary files
+        xmlfilepath = join_to_a_outfolder(tempfilesname+'_osm.xml')
 
-                geojsonfilepath = join_to_a_outfolder(tempfilesname+'_osm.geojson')
+        geojsonfilepath = join_to_a_outfolder(tempfilesname+'_osm.geojson')
 
-            print('xml will be written to: ',xmlfilepath)
+        print('xml will be written to: ',xmlfilepath)
 
 
 
-            # the xml file writing part:
-            with open(xmlfilepath,'w+') as handle:
-                handle.write(response.text)
+        # the xml file writing part:
+        with open(xmlfilepath,'w+') as handle:
+            handle.write(response.text)
 
-            print('geojson will be written to: ',geojsonfilepath)
+        print('geojson will be written to: ',geojsonfilepath)
 
-            # # # # # the command-line call
-            # # # # # old method: using osmtogeojson app
-            # # # # runstring = f'osmtogeojson "{xmlfilepath}" > "{geojsonfilepath}"'
-            # # # # out = subprocess.run(runstring,shell=True)
+        # # # # # the command-line call
+        # # # # # old method: using osmtogeojson app
+        # # # # runstring = f'osmtogeojson "{xmlfilepath}" > "{geojsonfilepath}"'
+        # # # # out = subprocess.run(runstring,shell=True)
 
-            # # new method : osm2geojson library
-            # codecs.
-            with open(xmlfilepath, 'r', encoding='utf-8') as data:
-                xml_filecontent = data.read()
+        # # new method : osm2geojson library
+        # codecs.
+        with open(xmlfilepath, 'r', encoding='utf-8') as data:
+            xml_filecontent = data.read()
 
     # converting OSM XML to Geojson:
     geojson_datadict = osm2geojson.xml2geojson(xml_filecontent, filter_used_refs=False, log_level='INFO')
 
-    if not return_as_string and not geojson_outpath:
+    if not return_as_string:
         with open(geojsonfilepath.replace('.geojson','_unfiltered.geojson'),'w+') as geojson_handle:
             json.dump(geojson_datadict,geojson_handle)
 
@@ -206,9 +203,6 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
 
     else:
         # dumping geojson file:
-        if geojson_outpath:
-            geojsonfilepath = geojson_outpath
-        
         with open(geojsonfilepath,'w+') as geojson_handle:
             json.dump(filtered_geojson_dict,geojson_handle)
 
