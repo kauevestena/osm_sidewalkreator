@@ -2480,12 +2480,25 @@ class sidewalkreator:
                         min_len_feat = contained_feats[pos_min_id_feature]
 
                         touching_features = []
+
+                        # touching features number of vertex:
+
+                        touching_features_n_vertex = []
+
+
+
                         for feature in contained_feats:
                             if feature.id() != min_len_id:
                                 # if not min_len_feat.geometry().disjoint(feature.geometry()):
                                 if min_len_feat.geometry().touches(feature.geometry()):
                                     # print(feature.geometry())
                                     touching_features.append(feature)
+
+                                    touching_features_n_vertex.append(count_of_vertex(feature))
+
+
+                        # print(touching_features_n_vertex)
+                        
 
                         if len(touching_features) >= 1:
                             # print(touching_features[0].geometry().combine(min_len_feat.geometry()),'1')
@@ -2512,7 +2525,7 @@ class sidewalkreator:
 
                                             break
 
-                                index_min_vertex = touching_features.index(min(touching_features))
+                                index_min_vertex = touching_features_n_vertex.index(min(touching_features_n_vertex))
                                 chosen_feature = touching_features[index_min_vertex]
 
                             merged_line = chosen_feature.geometry().combine(min_len_feat.geometry())

@@ -1108,3 +1108,21 @@ def write_generic_file(outpath:str,inputlist:list,mode='w+'):
     with open(outpath,mode) as filewriter:
         for item in inputlist:
             filewriter.write(item+'\n')
+
+
+def count_of_vertex(input_feature):
+    geom = input_feature.geometry()
+
+    count = 0
+
+    if geom.wkbType() == 5:
+        for part in geom.asMultiPolyline():
+            count += len(part)
+
+    elif geom.wkbType() == 2:
+        count = len(geom.asPolyline())
+
+    else:
+        return 0
+
+    return count
