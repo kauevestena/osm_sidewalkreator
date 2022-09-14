@@ -500,7 +500,7 @@ And It's OK!!
     <double>0.500000000000000</double>
    </property>
    <property name="value">
-    <double>5.000000000000000</double>
+    <double>3.000000000000000</double>
    </property>
   </widget>
   <widget class="QProgressBar" name="datafetch_progressbar">
@@ -1111,6 +1111,20 @@ segments</string>
     <item row="0" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
+       <widget class="QLabel" name="perc_draw_kerbs_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Kerbs
+at</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QSpinBox" name="perc_draw_kerbs_box">
         <property name="enabled">
          <bool>false</bool>
@@ -1133,13 +1147,13 @@ segments</string>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="perc_draw_kerbs_label">
+       <widget class="QLabel" name="label_inward_d">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Kerbs
-at</string>
+         <string>distance
+inward</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -1176,20 +1190,6 @@ at</string>
         </property>
         <property name="value">
          <double>2.000000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_inward_d">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>distance
-inward</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>

@@ -22,12 +22,12 @@ widths_fieldname = 'width'
 # control
 use_buildings = True
 draw_buildings = True
-# to control wheter must dowload relations in buildings
+# to control whether must download relations in buildings
 include_relations = True
 
 
 # buffer that defines the curvature radius is defined in GUI, max and min are in the .ui file
-default_curve_radius = 5
+default_curve_radius = 3
 
 # minimal distance that a sidewalk must be from a building
 min_d_to_building = 1 # 1 m defined in gui, along with max an min allowed values at .ui file
@@ -74,10 +74,10 @@ default_widths = {
 
     # unclear/uncanny/rare cases:
     'road' : 6.0,
-    'living_street': 4.0,
+    'living_street': 0.0,
 
 
-    # values that must be igored:
+    # values that must be ignored:
     'sidewalk' : 0,
     'crossing' : 0,
     'path' : 0,
@@ -125,7 +125,7 @@ crossings_layer_name = 'CROSSINGS'
 
 kerbs_layer_name = 'KERBS'
 
-# little buffer for dissolved protoblocks "within" condition elegibility in all cases (as long as I know)
+# little buffer for dissolved protoblocks "within" condition eligibility in all cases (as long as I know)
 protoblocks_buffer = 0.5 # 50 cm
 
 # value to exclude "tiny segments"
