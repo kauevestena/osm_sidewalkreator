@@ -131,7 +131,7 @@ class sidewalkreator:
     change_input_labels = True
 
     # to control wheter one shall ignore a "sidewalks already drawn" warning:
-    ignore_sidewalks_already_drawn = False
+    ignore_sidewalks_already_drawn = True
 
     # no buildings is the most general situation
     no_buildings = True
@@ -504,16 +504,75 @@ class sidewalkreator:
         # removing undesired tag values:
         for i,value in enumerate(self.unique_highway_values):
             # if a too small value is set (including negatives, lol), then also remove it:
+
+            # saving already existing sidewalks and crossings in layers:
+            if value == "footway":
+                # for sidewalks:
+                already_existing_sidewalks_list = select_feats_by_attr(self.clipped_reproj_datalayer,'footway','sidewalk')
+
+                self.already_existing_sidewalks_layer = layer_from_featlist(already_existing_sidewalks_list,'already_existing_sidewalks','linestring',CRS=self.custom_localTM_crs)
+
+                #for crossings:
+                already_existing_crossings_list = select_feats_by_attr(self.clipped_reproj_datalayer,'footway','crossing')
+
+                self.already_existing_crossings_layer = layer_from_featlist(already_existing_crossings_list,'already_existing_crossings','linestring',CRS=self.custom_localTM_crs)
+
+                ''' 
+                layer declaration inside a loop? 
+                Yes,
+                    but it's granted to happen only once
+                '''
+
+
+
             if highway_valuestable_dict[value] < 0.5:
                 remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
 
                 # creating the 'protoblocks' layer, is a poligonization of the streets layers
 
-        # protoblocks has been moved to here:
+        # self.add_layer_canvas(self.already_existing_sidewalks_layer)
+        # self.add_layer_canvas(self.already_existing_crossings_layer)
 
+        
+
+        # protoblocks has been moved to here:
         self.protoblocks = polygonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
+        '''
+        
+            NEW PROTOBLOCKS FILTERING TO INFER IF THERE'S ALREADY A SIDEWALK NETWORK DRAWN
+        
+        '''
+
+
+        create_incidence_field_layers_A_B(self.protoblocks,self.already_existing_sidewalks_layer,'inc_sidewalk_len',True)
+
+        # calculating the approximate area of the enclosed already drawn sidewalks (assuming squared shape) in order to judge if the protoblock contains sidewalks:
+
+
+        protoblocks_ratio_id = create_new_layerfield(self.protoblocks,'sidewalks_ratio')
+
+        with edit(self.protoblocks):
+            for feature in self.protoblocks.getFeatures():
+
+                # dividing by 4 approximates a square corner
+                ratio = (((feature['inc_sidewalk_len']/4)**2) / feature.geometry().area()) * 100
+
+                self.protoblocks.changeAttributeValue(feature.id(),protoblocks_ratio_id,ratio)
+
+                if ratio > cutoff_percent_protoblock:
+                    self.protoblocks.deleteFeature(feature.id())
+
+
+        # self.add_layer_canvas(self.protoblocks)
+
+
+        '''
+        
+            END OF THE NEW PROTOBLOCKS FILTERING
+        
+        '''
 
 
         # dissolving so will become just one geometry:
@@ -525,6 +584,11 @@ class sidewalkreator:
         self.dissolved_protoblocks_buff = generate_buffer(self.
         dissolved_protoblocks_0,protoblocks_buffer)
         self.dissolved_protoblocks_buff.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+
+
+        # self.add_layer_canvas(self.dissolved_protoblocks_buff)
+        # self.add_layer_canvas(self.dissolved_protoblocks_0)
+
 
 
         # splitting into segments:
@@ -1439,11 +1503,31 @@ class sidewalkreator:
         # # # # self.polygonized_sidewalks_convexhulls = convex_hulls(self.whole_sidewalks)
         # # # # self.polygonized_sidewalks_convexhulls.setCrs(self.custom_localTM_crs)
 
-        # self.add_layer_canvas(self.polygonized_sidewalks_convexhulls)
+        """
+        removing sidewalks that aren't attached to any protoblock:
+                
+        """
+
+        dissolved_protoblock_geom = get_first_feature_or_geom(self.dissolved_protoblocks_0,True)
+
+
+        with edit(self.whole_sidewalks):
+            for feature in self.whole_sidewalks.getFeatures():
+                if feature.geometry().disjoint(dissolved_protoblock_geom):
+                    self.whole_sidewalks.deleteFeature(feature.id())
+        
+
+        '''
+        end of that new part
+        '''
 
 
         # first, deleting all previous fields:
         remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
+
+
+
+
 
         '''
             tags to denote it's a sidewalk
@@ -1785,9 +1869,9 @@ class sidewalkreator:
         self.dlg.alongside_vor_checkbox.setChecked(False)
 
 
-        # control variables:
-        if self.ignore_sidewalks_already_drawn:
-            self.ignore_sidewalks_already_drawn = False
+        # # control variables:
+        # if self.ignore_sidewalks_already_drawn:
+        #     self.ignore_sidewalks_already_drawn = False
 
         self.no_buildings = True
         self.POI_split_avaliable = False

@@ -123,7 +123,7 @@ def filter_gjsonfeats_bygeomtype(geojson,geomtype='LineString',lvl1='features',i
 
 def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=False,timeout=30,return_as_string=False):
     '''
-        get the osmdata and stores in a geodataframe, also generates temporary files
+        get the osmdata and stores in files or in a geojson string, also generates temporary files
     '''
 
     overpass_url_list = ["http://overpass-api.de/api/interpreter","https://lz4.overpass-api.de/api/interpreter","https://z.overpass-api.de/api/interpreter",'https://overpass.openstreetmap.ru/api/interpreter','https://overpass.openstreetmap.fr/api/interpreter','https://overpass.kumi.systems/api/interpreter']

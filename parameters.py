@@ -138,3 +138,6 @@ max_crossings_iterations = 20
 
 # max distance for distance search in knn
 knn_max_dist = 50
+
+# cutoff percent to say that a protoblock contains an already drawn sidewalk:
+cutoff_percent_protoblock = 40

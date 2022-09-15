@@ -351,6 +351,9 @@ def check_empty_layer(inputlayer):
     for feature in inputlayer.getFeatures():
         feat_count += 1
 
+        if feat_count > 1:
+            break
+
     return (feat_count == 0)
 
 def get_column_names(inputlayer):
@@ -967,20 +970,36 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
     #     print(angle)
 
 
-def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident'):
+def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident',total_length_instead=False):
 
-    field_id = create_new_layerfield(inputlayer,fieldname,QVariant.String)
+    if total_length_instead:
+        field_id = create_new_layerfield(inputlayer,fieldname,QVariant.Double)
+    else:
+        field_id = create_new_layerfield(inputlayer,fieldname,QVariant.String)
 
     with edit(inputlayer):
 
         for feature in inputlayer.getFeatures():
 
-            contained_ids = []
-            for tested_feature in incident_layer.getFeatures():
-                if feature.geometry().contains(tested_feature.geometry()):
-                    contained_ids.append(str(tested_feature.id()))
+            contained_list = []
+            sum = 0 
 
-            inputlayer.changeAttributeValue(feature.id(),field_id,' '.join(contained_ids))
+            for tested_feature in incident_layer.getFeatures():
+                # with not disjoint one can go back and forth
+                if not feature.geometry().disjoint(tested_feature.geometry()):
+
+                    if total_length_instead:
+                        sum += tested_feature.geometry().length()
+                    else:
+                        contained_list.append(str(tested_feature.id()))
+
+            if total_length_instead:
+                inputlayer.changeAttributeValue(feature.id(),field_id,sum)
+            else:
+                inputlayer.changeAttributeValue(feature.id(),field_id,' '.join(contained_list))
+
+    return field_id
+
 
 def pointlist_to_multipoint(inputpointgeomlist):
 
@@ -1126,3 +1145,16 @@ def count_of_vertex(input_feature):
         return 0
 
     return count
+
+def select_feats_by_attr(inputlayer,attr,value):
+    '''
+        function to select features based on a tag (key/attribute/column_name and value pair)
+    '''
+
+    ret_list = []
+
+    for feature in inputlayer.getFeatures():
+        if feature.attributeMap().get(attr) == value:
+            ret_list.append(feature)
+
+    return ret_list
