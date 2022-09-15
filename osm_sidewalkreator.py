@@ -142,7 +142,7 @@ class sidewalkreator:
     # ready for "OK" button pressing:
     ok_ready = False
 
-    # if the plugin is ready to export results (avoid one problem when user click again at the plugin icon)
+    # if the plugin is ready to export results (avoid the problem when user click again at the plugin icon)
     export_ready = False
 
 
@@ -2949,7 +2949,7 @@ class sidewalkreator:
         # input_polygon_layer = layer_from_featlist([inpol_feat],'input_polygon','polygon',output_type=inputpol_layer_path)
 
         # sidewalks_4326 =
-        reproject_layer(self.whole_sidewalks,output_mode=sidewalks_path)
+        reproject_layer(convert_multipart_to_singleparts(self.whole_sidewalks),output_mode=sidewalks_path)
         # crossings_4326 =
         reproject_layer(self.crossings_layer,output_mode=crossings_path)
         # kerbs_4326 =
