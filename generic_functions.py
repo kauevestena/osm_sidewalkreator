@@ -4,6 +4,7 @@ from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
+from processing.tools import dataobjects
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty
 import os, json
 from math import isclose,pi
@@ -18,7 +19,7 @@ def create_dir_ifnotexists(folderpath):
             os.makedirs(folderpath)
 
 
-def generate_buffer(inputlayer,distance,segments=10,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
+def generate_buffer(inputlayer,distance,segments=5,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
 
     '''
         interfacing qgis processing operation
@@ -51,6 +52,13 @@ def remove_duplicate_geometries(inputlayer,outputlayer):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
 
     return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
+
+
+
+def remove_duplicate_vertices(inputlayer,tolerance):
+    parameter_dict = {'INPUT': inputlayer,'TOLERANCE':tolerance,'OUTPUT':'TEMPORARY_OUTPUT'}
+
+    return processing.run('native:removeduplicatevertices',parameter_dict)['OUTPUT']
 
 
 def split_lines_by_max_len(inputlayer,len_val_or_expression,outputlayer='TEMPORARY_OUTPUT'):
@@ -122,10 +130,19 @@ def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
 
     return processing.run('native:convexhull',parameter_dict)['OUTPUT']
 
-def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT'):
+def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=False):
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
 
-    return processing.run('native:snapgeometries',parameter_dict)['OUTPUT']
+    if not dontcheckinvalid:
+        return processing.run('native:snapgeometries',parameter_dict)['OUTPUT']
+
+    else:
+        # thx: https://gis.stackexchange.com/a/307618
+        context = dataobjects.createContext()
+        context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)
+        return processing.run("qgis:snapgeometries", parameter_dict, context=context)['OUTPUT']
+
+
 
 def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
     parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}

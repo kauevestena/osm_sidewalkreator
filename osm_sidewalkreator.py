@@ -839,6 +839,28 @@ class sidewalkreator:
         # removing previous layerfields:
         remove_layerfields(self.kerbs_layer,get_column_names(self.kerbs_layer))
 
+        """
+            trying to fix some bugs:
+               
+        """
+
+        # lots of double points being reported:
+        self.whole_sidewalks = remove_duplicate_vertices(self.whole_sidewalks,tolerance=duplicate_points_tol)
+            
+        # and then disjoint sidewalk stretches:
+        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.whole_sidewalks,tolerance=snap_disjointed_tol,behavior_code=0)
+
+        # # trying to solve lack of snapping in some crossings
+        self.crossings_layer = snap_layers(self.crossings_layer,self.whole_sidewalks,tolerance=.1,behavior_code=5,dontcheckinvalid=True)
+
+        # snapping once again:
+        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer,tolerance=0.1,behavior_code=1,dontcheckinvalid=True)
+        
+
+        """
+        end of it
+        """
+
         # kerbs:
         create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
         # crossings:
@@ -1073,7 +1095,7 @@ class sidewalkreator:
                 tr_widthPF, trfeat_idPF = get_major_dif_signed(featurewidth,PF_intersecting_widths)
 
 
-                d_to_interpolate_PF = (tr_widthPF * 0.5) + self.curveradius + d_to_add_interp_d
+                d_to_interpolate_PF = (tr_widthPF * 0.5) + self.curveradius + self.dlg.d_to_add_inward_box.value()
 
                 # storing the distance to use if needed:
                 inward_distances[innerPF_id] = d_to_interpolate_PF
@@ -2964,9 +2986,9 @@ class sidewalkreator:
 
         '''
         # merging all the 3 output geojsons, since:
-            - QGIS does not support Points and LineStrings in the same layer (or any combination of 2 types of geometry, includinf multi types), so we are doing merging as a python dict, outside QGIS API
+            - QGIS does not support Points and LineStrings in the same layer (or any combination of 2 types of geometry, including multi types), so we are doing merging as a python dict, outside QGIS API
             - GEOJSON supports that each feature have its own type
-            - JOSM handle snappings properly if everything is in the same GEOJSON
+            - JOSM handles topology (snappings) properly if everything is in the same GEOJSON
         # '''
 
         output_geojson_path = os.path.join(inputdirpath,self.string_according_language('sidewalkreator_output.geojson','saidas_sidewalkreator.geojson'))

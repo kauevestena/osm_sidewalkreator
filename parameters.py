@@ -141,3 +141,9 @@ knn_max_dist = 50
 
 # cutoff percent to say that a protoblock contains an already drawn sidewalk:
 cutoff_percent_protoblock = 40
+
+# for duplicate points (m):
+duplicate_points_tol = .1
+
+# snap tolerance for disjointed (m):
+snap_disjointed_tol = .5
