@@ -147,3 +147,6 @@ duplicate_points_tol = .1
 
 # snap tolerance for disjointed (m):
 snap_disjointed_tol = .5
+
+# minimum length that a sidewalk stretch should have (m):
+min_stretch_size = 7

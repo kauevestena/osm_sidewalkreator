@@ -149,6 +149,31 @@ def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
 
     return processing.run('native:polygonstolines',parameter_dict)['OUTPUT']
 
+
+def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=True):
+    """
+    Generic spatial relationship extractor
+
+    Predicates are: 
+
+    YOU MUST PASS A LIST, you can use more than one predicate
+
+    0 — intersect; 1 — contain;2 — disjoint; 3 — equal; 4 — touch; 5 — overlap; 6 — are within; 7 — cross
+
+    """
+
+    parameter_dict = {'INPUT': input_layer,'PREDICATE':predicate,'INTERSECT':compared_layer, 'OUTPUT': outputlayer}
+
+    if dontcheckinvalid:
+        # thx: https://gis.stackexchange.com/a/307618
+        context = dataobjects.createContext()
+        context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)
+        return processing.run("qgis:extractbylocation", parameter_dict, context=context)['OUTPUT']
+
+    else:
+        return processing.run('qgis:extractbylocation',parameter_dict)['OUTPUT']
+
+
 def collected_geoms_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
     '''
     interface to 

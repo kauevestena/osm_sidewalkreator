@@ -848,7 +848,7 @@ class sidewalkreator:
         self.whole_sidewalks = remove_duplicate_vertices(self.whole_sidewalks,tolerance=duplicate_points_tol)
             
         # and then disjoint sidewalk stretches:
-        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.whole_sidewalks,tolerance=snap_disjointed_tol,behavior_code=0)
+        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.whole_sidewalks,tolerance=snap_disjointed_tol+0.01,behavior_code=0)
 
         # # trying to solve lack of snapping in some crossings
         self.crossings_layer = snap_layers(self.crossings_layer,self.whole_sidewalks,tolerance=.1,behavior_code=5,dontcheckinvalid=True)
@@ -856,6 +856,8 @@ class sidewalkreator:
         # snapping once again:
         self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer,tolerance=0.1,behavior_code=1,dontcheckinvalid=True)
         
+        #trying to merge too small stretches with a neighbour for each
+        self.try_to_merge_small_stretches()
 
         """
         end of it
@@ -866,6 +868,17 @@ class sidewalkreator:
         # crossings:
         create_filled_newlayerfield(self.crossings_layer,'highway','footway',QVariant.String)
         create_filled_newlayerfield(self.crossings_layer,'footway','crossing',QVariant.String)
+
+        '''
+            tags to denote it's a sidewalk
+            footway=sidewalk
+            highway=footway
+
+            then filling:
+        '''
+
+        create_filled_newlayerfield(self.whole_sidewalks,'highway','footway',QVariant.String)
+        create_filled_newlayerfield(self.whole_sidewalks,'footway','sidewalk',QVariant.String)
 
         # enabling for aftewards:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
@@ -1551,15 +1564,7 @@ class sidewalkreator:
 
 
 
-        '''
-            tags to denote it's a sidewalk
-            footway=sidewalk
-            highway=footway
 
-            then filling:
-        '''
-        create_filled_newlayerfield(self.whole_sidewalks,'highway','footway',QVariant.String)
-        create_filled_newlayerfield(self.whole_sidewalks,'footway','sidewalk',QVariant.String)
 
         # styling the sidewalks layer
         sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
@@ -2541,116 +2546,121 @@ class sidewalkreator:
         # somehow it keep features selected, so:
         self.unselect_all_from_all()
 
+
+
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
                 # print(feature.geometry().length())
                 if feature.geometry().length() < tiny_segments_tol:
                     self.whole_sidewalks.deleteFeature(feature.id())
 
-
-            for feature in self.protoblocks.getFeatures():
-                self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
-
-
-                n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
-
-                if n_whole_incidents == 1:
-
-                    contained_feats = []
-                    for tested_feature in self.whole_sidewalks.getFeatures():
-                        if feature.geometry().contains(tested_feature.geometry()):
-                            contained_feats.append(tested_feature)
-
-                    interest_id = self.protoblock_wholesidewalk_inc_dict[feature.id()][0]
+        # # # taking a look here:
+        ### SUSPENDED: PROBABLY ERROR PRONE CODE
 
 
-                    # print(len(contained_geoms),len(rel_vertices_dict[interest_id]))
-
-                    # print(contained_feats)
-
-                    """
-                    IF CONTAINED FEATURES ARE BIGGER THAN THEY SHOULD BE, UNITE THE TINYEST WITH THE REMNANT WITH LESS POINTS
-                    """
+        # #     for feature in self.protoblocks.getFeatures():
+        # #         self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
 
 
-                    if len(contained_feats) == (len(rel_vertices_dict[interest_id]) + 1):
-                        ids = [c_feat.id() for c_feat in contained_feats]
-                        lenghts = [c_feat.geometry().length() for c_feat in contained_feats]
+        # #         n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
 
-                        # lenghts = {c_feat.key():len(c_feat.geometry()) for cfeat in contained_feats}
+        # #         if n_whole_incidents == 1:
 
+        # #             contained_feats = []
+        # #             for tested_feature in self.whole_sidewalks.getFeatures():
+        # #                 if feature.geometry().contains(tested_feature.geometry()):
+        # #                     contained_feats.append(tested_feature)
 
-                        pos_min_id_feature = lenghts.index(min(lenghts))
-                        min_len_id = ids[pos_min_id_feature]
-
-                        min_len_feat = contained_feats[pos_min_id_feature]
-
-                        touching_features = []
-
-                        # touching features number of vertex:
-
-                        touching_features_n_vertex = []
+        # #             interest_id = self.protoblock_wholesidewalk_inc_dict[feature.id()][0]
 
 
+        # #             # print(len(contained_geoms),len(rel_vertices_dict[interest_id]))
 
-                        for feature in contained_feats:
-                            if feature.id() != min_len_id:
-                                # if not min_len_feat.geometry().disjoint(feature.geometry()):
-                                if min_len_feat.geometry().touches(feature.geometry()):
-                                    # print(feature.geometry())
-                                    touching_features.append(feature)
+        # #             # print(contained_feats)
 
-                                    touching_features_n_vertex.append(count_of_vertex(feature))
+        # #             """
+        # #             IF CONTAINED FEATURES ARE BIGGER THAN THEY SHOULD BE, UNITE THE TINYEST WITH THE REMNANT WITH LESS POINTS
+        # #             """
 
 
-                        # print(touching_features_n_vertex)
+        # #             if len(contained_feats) == (len(rel_vertices_dict[interest_id]) + 1):
+        # #                 ids = [c_feat.id() for c_feat in contained_feats]
+        # #                 lenghts = [c_feat.geometry().length() for c_feat in contained_feats]
+
+        # #                 # lenghts = {c_feat.key():len(c_feat.geometry()) for cfeat in contained_feats}
+
+
+        # #                 pos_min_id_feature = lenghts.index(min(lenghts))
+        # #                 min_len_id = ids[pos_min_id_feature]
+
+        # #                 min_len_feat = contained_feats[pos_min_id_feature]
+
+        # #                 touching_features = []
+
+        # #                 # touching features number of vertex:
+
+        # #                 touching_features_n_vertex = []
+
+
+
+        # #                 for feature in contained_feats:
+        # #                     if feature.id() != min_len_id:
+        # #                         # if not min_len_feat.geometry().disjoint(feature.geometry()):
+        # #                         if min_len_feat.geometry().touches(feature.geometry()):
+        # #                             # print(feature.geometry())
+        # #                             touching_features.append(feature)
+
+        # #                             touching_features_n_vertex.append(count_of_vertex(feature))
+
+
+        # #                 # print(touching_features_n_vertex)
                         
 
-                        if len(touching_features) >= 1:
-                            # print(touching_features[0].geometry().combine(min_len_feat.geometry()),'1')
-                            # print(min_len_feat.geometry().combine(touching_features[0].geometry()),'2','\n')
+        # #                 if len(touching_features) >= 1:
+        # #                     # print(touching_features[0].geometry().combine(min_len_feat.geometry()),'1')
+        # #                     # print(min_len_feat.geometry().combine(touching_features[0].geometry()),'2','\n')
 
-                            chosen_feature = touching_features[0]
-
-
-                            if len(touching_features) > 1:
-
-                                n_vertex = []
-                                for touching_feature in touching_features:
-                                    try:
-                                        as_polyline = touching_feature.asPolyline()
-
-                                        n_vertex.append(len(as_polyline))
-                                    except Exception as e:
-                                        try:
-                                            as_polyline = touching_feature.asPolyline()[0]
-
-                                            n_vertex.append(len(as_polyline))
-                                        except:
-                                            chosen_feature = touching_features[0]
-
-                                            break
-
-                                index_min_vertex = touching_features_n_vertex.index(min(touching_features_n_vertex))
-                                chosen_feature = touching_features[index_min_vertex]
-
-                            merged_line = chosen_feature.geometry().combine(min_len_feat.geometry())
-
-                            geom_type = merged_line.wkbType()
-
-                            if geom_type == 5: # '2' is for "MultiLinestring"
-                                merged_second_method = merged_line.mergeLines(merged_line)
-
-                                if not merged_second_method.isEmpty():
-                                    merged_line = merged_second_method
-                                    geom_type = merged_line.wkbType()
-
-                            if geom_type == 2: # '2' is for "Linestring"
-                                self.whole_sidewalks.changeGeometry(chosen_feature.id(),merged_line)
-                                self.whole_sidewalks.deleteFeature(min_len_feat.id())
+        # #                     chosen_feature = touching_features[0]
 
 
-                # else: # TODO: treat cases with 2 or more per protoblock
+        # #                     if len(touching_features) > 1:
+
+        # #                         n_vertex = []
+        # #                         for touching_feature in touching_features:
+        # #                             try:
+        # #                                 as_polyline = touching_feature.asPolyline()
+
+        # #                                 n_vertex.append(len(as_polyline))
+        # #                             except Exception as e:
+        # #                                 try:
+        # #                                     as_polyline = touching_feature.asPolyline()[0]
+
+        # #                                     n_vertex.append(len(as_polyline))
+        # #                                 except:
+        # #                                     chosen_feature = touching_features[0]
+
+        # #                                     break
+
+        # #                         index_min_vertex = touching_features_n_vertex.index(min(touching_features_n_vertex))
+        # #                         chosen_feature = touching_features[index_min_vertex]
+
+        # #                     merged_line = chosen_feature.geometry().combine(min_len_feat.geometry())
+
+        # #                     geom_type = merged_line.wkbType()
+
+        # #                     if geom_type == 5: # '2' is for "MultiLinestring"
+        # #                         merged_second_method = merged_line.mergeLines(merged_line)
+
+        # #                         if not merged_second_method.isEmpty():
+        # #                             merged_line = merged_second_method
+        # #                             geom_type = merged_line.wkbType()
+
+        # #                     if geom_type == 2: # '2' is for "Linestring"
+        # #                         self.whole_sidewalks.changeGeometry(chosen_feature.id(),merged_line)
+        # #                         self.whole_sidewalks.deleteFeature(min_len_feat.id())
+
+
+        # #         # else: # TODO: treat cases with 2 or more per protoblock
 
         # for feature in self.whole_sidewalks.getFeatures():
         #     geom = feature.geometry()
@@ -2997,6 +3007,7 @@ class sidewalkreator:
 
         time.sleep(0.1)
 
+        # cleaning up,since they are just temporary
         delete_filelist_that_exists(outlayers_gjsonpaths)
 
 
@@ -3074,6 +3085,57 @@ class sidewalkreator:
         outpath = os.path.join(outfolderpath,layername+'.geojson')
 
         reproject_layer(inputlayer,output_mode=outpath)
+
+    def try_to_merge_small_stretches(self):
+        '''
+            this may be the ending chapter of the "too small stretches" arc of the entire saga
+        '''
+
+        orig_id_fieldname = 'original_id'
+
+        # pass # paz tb ('peace aswell' in portuguese, lol)
+        create_fill_id_field(self.whole_sidewalks,orig_id_fieldname)
+
+
+        # filling with the lengths of the too small stretches
+        # small_len_dict = {}
+        # small_bufs_dict = {}
+        feats_dict = {}
+
+        for feature in self.whole_sidewalks.getFeatures():
+            len = feature.geometry().length()
+
+            if len < min_stretch_size:
+                # small_len_dict[feature.id()] = len
+                # # using the buffer strategy to speed-up feature selecting 
+                # small_bufs_dict[feature.id()] = feature.geometry().buffer(.5,5)
+                feats_dict[feature.id()] = feature
+
+        too_small_stretches = layer_from_featlist(list(feats_dict.values()),'too_small_stretches','linestring',{orig_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
+
+        small_buffs_layer = generate_buffer(too_small_stretches,.5,dissolve=True)
+        
+
+        # using intersection, as not managed to get 
+        extracted_adj_lines = extract_with_spatial_relation(self.whole_sidewalks,small_buffs_layer,[0])
+
+        # removing the too small:
+        with edit(extracted_adj_lines):
+            for feature in extracted_adj_lines.getFeatures():
+                if feature[orig_id_fieldname] in list(feats_dict.keys()):
+                    extracted_adj_lines.deleteFeature(feature.id())
+
+        self.add_layer_canvas(too_small_stretches)
+        self.add_layer_canvas(small_buffs_layer)
+        self.add_layer_canvas(extracted_adj_lines)
+
+
+
+
+            
+
+
+
 
 
 
