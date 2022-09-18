@@ -831,7 +831,7 @@ class sidewalkreator:
             if self.dlg.voronoi_checkbox.isChecked():
                 self.voronoi_splitting()
 
-        # # # adjuting the fields of thr output layers
+        # # # adjusting the fields of the output layers
         # sidewalks:
         if self.split_field_name in get_column_names(self.whole_sidewalks):
             remove_layerfields(self.whole_sidewalks,[self.split_field_name])
@@ -3094,13 +3094,15 @@ class sidewalkreator:
         orig_id_fieldname = 'original_id'
 
         # pass # paz tb ('peace aswell' in portuguese, lol)
+
+        # creating the field with the original id to use later
         create_fill_id_field(self.whole_sidewalks,orig_id_fieldname)
 
 
         # filling with the lengths of the too small stretches
         # small_len_dict = {}
         # small_bufs_dict = {}
-        feats_dict = {}
+        tiny_feats_dict = {}
 
         for feature in self.whole_sidewalks.getFeatures():
             len = feature.geometry().length()
@@ -3109,21 +3111,65 @@ class sidewalkreator:
                 # small_len_dict[feature.id()] = len
                 # # using the buffer strategy to speed-up feature selecting 
                 # small_bufs_dict[feature.id()] = feature.geometry().buffer(.5,5)
-                feats_dict[feature.id()] = feature
+                tiny_feats_dict[feature.id()] = feature
 
-        too_small_stretches = layer_from_featlist(list(feats_dict.values()),'too_small_stretches','linestring',{orig_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
+        too_small_stretches = layer_from_featlist(list(tiny_feats_dict.values()),'too_small_stretches','linestring',{orig_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
 
         small_buffs_layer = generate_buffer(too_small_stretches,.5,dissolve=True)
         
 
-        # using intersection, as not managed to get 
+        # using intersection, as not managed to get with "overlaps"
         extracted_adj_lines = extract_with_spatial_relation(self.whole_sidewalks,small_buffs_layer,[0])
 
         # removing the too small:
         with edit(extracted_adj_lines):
             for feature in extracted_adj_lines.getFeatures():
-                if feature[orig_id_fieldname] in list(feats_dict.keys()):
+                if feature[orig_id_fieldname] in list(tiny_feats_dict.keys()):
                     extracted_adj_lines.deleteFeature(feature.id())
+
+        # now iterating the features, testing all the selected against the remaining ones
+        # touching_times_dict = {}
+        # touchers = {}
+        already_used_adj = []
+
+        with edit(self.whole_sidewalks):
+            for feat_id in tiny_feats_dict:
+                # touching_times_dict[feat_id] = 0
+                # touchers[feat_id] = []
+
+                for feat2 in extracted_adj_lines.getFeatures():
+                    if not feat2.id in already_used_adj: # to avoid a feature to be used 2 times, or acess a not existent anymore feature
+                        if tiny_feats_dict[feat_id].geometry().touches(feat2.geometry()):
+                            # touching_times_dict[feat_id] += 1 
+
+                            # touchers[feat_id].append(feat2[orig_id_fieldname])
+
+                            # collecting the geometry and the 
+                            collected_mls = QgsGeometry.collectGeometry([tiny_feats_dict[feat_id].geometry(),feat2.geometry()])
+
+                            rejoined_ls = collected_mls.mergeLines()
+
+                            # if the rejoining was sucessful we jsut need to replace the geometry at the small segment and remove the other feature from layer, and break
+                            if rejoined_ls.wkbType() == 2:
+
+                                self.whole_sidewalks.changeGeometry(feat_id,rejoined_ls) # replacing with the rejoined
+                                self.whole_sidewalks.deleteFeature(feat2[orig_id_fieldname]) #deleting the other one
+                                already_used_adj.append(feat2.id())
+
+                                break # so, go for the next small stretch
+
+                                print(feat2.geometry().length())
+        print(already_used_adj)
+
+        #remove the layerfield: It wont be necessary anymore
+        remove_layerfields(self.whole_sidewalks,[orig_id_fieldname])
+
+
+        # print(touching_times_dict,'\n\n')
+        # print(touchers)
+
+
+
 
         self.add_layer_canvas(too_small_stretches)
         self.add_layer_canvas(small_buffs_layer)

@@ -874,7 +874,7 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
         if not intersectiongeom.isMultipart():
             return True,intersectiongeom
         else:
-            # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearer to "referencepoint"
+            # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearest to "referencepoint"
             print(intersectiongeom.asWkt())
             print(intersectiongeom.wkbType())
 
