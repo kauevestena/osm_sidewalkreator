@@ -397,6 +397,12 @@ class sidewalkreator:
         QgsMapCanvas().setExtent(layer.extent())
         # canvas.setLayerSet([QgsMapCanvasLayer(layer)])
 
+    def remove_layer_canvas(self,layername):
+        # canvas = QgsMapCanvas()
+        id = QgsProject.instance().mapLayersByName(layername)[0]
+        QgsProject.instance().removeMapLayer(id)
+        # canvas.setLayerSet([QgsMapCanvasLayer(layer)])
+
     def change_language_ptbr(self):
         self.current_lang = 'ptbr'
 
@@ -844,6 +850,8 @@ class sidewalkreator:
                
         """
 
+
+
         # lots of double points being reported:
         self.whole_sidewalks = remove_duplicate_vertices(self.whole_sidewalks,tolerance=duplicate_points_tol)
             
@@ -851,17 +859,37 @@ class sidewalkreator:
         self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.whole_sidewalks,tolerance=snap_disjointed_tol+0.01,behavior_code=0)
 
         # # trying to solve lack of snapping in some crossings
-        self.crossings_layer = snap_layers(self.crossings_layer,self.whole_sidewalks,tolerance=.1,behavior_code=5,dontcheckinvalid=True)
+        self.crossings_layer = snap_layers(self.crossings_layer,self.whole_sidewalks,tolerance=.1,behavior_code=5,dontcheckinvalid=True,outputlayer='memory:CROSSINGS_')
+
+
+        splitted_name = 'splitted_SIDEWALKS'
 
         # snapping once again:
-        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer,tolerance=0.1,behavior_code=1,dontcheckinvalid=True)
+        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer,tolerance=0.1,behavior_code=1,dontcheckinvalid=True,outputlayer='memory:'+splitted_name)
         
         #trying to merge too small stretches with a neighbour for each
         self.try_to_merge_small_stretches()
 
+
+
+
+
         """
         end of it
         """
+        # workaround for the reference of layers changing
+
+        self.remove_layer_canvas(self.whole_sidewalklayer_name)
+        self.remove_layer_canvas('CROSSINGS')
+
+        # print(QgsProject.instance().mapLayers())
+
+        self.add_layer_canvas(self.whole_sidewalks)
+        self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
+
+        self.add_layer_canvas(self.crossings_layer)
+        self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
+
 
         # kerbs:
         create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
@@ -1370,8 +1398,8 @@ class sidewalkreator:
 
         # create_filled_newlayerfield(self.crossings_layer,'length',{'geometry':'length'},QVariant.Double)
 
-        crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
-        self.crossings_layer.loadNamedStyle(crossings_stylefile_path)
+        self.crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
+        self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
 
         self.kerbs_layer = layer_from_featlist(kerbs_featlist,kerbs_layer_name)
         self.kerbs_layer.setCrs(self.custom_localTM_crs)
@@ -1567,9 +1595,9 @@ class sidewalkreator:
 
 
         # styling the sidewalks layer
-        sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
+        self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
 
-        self.whole_sidewalks.loadNamedStyle(sidewalk_stylefile_path)
+        self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
         #  self.whole_sidewalks.triggerRepaint()
 
         # self.add_layer_canvas(big_temporary_buffer) #just for test
@@ -3159,7 +3187,7 @@ class sidewalkreator:
                                 break # so, go for the next small stretch
 
                                 print(feat2.geometry().length())
-        print(already_used_adj)
+        # print(already_used_adj)
 
         #remove the layerfield: It wont be necessary anymore
         remove_layerfields(self.whole_sidewalks,[orig_id_fieldname])
@@ -3171,9 +3199,9 @@ class sidewalkreator:
 
 
 
-        self.add_layer_canvas(too_small_stretches)
-        self.add_layer_canvas(small_buffs_layer)
-        self.add_layer_canvas(extracted_adj_lines)
+        # self.add_layer_canvas(too_small_stretches)
+        # self.add_layer_canvas(small_buffs_layer)
+        # self.add_layer_canvas(extracted_adj_lines)
 
 
 
