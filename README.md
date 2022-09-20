@@ -1,3 +1,10 @@
+## Presented at State of the Map 2022!
+Abstract at the proceedings: https://zenodo.org/record/7004523
+
+[Presentation slides](https://rebrand.ly/kauevestena_sotm22) 
+
+(recording comingo soon!!)
+
 # sidewalkreator
 Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets.
 
