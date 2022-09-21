@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Protocol
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
