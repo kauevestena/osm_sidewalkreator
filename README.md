@@ -22,3 +22,11 @@ The summary of what the plugin does is what follows:
   - Export the generated sidewalks, crossings and kerb points to a JOSM ready format, where all the importing into OSM shall be done.
 
 It is mostly intended for Acessibility Mapping.
+
+
+# Known Issues:
+
+The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn't come bundled with QGIS, 
+so you can install it manually with:
+
+    <qgis_python_path> -m pip install shapely
