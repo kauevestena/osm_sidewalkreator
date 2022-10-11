@@ -3,7 +3,7 @@ Abstract at the proceedings: https://zenodo.org/record/7004523
 
 [Presentation slides](https://rebrand.ly/kauevestena_sotm22) 
 
-(recording comingo soon!!)
+[Recording](https://www.youtube.com/watch?v=B--1ge42UHY)
 
 # sidewalkreator
 Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets.
