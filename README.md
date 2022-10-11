@@ -9,6 +9,9 @@ Abstract at the proceedings: https://zenodo.org/record/7004523
 Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets.
 
 
+[there's a tutorial with the basics on youtube:](https://www.youtube.com/watch?v=jq-K3Ixx0IM)
+[and a mute video about the first importing at JOSM](https://www.youtube.com/watch?v=Apqdb73lNvY)
+
 The summary of what the plugin does is what follows:
 
   - Download and prepare the data (highways and optionally buildings) for a polygon of interest;
