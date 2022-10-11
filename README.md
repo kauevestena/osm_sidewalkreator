@@ -10,6 +10,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 
 
 [there's a tutorial with the basics on youtube:](https://www.youtube.com/watch?v=jq-K3Ixx0IM)
+
 [and a mute video about the first importing at JOSM](https://www.youtube.com/watch?v=Apqdb73lNvY)
 
 The summary of what the plugin does is what follows:
