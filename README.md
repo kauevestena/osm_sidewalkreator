@@ -30,3 +30,5 @@ The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn
 so you can install it manually with:
 
     <qgis_python_path> -m pip install shapely
+    
+ In a future release I will try to use the GDAL driver for .osm removing even this dependency ;)
