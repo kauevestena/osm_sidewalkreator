@@ -936,6 +936,13 @@ class sidewalkreator:
         self.dlg.min_seg_len_label.setEnabled(False)
         self.dlg.min_seg_len_box.setEnabled(False)
         self.dlg.ch_remove_abovetol.setEnabled(False)
+        
+
+        # moved from draw_sidewalks 
+        # to (probably) speed up intersections:
+        self.dissolved_sidewalks = dissolve_tosinglegeom(self.whole_sidewalks)
+        self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
+
 
 
         # analyzing if the endpoits of splitted lines are elegible for
@@ -1604,14 +1611,6 @@ class sidewalkreator:
         # self.add_layer_canvas(dissolved_buffer) #just for test
         # self.add_layer_canvas(diff_layer) #just for test
         self.add_layer_canvas(self.whole_sidewalks)
-
-
-        # to (probably) speed up intersections:
-        self.dissolved_sidewalks = dissolve_tosinglegeom(self.whole_sidewalks)
-        self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
-
-        # with open('/home/kaue/test_wkt_sidewalks.txt','w+') as writer:
-        #     writer.write(self.dissolved_sidewalks_geom.asWkt())
 
 
         # disabling what won't be needed afterwards

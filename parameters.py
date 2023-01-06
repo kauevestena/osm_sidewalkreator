@@ -37,7 +37,7 @@ buildings_layername = 'osm_buildings'
 roads_layername = "osm_road_data"
 
 # big buffer distance
-big_buffer_d = 3000
+big_buffer_d = 10000
 
 # min buffer size for the worst case (building intersecting road)
 minimal_buffer = 3 # 2m
