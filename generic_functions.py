@@ -255,8 +255,53 @@ def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
         max_area_idx = areas.index(max(areas))
         inputlayer.deleteFeature(ids[max_area_idx])
 
+def single_geom_polygonize(inputgeom):
+    return QgsGeometry.polygonize([inputgeom]).asGeometryCollection()[0]
 
 
+def create_area_field(inputlayer,area_fieldname):
+    area_idx = create_new_layerfield(inputlayer,area_fieldname)
+
+
+    with edit(inputlayer):
+
+        if inputlayer.geometryType() == 2:
+            for feature in inputlayer.getFeatures():
+                area_val = feature.geometry().area()
+                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
+
+        elif inputlayer.geometryType() == 1:
+            for feature in inputlayer.getFeatures():
+                area_val = single_geom_polygonize(feature.geometry()).area()
+                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
+
+        # for points or not-spatial will leave all NULL
+
+        return area_idx
+
+
+def create_perimeter_field(inputlayer,perimeter_fieldname):
+    perimeter_idx = create_new_layerfield(inputlayer,perimeter_fieldname)
+
+
+    with edit(inputlayer):
+
+        if inputlayer.geometryType() == 1:
+            for feature in inputlayer.getFeatures():
+                perim_val = feature.geometry().length()
+                inputlayer.changeAttributeValue(feature.id(),perimeter_idx,perim_val)
+
+        # TBD for polygons
+
+
+        # elif inputlayer.geometryType() == 2:
+        #     for feature in inputlayer.getFeatures():
+        #         perim_val = 
+        #         inputlayer.changeAttributeValue(feature.id(),perimeter_idx,perim_val)
+
+        # for points or not-spatial will leave all NULL
+
+        return perimeter_idx
 
 
 
@@ -462,6 +507,8 @@ def remove_layerfields(inputlayer,fieldlist):
                 f_idx = inputlayer.fields().indexOf(field_name)
                 inputlayer.deleteAttribute(f_idx)
 
+def remove_all_layerfields(inputlayer):
+    remove_layerfields(inputlayer,get_column_names(inputlayer))
 
 
 def get_layercolumn_byname(inputlayer,columname):

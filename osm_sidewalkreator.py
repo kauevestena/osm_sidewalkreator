@@ -62,6 +62,9 @@ import sys
 # for output folder unique naming
 import datetime
 
+# small calculations
+import math
+
 
 ############################
 ##### GLOBAL-SCOPE
@@ -1593,12 +1596,26 @@ class sidewalkreator:
 
 
         # first, deleting all previous fields:
-        remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
+        # remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
+        remove_all_layerfields(self.whole_sidewalks)
 
+        # areas and ratios part
+        self.sidewalks_area_field_name = 'in_area'
+        self.sidewalks_area_field_idx = create_area_field(self.whole_sidewalks,self.sidewalks_area_field_name)  
 
+        self.sidewalks_perimeter_field_name = 'perimeter'
+        self.sidewalks_perimeter_field_idx = create_perimeter_field(self.whole_sidewalks,self.sidewalks_perimeter_field_name) 
 
+        self.sidewalks_ratio_field_name = 'ratio_perim_sqrt_area'
+        ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.sidewalks_ratio_field_name)
 
+        with edit(self.whole_sidewalks):
+            for feature in self.whole_sidewalks.getFeatures():
+                attrdict = feature.attributeMap()
 
+                ratio = attrdict[self.sidewalks_perimeter_field_name] / math.sqrt(attrdict[self.sidewalks_area_field_name])
+
+                self.whole_sidewalks.changeAttributeValue(feature.id(),ratio_field_idx,ratio)
 
 
         # styling the sidewalks layer
