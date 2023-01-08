@@ -1161,7 +1161,7 @@ class sidewalkreator:
                     inward_distances[innerPF_id] = None
 
 
-                # since we are interpolating from the end and by QGIS 3.20 it does not support negative interpolation, we just subtract from total feature length
+                # since we are interpolating from the end and by QGIS 3.20 it does not support negative interpolation (to denote interpolating backwards), we just subtract from total feature length
                 innerPF_0 = feature_A.geometry().interpolate(featurelen-d_to_interpolate_PF)
 
 
@@ -1174,7 +1174,7 @@ class sidewalkreator:
 
                 # print(dlist_PF,'\n')
 
-                    # transforming as a feature, storing osm id
+                # transforming as a feature, storing osm id
                 innerPF_feat = QgsFeature()
                 innerPF_feat.setGeometry(innerPF_0)
                 innerPF_feat.setAttributes([feature_osm_id,innerPF_id])
@@ -2502,13 +2502,17 @@ class sidewalkreator:
 
                 crossing_len = line_AB.length()
 
+                if crossing_len > abs_max_crossing_len:
+                    return None,None,False
+                    
+
                 # print(crossing_len,max_len,linefeature[widths_fieldname])
 
                 # print('entered the len test part 1')
 
 
                 if crossing_len > max_len:
-                    # print('\tentered the len test part 2')
+                    # print('\t entered the len test part 2')
 
 
                     curr_distance += increment_inward
@@ -2537,7 +2541,7 @@ class sidewalkreator:
             iter_num += 1
 
             if iter_num > max_crossings_iterations:
-                # to stop iterating indefenitely and just skip the crossinf
+                # to stop iterating indefenitely and just skip the crossing
                 return None,None,False
 
 

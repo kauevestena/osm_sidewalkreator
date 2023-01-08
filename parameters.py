@@ -150,3 +150,6 @@ snap_disjointed_tol = .5
 
 # minimum length that a sidewalk stretch should have (m):
 min_stretch_size = 7
+
+# absolute max crossing len (m):
+abs_max_crossing_len = 100 # 100 m could be a very large crossing
