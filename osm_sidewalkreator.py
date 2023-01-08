@@ -37,7 +37,7 @@ from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
 # additional qgis/qt imports:
 from processing.gui.AlgorithmExecutor import execute_in_place
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis, NULL
+from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis, NULL, QgsStatisticalSummary
 from qgis.utils import iface
 
 
@@ -765,7 +765,7 @@ class sidewalkreator:
         self.dlg.onlyfacades_checkbox.setEnabled(False)
         self.dlg.dontsplit_checkbox.setEnabled(False)
 
-        #  just the variable
+        #  just the name for a field that will be deleted afterwards
         self.split_field_name = 'split_len'
 
 
@@ -842,11 +842,14 @@ class sidewalkreator:
 
         # # # adjusting the fields of the output layers
         # sidewalks:
-        if self.split_field_name in get_column_names(self.whole_sidewalks):
-            remove_layerfields(self.whole_sidewalks,[self.split_field_name])
+        # if self.split_field_name in get_column_names(self.whole_sidewalks):
+        #     remove_layerfields(self.whole_sidewalks,[self.split_field_name])
+
+        # now we will always have layerfields, so we will remove all of them:
+        remove_all_layerfields(self.whole_sidewalks)
 
         # removing previous layerfields:
-        remove_layerfields(self.kerbs_layer,get_column_names(self.kerbs_layer))
+        remove_all_layerfields(self.kerbs_layer)
 
         """
             trying to fix some bugs:
@@ -1606,17 +1609,44 @@ class sidewalkreator:
         self.sidewalks_perimeter_field_name = 'perimeter'
         self.sidewalks_perimeter_field_idx = create_perimeter_field(self.whole_sidewalks,self.sidewalks_perimeter_field_name) 
 
-        self.sidewalks_ratio_field_name = 'ratio_perim_sqrt_area'
-        ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.sidewalks_ratio_field_name)
+        # normalized perimeter/sqrt(area) ratio: declaration
+        self.norm_ratio_field_name = 'norm_ratio'
+        self.norm_ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.norm_ratio_field_name)
 
+        # simple perimeter/area ratio: declaration
+        self.simple_ratio_field_name = 'simple_ratio'
+        self.simple_ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.simple_ratio_field_name)
+
+        # creation of both ratios
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
-                attrdict = feature.attributeMap()
+                attrdict = feature.attributeMap() # getting attributes
 
-                ratio = attrdict[self.sidewalks_perimeter_field_name] / math.sqrt(attrdict[self.sidewalks_area_field_name])
+                # normalized ratio
+                norm_ratio = attrdict[self.sidewalks_perimeter_field_name] / math.sqrt(attrdict[self.sidewalks_area_field_name])
 
-                self.whole_sidewalks.changeAttributeValue(feature.id(),ratio_field_idx,ratio)
+                self.whole_sidewalks.changeAttributeValue(feature.id(),self.norm_ratio_field_idx,norm_ratio)
 
+                # simple ratio
+                simple_ratio = attrdict[self.sidewalks_perimeter_field_name] / attrdict[self.sidewalks_area_field_name]
+
+                self.whole_sidewalks.changeAttributeValue(feature.id(),self.simple_ratio_field_idx,simple_ratio)
+
+        ratios_list = get_layercolumn_byname(self.whole_sidewalks,self.norm_ratio_field_name)
+
+
+        ratios_summ = QgsStatisticalSummary()
+
+        ratios_summ.calculate(ratios_list)
+
+        q1 = ratios_summ.firstQuartile()
+
+        q3 = ratios_summ.thirdQuartile()
+
+        IQR = ratios_summ.interQuartileRange()
+
+        print(q1,q3,IQR)
+        print(q1-1.5*IQR,q3+1.5*IQR)
 
         # styling the sidewalks layer
         self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
