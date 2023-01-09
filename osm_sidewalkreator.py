@@ -149,7 +149,7 @@ class sidewalkreator:
     export_ready = False
 
 
-    # pre-declaration 
+    # a pre-declaration 
     already_existing_sidewalks_layer = None
 
 
@@ -1597,6 +1597,80 @@ class sidewalkreator:
 
         '''
         end of that new part
+        '''
+
+        """
+            NEW PART: exclusion zones        
+        """
+        exclusion_zones_featlist = []
+
+        for i,feature in enumerate(self.splitted_lines.getFeatures()):
+            attrdict = feature.attributeMap()
+
+            # checking if no "sidewalk tag", case that can trigger a skipping
+            if i == 0:
+                #kl is "keyslist"
+                kl = list(attrdict.keys())
+                if not any(['sidewalk' in key for key in kl]):
+                    break
+
+            width_val = float(attrdict.get(widths_fieldname)) + self.dlg.d_to_add_box.value() + 1
+            half_width = (width_val/2) + 0.5
+
+            geom = None
+
+            sidewalk_tag = attrdict.get('sidewalk')
+
+            # 0 is for "left"
+            # 1 is for "right"
+
+            if sidewalk_tag:
+                if sidewalk_tag == 'no':
+                    geom = feature.geometry().buffer(half_width,5)
+                elif sidewalk_tag == 'left':
+                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+                elif sidewalk_tag == 'right':
+                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
+                elif sidewalk_tag == 'both':
+                    continue
+
+            sidewalk_both_tag = attrdict.get('sidewalk:both')
+
+            if sidewalk_both_tag:
+                if sidewalk_both_tag == 'no':
+                    geom = feature.geometry().buffer(half_width,5)
+                if sidewalk_both_tag == 'both':
+                    continue
+
+            sidewalk_left_tag = attrdict.get('sidewalk:left')
+
+            if sidewalk_left_tag:
+                if sidewalk_left_tag == 'no':
+                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
+
+            sidewalk_right_tag = attrdict.get('sidewalk:right')
+
+            if sidewalk_right_tag:
+                if sidewalk_right_tag == 'no':
+                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+            
+
+            if geom:
+                as_feat = geom_to_feature(geom,['tag_repr'])
+                exclusion_zones_featlist.append(as_feat)
+            
+
+        # effectively creating the layer
+        self.exclusion_zones = layer_from_featlist(exclusion_zones_featlist,'exclusion_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
+
+        ### setting styles and adding to canvas
+        exclusionzones_stylelayerpath = os.path.join(assets_path,exclusion_stylefilename)
+        self.exclusion_zones.loadNamedStyle(exclusionzones_stylelayerpath)
+
+        self.add_layer_canvas(self.exclusion_zones)
+
+        '''
+        end of that new part (exclusion zones, parts with no sidewalks)
         '''
 
 

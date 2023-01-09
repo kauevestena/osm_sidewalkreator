@@ -110,6 +110,7 @@ sidewalks_stylefilename = 'sidewalkstyles.qml'
 inputpolygons_stylefilename = 'polygonstyles.qml'
 crossings_stylefilename = 'crossings.qml'
 kerbs_stylefilename = 'kerbs.qml'
+exclusion_stylefilename = 'exclusion_zones.qml'
 
 
 
