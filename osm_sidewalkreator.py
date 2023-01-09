@@ -149,7 +149,8 @@ class sidewalkreator:
     export_ready = False
 
 
-
+    # pre-declaration 
+    already_existing_sidewalks_layer = None
 
 
     def __init__(self, iface):
@@ -554,27 +555,28 @@ class sidewalkreator:
         
         '''
 
+        if self.already_existing_sidewalks_layer:
 
-        create_incidence_field_layers_A_B(self.protoblocks,self.already_existing_sidewalks_layer,'inc_sidewalk_len',True)
+            create_incidence_field_layers_A_B(self.protoblocks,self.already_existing_sidewalks_layer,'inc_sidewalk_len',True)
 
-        # calculating the approximate area of the enclosed already drawn sidewalks (assuming squared shape) in order to judge if the protoblock contains sidewalks:
-
-
-        protoblocks_ratio_id = create_new_layerfield(self.protoblocks,'sidewalks_ratio')
-
-        with edit(self.protoblocks):
-            for feature in self.protoblocks.getFeatures():
-
-                # dividing by 4 approximates a square corner
-                ratio = (((feature['inc_sidewalk_len']/4)**2) / feature.geometry().area()) * 100
-
-                self.protoblocks.changeAttributeValue(feature.id(),protoblocks_ratio_id,ratio)
-
-                if ratio > cutoff_percent_protoblock:
-                    self.protoblocks.deleteFeature(feature.id())
+            # calculating the approximate area of the enclosed already drawn sidewalks (assuming squared shape) in order to judge if the protoblock contains sidewalks:
 
 
-        # self.add_layer_canvas(self.protoblocks)
+            protoblocks_ratio_id = create_new_layerfield(self.protoblocks,'sidewalks_ratio')
+
+            with edit(self.protoblocks):
+                for feature in self.protoblocks.getFeatures():
+
+                    # dividing by 4 approximates a square corner
+                    ratio = (((feature['inc_sidewalk_len']/4)**2) / feature.geometry().area()) * 100
+
+                    self.protoblocks.changeAttributeValue(feature.id(),protoblocks_ratio_id,ratio)
+
+                    if ratio > cutoff_percent_protoblock:
+                        self.protoblocks.deleteFeature(feature.id())
+
+
+            # self.add_layer_canvas(self.protoblocks)
 
 
         '''
