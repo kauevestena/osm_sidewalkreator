@@ -5,12 +5,12 @@
 [general]
 name=OSM SidewalKreator
 qgisMinimumVersion=3.22.2
-description=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting to a .geojson to be imported on JOSM. It is mostly intended for acessibility Mapping. 
-version=1.0.1
+description=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting to a .geojson to be imported on JOSM. It is mostly intended for accessibility Mapping. 
+version=1.1
 author=Kaue de Moraes Vestena
 email=kauemv2@gmail.com
 
-about=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting a .geojson that should be imported on JOSM to update OSM data. It is mostly intended for acessibility Mapping.
+about=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting a .geojson that should be imported on JOSM to update OSM data. It is mostly intended for accessibility Mapping.
 
 tracker=https://github.com/kauevestena/osm_sidewalkreator/issues
 repository=https://github.com/kauevestena/osm_sidewalkreator
