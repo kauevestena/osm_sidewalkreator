@@ -878,13 +878,16 @@ class sidewalkreator:
         #trying to merge too small stretches with a neighbour for each
         self.try_to_merge_small_stretches()
 
-
-
-
-
         """
         end of it
         """
+
+        # maybe in a future release:
+        # # # # excluding exclusion zones once again:
+        # # # if self.exclusion_zones.featureCount() != self.exclusion_zones_count:
+        # # #     self.excluding_exclusion_zones()
+
+
         # workaround for the reference of layers changing
 
         self.remove_layer_canvas(self.whole_sidewalklayer_name)
@@ -1626,7 +1629,7 @@ class sidewalkreator:
 
             if sidewalk_tag:
                 if sidewalk_tag == 'no':
-                    geom = feature.geometry().buffer(half_width,5)
+                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
                 elif sidewalk_tag == 'left':
                     geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
                 elif sidewalk_tag == 'right':
@@ -1638,7 +1641,7 @@ class sidewalkreator:
 
             if sidewalk_both_tag:
                 if sidewalk_both_tag == 'no':
-                    geom = feature.geometry().buffer(half_width,5)
+                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
                 if sidewalk_both_tag == 'both':
                     continue
 
@@ -1660,23 +1663,48 @@ class sidewalkreator:
                 exclusion_zones_featlist.append(as_feat)
             
 
+
         # effectively creating the layer
         self.exclusion_zones = layer_from_featlist(exclusion_zones_featlist,'exclusion_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
+
+        # storing the feature count of exclusion zones:
+        self.exclusion_zones_count = self.exclusion_zones.featureCount()
 
         ### setting styles and adding to canvas
         exclusionzones_stylelayerpath = os.path.join(assets_path,exclusion_stylefilename)
         self.exclusion_zones.loadNamedStyle(exclusionzones_stylelayerpath)
 
-        self.add_layer_canvas(self.exclusion_zones)
+
+
+
+
+        # applying:
+
+        # difference_inplace(self.whole_sidewalks,self.exclusion_zones)
+
+
+        # applying the exclusion
+
+        # print(self.whole_sidewalks.isEditCommandActive())
+        # print(self.whole_sidewalks.isEditable())
+
+
+        # with edit(self.whole_sidewalks):
+        #     registry = QgsApplication.instance().processingRegistry()
+
+        #     alg = registry.algorithmById("qgis:difference")
+
+        #     execute_in_place(alg, {'INPUT': self.whole_sidewalks,'OVERLAY':self.exclusion_zones})
+
+        # self.unselect_all_from_all()
+  
 
         '''
         end of that new part (exclusion zones, parts with no sidewalks)
         '''
 
 
-        # first, deleting all previous fields:
-        # remove_layerfields(self.whole_sidewalks,get_column_names(self.whole_sidewalks))
-        remove_all_layerfields(self.whole_sidewalks)
+
 
         # areas and ratios part
         self.sidewalks_area_field_name = 'in_area'
@@ -1708,33 +1736,34 @@ class sidewalkreator:
 
                 self.whole_sidewalks.changeAttributeValue(feature.id(),self.simple_ratio_field_idx,simple_ratio)
 
-        ratios_list = get_layercolumn_byname(self.whole_sidewalks,self.norm_ratio_field_name)
+        # ratios_list = get_layercolumn_byname(self.whole_sidewalks,self.norm_ratio_field_name)
 
 
-        ratios_summ = QgsStatisticalSummary()
+        # ratios_summ = QgsStatisticalSummary()
 
-        ratios_summ.calculate(ratios_list)
+        # ratios_summ.calculate(ratios_list)
 
-        q1 = ratios_summ.firstQuartile()
+        # q1 = ratios_summ.firstQuartile()
 
-        q3 = ratios_summ.thirdQuartile()
+        # q3 = ratios_summ.thirdQuartile()
 
-        IQR = ratios_summ.interQuartileRange()
+        # IQR = ratios_summ.interQuartileRange()
 
-        print(q1,q3,IQR)
-        print(q1-1.5*IQR,q3+1.5*IQR)
+        # print(q1,q3,IQR)
+        # print(q1-1.5*IQR,q3+1.5*IQR)
+
+        #### APPLYING THE EXCLUSION:
+        self.excluding_exclusion_zones()
+
 
         # styling the sidewalks layer
         self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
 
         self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
-        #  self.whole_sidewalks.triggerRepaint()
 
-        # self.add_layer_canvas(big_temporary_buffer) #just for test
-        # self.add_layer_canvas(dissolved_buffer) #just for test
-        # self.add_layer_canvas(diff_layer) #just for test
+        # adding layers to canvas
+        self.add_layer_canvas(self.exclusion_zones)
         self.add_layer_canvas(self.whole_sidewalks)
-
 
         # disabling what won't be needed afterwards
         self.dlg.min_d_buildings_box.setEnabled(False)
@@ -1765,12 +1794,14 @@ class sidewalkreator:
 
 
 
+    def excluding_exclusion_zones(self):
+        # called once or twice, so this one created
 
+        temp_sidewalk_w_exclusions = compute_difference_layer(self.whole_sidewalks,self.exclusion_zones)
 
+        temp_sidewalk_w_exclusions.setCrs(self.custom_localTM_crs)
 
-
-
-
+        swap_features_layer_another(self.whole_sidewalks,temp_sidewalk_w_exclusions)    
 
     def string_according_language(self,en_str,ptbr_str):
         if self.current_lang == 'en':
@@ -2697,7 +2728,7 @@ class sidewalkreator:
 
 
 
-        # somehow it keep features selected, so:
+        # somehow it keeps features selected, so:
         self.unselect_all_from_all()
 
 

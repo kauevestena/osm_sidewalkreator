@@ -4,7 +4,10 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from processing.tools import dataobjects
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication
+
+from processing.gui.AlgorithmExecutor import execute_in_place
+
 import os, json
 from math import isclose,pi
 
@@ -84,6 +87,23 @@ def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTP
     parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer, 'OUTPUT': outputlayer}
 
     return processing.run('qgis:difference',parameter_dict)['OUTPUT']
+
+# def difference_inplace(inputlayer,overlaylayer):
+
+#     # with edit(inputlayer):
+
+#     inputlayer.startEditing()
+
+#     parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer}
+
+#     registry = QgsApplication.instance().processingRegistry()
+
+#     alg = registry.algorithmById("qgis:difference")
+
+#     execute_in_place(alg, parameter_dict)
+
+#     inputlayer.commitChanges()
+
 
 
 def convert_multipart_to_singleparts(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
