@@ -152,6 +152,10 @@ class sidewalkreator:
     # a pre-declaration 
     already_existing_sidewalks_layer = None
 
+    # hint texts:
+    en_hint = 'Many Times its better to\ncorrect errors on OSM data first!'
+    ptbr_hint = 'Pode ser melhor consertar\nerros na base do OSM antes!'
+
 
     def __init__(self, iface):
         """Constructor.
@@ -332,7 +336,7 @@ class sidewalkreator:
 
             # setting items that should not be visible at beginning:
             self.dlg.sidewalks_warning.setHidden(True)
-            self.dlg.widths_hint.setHidden(True)
+            self.dlg.hint_text.setHidden(True)
             self.dlg.ignore_already_drawn_btn.setHidden(True)
 
 
@@ -394,6 +398,10 @@ class sidewalkreator:
     ##################################
     ##### THE CLASS SCOPE
     ##################################
+    def set_hint_text(self):
+        self.dlg.hint_text.setText(
+            self.string_according_language(self.en_hint,self.ptbr_hint)
+        )
 
     def add_layer_canvas(self,layer):
         # canvas = QgsMapCanvas()
@@ -437,7 +445,7 @@ class sidewalkreator:
             (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
             (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,this stuff shall be handled properly...)","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)"),
             (self.dlg.check_if_overlaps_buildings,'Check if Overlaps\n Buildings\n(much slower)','Testar se Sobrepõe\nEdificações\n(mais lento)'),
-            (self.dlg.widths_hint,'Hint: You Can Set Widths\nfor Each Segment...','Dica: Você pode Inserir uma Largura\nPara Cada Segmento'),
+            (self.dlg.hint_text,self.en_hint,self.ptbr_hint),
             (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
             (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
             (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n(mais rápido)'),
@@ -677,6 +685,11 @@ class sidewalkreator:
         self.add_layer_canvas(self.splitted_lines)
 
 
+        # hint texts:
+        self.en_hint = 'Hint: You Can Set Widths\nmanually for Each Segment...'
+        self.ptbr_hint = 'Dica: Você pode Inserir manualmente\numa Largura Para Cada Segmento!'
+        self.set_hint_text()
+
         # always cleaning stuff that user does not need anymore
         remove_layerlist([osm_higway_layer_finalname])
 
@@ -687,7 +700,7 @@ class sidewalkreator:
         self.dlg.curveradius_label.setEnabled(True)
         self.dlg.d_to_add_label.setEnabled(True)
 
-        self.dlg.widths_hint.setHidden(False)
+        self.dlg.hint_text.setHidden(False)
 
         # to say to the user: it's not the global progress,
         # its just to that part
@@ -766,6 +779,8 @@ class sidewalkreator:
         self.dlg.segsbynum_box.setEnabled(False)
         self.dlg.onlyfacades_checkbox.setEnabled(False)
         self.dlg.dontsplit_checkbox.setEnabled(False)
+
+        self.dlg.hint_text.setHidden(True)
 
         #  just the name for a field that will be deleted afterwards
         self.split_field_name = 'split_len'
@@ -1362,6 +1377,8 @@ class sidewalkreator:
             # self.crossings_A_E_pointlist.append(pA_feat.geometry())
             # self.crossings_A_E_pointlist.append(pE_feat.geometry())
 
+
+
         
 
 
@@ -1410,6 +1427,12 @@ class sidewalkreator:
                 nearest_dist_dict[crossing_id] = NULL
 
         create_filled_newlayerfield(self.crossings_layer,self.nearest_centerpoint_fieldname,{'attr_by_id':nearest_dist_dict},QVariant.Double)
+
+        # hint texts:
+        self.en_hint = 'Hint: check for bad crossings using attrs.\nyou can delete them,\nkerbs are autom. cleaned!'
+        self.ptbr_hint = 'Dica: Você pode\ndeletar manualmente cruzamentos\nvide a tabela de atributos para filtrar!'
+        self.set_hint_text()
+
 
         # adding crossing len to check for "bad" crossings:
         # create_new_layerfield(self.crossings_layer,'length')
@@ -1468,7 +1491,13 @@ class sidewalkreator:
         # disabling what should not be used afterwards:
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.generate_sidewalks.setEnabled(False)
-        self.dlg.widths_hint.setHidden(True)
+        # self.dlg.hint_text.setHidden(True)
+
+
+        # hint texts:
+        self.en_hint = 'Hint: you can manually delete sidewalks\nuse the att. table to filter!'
+        self.ptbr_hint = 'Você pode del. manualmente calçadas,\nvide a tabela de atributos para filtrar!'
+        self.set_hint_text()
 
 
         # if no buildings, we can directly generate a simply dissolved-big_buffer
@@ -1871,7 +1900,7 @@ class sidewalkreator:
         self.dlg.ch_remove_abovetol.setHidden(True)
 
         # self.dlg.gencrossings_progressbar.setHidden(True)
-        self.dlg.widths_hint.setHidden(True)
+        self.dlg.hint_text.setHidden(True)
 
         self.dlg.split_sidewalks.setHidden(True)
         self.dlg.split_progressbar.setHidden(True)
@@ -2002,7 +2031,7 @@ class sidewalkreator:
 
 
         #hidden elements
-        self.dlg.widths_hint.setHidden(True)
+        self.dlg.hint_text.setHidden(True)
         self.dlg.ignore_already_drawn_btn.setHidden(True)
         self.dlg.sidewalks_warning.setHidden(True)
 
@@ -2485,17 +2514,20 @@ class sidewalkreator:
 
 
         # BUT... if there are sidewalks already drawn, one must step back!!
-        if sidewalk_tag_value in self.unique_highway_values:
-            # DISABLING STUFF
-            if not self.ignore_sidewalks_already_drawn:
-                self.disable_all_because_sidewalks()
+        # if sidewalk_tag_value in self.unique_highway_values:
+        #     # DISABLING STUFF
+        #     if not self.ignore_sidewalks_already_drawn:
+        #         self.disable_all_because_sidewalks()
 
-                self.ignore_sidewalks_already_drawn = True
+        #         self.ignore_sidewalks_already_drawn = True
 
 
         # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
+        self.dlg.hint_text.setHidden(False)
+
+  
 
 
         self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')

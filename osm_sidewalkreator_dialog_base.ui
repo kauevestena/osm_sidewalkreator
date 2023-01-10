@@ -160,7 +160,7 @@
    <property name="geometry">
     <rect>
      <x>367</x>
-     <y>118</y>
+     <y>128</y>
      <width>171</width>
      <height>51</height>
     </rect>
@@ -193,8 +193,8 @@
   <widget class="QLabel" name="input_status_of_data">
    <property name="geometry">
     <rect>
-     <x>550</x>
-     <y>116</y>
+     <x>605</x>
+     <y>88</y>
      <width>171</width>
      <height>21</height>
     </rect>
@@ -354,18 +354,21 @@ Compute Intersections</string>
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="widths_hint">
+  <widget class="QLabel" name="hint_text">
    <property name="geometry">
     <rect>
-     <x>405</x>
-     <y>177</y>
+     <x>550</x>
+     <y>140</y>
      <width>291</width>
-     <height>41</height>
+     <height>71</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(255, 253, 197);</string>
+   </property>
    <property name="text">
-    <string>Hint: You Can Set Widths
-for Each Segment...</string>
+    <string>Many Times its better to
+correct errors on OSM data first!</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -377,8 +380,8 @@ for Each Segment...</string>
    </property>
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>212</y>
+     <x>280</x>
+     <y>210</y>
      <width>141</width>
      <height>61</height>
     </rect>
@@ -509,8 +512,8 @@ And It's OK!!
    </property>
    <property name="geometry">
     <rect>
-     <x>575</x>
-     <y>138</y>
+     <x>630</x>
+     <y>110</y>
      <width>118</width>
      <height>23</height>
     </rect>
@@ -797,7 +800,7 @@ dead-end-streets
    <property name="geometry">
     <rect>
      <x>300</x>
-     <y>130</y>
+     <y>140</y>
      <width>51</width>
      <height>21</height>
     </rect>
@@ -824,7 +827,7 @@ dead-end-streets
    <property name="geometry">
     <rect>
      <x>290</x>
-     <y>150</y>
+     <y>160</y>
      <width>71</width>
      <height>21</height>
     </rect>
