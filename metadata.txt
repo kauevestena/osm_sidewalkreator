@@ -18,7 +18,7 @@ repository=https://github.com/kauevestena/osm_sidewalkreator
 
 # Recommended items:
 
-hasProcessingProvider=no
+hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 # changelog=
 
