@@ -2464,7 +2464,7 @@ class sidewalkreator:
         # a little cleaning:
         #   move do self.data_clean?
         # it just removes lines that are really not connected to any other
-        remove_unconnected_lines(self.clipped_reproj_datalayer)
+        remove_unconnected_lines_v2(self.clipped_reproj_datalayer)
 
 
 

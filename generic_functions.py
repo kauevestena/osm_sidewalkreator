@@ -1266,3 +1266,34 @@ def select_feats_by_attr(inputlayer,attr,value):
             ret_list.append(feature)
 
     return ret_list
+
+
+def remove_unconnected_lines_v2(inputlayer):
+    #thx: https://sl.bing.net/iIo7elzcg68
+    index = QgsSpatialIndex(inputlayer.getFeatures())
+
+    with edit(inputlayer):
+        for feature in inputlayer.getFeatures():
+
+            featuregeom = feature.geometry()
+
+            feat_id = feature.id()
+
+            intersect_ids = index.intersects(featuregeom.boundingBox())
+
+            if feat_id in intersect_ids:
+                intersect_ids.remove(feat_id)
+
+            if not intersect_ids:
+                # in the case of empty list one can just delete it 
+                inputlayer.deleteFeature(feat_id)
+            else:
+                not_intersecting = True
+                for id in intersect_ids:
+                    feature = inputlayer.getFeature(id)
+                    if feature.geometry().intersects(featuregeom):
+                        not_intersecting = False
+                        break
+
+                if not_intersecting:
+                    inputlayer.deleteFeature(feat_id)
