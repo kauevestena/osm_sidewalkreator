@@ -3152,14 +3152,48 @@ class sidewalkreator:
 
         # creating again the Kerbs layer, so if the user delete any crossing, there will be no loose kerbs:
         new_kerbs_list = []
+
+        # to handle alternate schema as requested in github (ALT_SCHEMA)
+        alt_crossings_centers = []
+        alt_crossings_ends = []
+
+
         for feature in self.crossings_layer.getFeatures():
             as_polyline = feature.geometry().asPolyline()
-            # 0 1 2 3 4 index 1 and 3 are kerbs
-            pB = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[1]))
-            pD = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[3]))
 
-            new_kerbs_list += [pB,pD]
+            if len(as_polyline) == 5:
+                # 0 1 2 3 4 index 1 and 3 are kerbs
+                pB = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[1]))
+                pD = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[3]))
 
+                new_kerbs_list += [pB,pD]
+
+                # (ALT_SCHEMA)
+                end1 = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[0],as_polyline[1]]))
+                end2 = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[3],as_polyline[4]]))
+
+                alt_crossings_ends.append(end1)
+                alt_crossings_ends.append(end2)
+
+
+                center_part = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[1],as_polyline[2],as_polyline[3]]))
+
+                alt_crossings_centers.append(center_part)
+
+        # (ALT_SCHEMA)
+        alt_crossings_ends_layer = layer_from_featlist(alt_crossings_ends,'alt_crossings_ends',"LineString",CRS=self.custom_localTM_crs)
+
+        create_filled_newlayerfield(alt_crossings_ends_layer,'highway','footway',QVariant.String)
+        create_filled_newlayerfield(alt_crossings_ends_layer,'footway','sidewalk',QVariant.String)
+
+
+        alt_crossings_centers_layer = layer_from_featlist(alt_crossings_centers,'alt_crossings_centers',"LineString",CRS=self.custom_localTM_crs)
+
+        create_filled_newlayerfield(alt_crossings_centers_layer,'highway','footway',QVariant.String)
+        create_filled_newlayerfield(alt_crossings_centers_layer,'footway','crossing',QVariant.String)
+
+
+        # kerbs
         temp_kerbs_layer = layer_from_featlist(new_kerbs_list)
         temp_kerbs_layer.setCrs(self.custom_localTM_crs)
 
@@ -3187,7 +3221,14 @@ class sidewalkreator:
         crossings_path = os.path.join(inputdirpath,self.string_according_language('crossings4326.geojson','travessias4326.geojson'))
         kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
 
+        # (ALT_SCHEMA)
+        alt_crossings_ends_path = os.path.join(self.aux_files_dirpath,self.string_according_language('alt_crossings_ends4326.geojson','travessias_alt_fim4326.geojson'))
+        alt_crossings_centers_path = os.path.join(self.aux_files_dirpath,self.string_according_language('alt_crossings_centers326.geojson','travessias_alt_centros4326.geojson'))
+        outlayers_altpaths = [alt_crossings_ends_path,alt_crossings_centers_path]
 
+
+
+        # input pol layer
         inputpol_layer_path = os.path.join(self.aux_files_dirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
 
         outlayers_gjsonpaths = [crossings_path,kerbs_path,sidewalks_path]
@@ -3203,6 +3244,11 @@ class sidewalkreator:
         reproject_layer(self.crossings_layer,output_mode=crossings_path)
         # kerbs_4326 =
         reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
+
+        # (ALT_SCHEMA)
+        reproject_layer(alt_crossings_ends_layer,output_mode=alt_crossings_ends_path)
+        reproject_layer(alt_crossings_centers_layer,output_mode=alt_crossings_centers_path)
+
 
 
         # outputting the input polygon:
@@ -3224,8 +3270,17 @@ class sidewalkreator:
 
         time.sleep(0.1)
 
+        # (ALT_SCHEMA)
+        output_alt_geojson_path = os.path.join(self.aux_files_dirpath,self.string_according_language('sidewalkreator_output_alt_scheme.geojson','saidas_sidewalkreator_esq_alternativo.geojson'))
+        merge_geojsons(outlayers_altpaths+[kerbs_path,sidewalks_path],output_alt_geojson_path)
+        time.sleep(0.1)
+
+
         # cleaning up,since they are just temporary
         delete_filelist_that_exists(outlayers_gjsonpaths)
+
+        # (ALT_SCHEMA) last one
+        delete_filelist_that_exists(outlayers_altpaths)
 
 
         # auxiliary files:
