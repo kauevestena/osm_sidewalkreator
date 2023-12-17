@@ -153,7 +153,7 @@ class sidewalkreator:
     already_existing_sidewalks_layer = None
 
     # hint texts:
-    en_hint = 'Many Times its better to\ncorrect errors on OSM data first!'
+    en_hint = "Sometimes it's better to\ncorrect errors on OSM data first!"
     ptbr_hint = 'Pode ser melhor consertar\nerros na base do OSM antes!'
 
 
@@ -507,8 +507,8 @@ class sidewalkreator:
                 width_value = float(self.dlg.higway_values_table.item(i,1).text())
             except:
                 # if the user input value not convertible to float, just use the value from
-                print('invalid input value: ',self.dlg.higway_values_table.item(i,1).text(),', using default: ',default_widths[val])
-                width_value = default_widths[val]
+                print('invalid input value: ',self.dlg.higway_values_table.item(i,1).text(),', using default: ',default_widths.get(val,fallback_default_width))
+                width_value = default_widths.get(val,fallback_default_width)
 
             highway_valuestable_dict[val] = width_value
 
@@ -553,7 +553,7 @@ class sidewalkreator:
 
         
 
-        # protoblocks has been moved to here:
+        # protoblocks have been moved to here:
         self.protoblocks = polygonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
 
@@ -575,7 +575,7 @@ class sidewalkreator:
             with edit(self.protoblocks):
                 for feature in self.protoblocks.getFeatures():
 
-                    # dividing by 4 approximates a square corner
+                    # dividing by 4 approximates the side of a squared shape block
                     ratio = (((feature['inc_sidewalk_len']/4)**2) / feature.geometry().area()) * 100
 
                     self.protoblocks.changeAttributeValue(feature.id(),protoblocks_ratio_id,ratio)
@@ -1002,6 +1002,7 @@ class sidewalkreator:
         self.above_tol_fieldname = self.string_according_language('above_tol','acima_da_tolerancia')
         self.nearest_centerpoint_fieldname= self.string_according_language('nearest_centerpoint','ponto_central_maisprox')
 
+        index = QgsSpatialIndex(self.splitted_lines.getFeatures())
 
         for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
 
@@ -1031,28 +1032,33 @@ class sidewalkreator:
             # tolerance for considering that a crossing center will have the crossing effectively drawn
             # a: two times (half width plus self.dlg.d_to_add_box.value())
             # b: three times half the width
-            initial_vec_len = featurewidth + self.dlg.d_to_add_box.value()
 
             # # 3 times to KNN search
             # # KNN search was deprecated
 
-            for j,feature_B in enumerate(self.splitted_lines.getFeatures()):
-                # if not i == j:
-                if P0.intersects(feature_B.geometry()):
-                    P0_count += 1
+            P0_small_region = P0.buffer(.1,5).boundingBox()
+            PF_small_region = PF.buffer(.1,5).boundingBox()
 
-                    if not feature_B.id() == feature_layer_id:
-                        if not feature_osm_id == feature_B['id']:
-                            P0_intersecting_widths[feature_B.id()] = feature_B['width']
+            intersecting_ids_P0 = index.intersects(P0_small_region)
+
+            if intersecting_ids_P0:
+                P0_count = len([id for id in intersecting_ids_P0 if self.splitted_lines.getFeature(id).geometry().intersects(P0.buffer(.1,5))]) 
+
+                for id in intersecting_ids_P0:
+                    if id != feature_A.id():
+                        P0_intersecting_widths[id] = self.splitted_lines.getFeature(id)['width']
+
+            intersecting_ids_PF = index.intersects(PF_small_region)
+
+            if intersecting_ids_PF:
+                PF_count = len([id for id in intersecting_ids_PF if self.splitted_lines.getFeature(id).geometry().intersects(PF.buffer(.1,5))]) 
+
+                for id in intersecting_ids_PF:
+                    if id != feature_A.id():
+                        PF_intersecting_widths[id] = self.splitted_lines.getFeature(id)['width']
 
 
-                if PF.intersects(feature_B.geometry()):
-                    PF_count += 1
-
-                    if not feature_B.id() == feature_layer_id:
-                        if not feature_osm_id == feature_B['id']:
-                            PF_intersecting_widths[feature_B.id()] = feature_B['width']
-
+            initial_vec_len = featurewidth + self.dlg.d_to_add_box.value()
 
             # print(i+1,P0_intersecting_widths)
             # print(i+1,PF_intersecting_widths,'\n')
@@ -2120,6 +2126,10 @@ class sidewalkreator:
         self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels)
         self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels)
 
+        # hint box:
+        self.en_hint = "Sometimes it's better to\ncorrect errors on OSM data first!"
+        self.ptbr_hint = 'Pode ser melhor consertar\nerros na base do OSM antes!'
+
 
         # to not exclude created layers and data when the "Ok" button is pressed:
         if not self.ok_ready:
@@ -2502,7 +2512,7 @@ class sidewalkreator:
 
             self.dlg.higway_values_table.setItem(i,0,QTableWidgetItem(vvalue))
 
-            self.dlg.higway_values_table.setItem(i,1,QTableWidgetItem(str(default_widths[vvalue])))
+            self.dlg.higway_values_table.setItem(i,1,QTableWidgetItem(str(default_widths.get(vvalue,fallback_default_width))))
 
 
 
@@ -3409,6 +3419,8 @@ class sidewalkreator:
                 # touching_times_dict[feat_id] = 0
                 # touchers[feat_id] = []
 
+                # MARKED FOR IMPROVEMENT WITH QgsSpatialIndex
+
                 for feat2 in extracted_adj_lines.getFeatures():
                     if not feat2.id in already_used_adj: # to avoid a feature to be used 2 times, or acess a not existent anymore feature
                         if tiny_feats_dict[feat_id].geometry().touches(feat2.geometry()):
@@ -3430,7 +3442,7 @@ class sidewalkreator:
 
                                 break # so, go for the next small stretch
 
-                                print(feat2.geometry().length())
+                                # print(feat2.geometry().length())
         # print(already_used_adj)
 
         #remove the layerfield: It wont be necessary anymore

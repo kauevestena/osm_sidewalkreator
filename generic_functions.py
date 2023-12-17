@@ -576,25 +576,26 @@ def remove_layerlist(listoflayer_alias):
             project_instance.removeMapLayer(layerfullname)
 
 
-def remove_unconnected_lines(inputlayer):
-    #thx: https://gis.stackexchange.com/a/316058/49900
-    with edit(inputlayer):
-        for i,feature_A in enumerate(inputlayer.getFeatures()):
-            is_disjointed = True
-            # disjointed_features = 0
-            for j,feature_B in enumerate(inputlayer.getFeatures()):
-                if not i == j:
-                    if not feature_A.geometry().disjoint(feature_B.geometry()):
-                        # print('not disjointed!!',i,j)
-                        is_disjointed=False
+###  DEPRECATED ###
+# # def remove_unconnected_lines(inputlayer):
+# #     #thx: https://gis.stackexchange.com/a/316058/49900
+# #     with edit(inputlayer):
+# #         for i,feature_A in enumerate(inputlayer.getFeatures()):
+# #             is_disjointed = True
+# #             # disjointed_features = 0
+# #             for j,feature_B in enumerate(inputlayer.getFeatures()):
+# #                 if not i == j:
+# #                     if not feature_A.geometry().disjoint(feature_B.geometry()):
+# #                         # print('not disjointed!!',i,j)
+# #                         is_disjointed=False
 
-            if is_disjointed:
-                # print(is_disjointed)
+# #             if is_disjointed:
+# #                 # print(is_disjointed)
 
-                inputlayer.deleteFeature(feature_A.id())
+# #                 inputlayer.deleteFeature(feature_A.id())
 
-    # # # # it works inplace =D ()
-    # # # # return inputlayer
+# #     # # # # it works inplace =D ()
+# #     # # # # return inputlayer
 
 def qgs_point_geom_from_line_at(inputlinefeature,index=0):
     return QgsGeometry.fromPointXY(inputlinefeature.geometry().asPolyline()[index])
@@ -607,6 +608,7 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
         the "layer_to_check_culdesac" is a whole layer (dissolved) that should be checked for 'within' condition
     '''
 
+
     # TODO: check if will work with multilinestrings
 
     check_for_culdesacs = False
@@ -617,6 +619,8 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
 
     feature_ids_to_be_removed = []
 
+    index = QgsSpatialIndex(inputlayer.getFeatures())
+
 
     for i,feature_A in enumerate(inputlayer.getFeatures()):
 
@@ -626,19 +630,27 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
         P0_count = 0
         PF_count = 0
 
+        # THE OPTIMIZATION PATROL:
+        # for j,feature_B in enumerate(inputlayer.getFeatures()):
+        #     # if not i == j:
+        #     if P0.intersects(feature_B.geometry()):
+        #         P0_count += 1
+        #     if PF.intersects(feature_B.geometry()):
+        #         PF_count += 1
 
-        for j,feature_B in enumerate(inputlayer.getFeatures()):
-            # if not i == j:
-            if P0.intersects(feature_B.geometry()):
-                P0_count += 1
-            if PF.intersects(feature_B.geometry()):
-                PF_count += 1
+        intersect_ids = index.intersects(feature_A.geometry().boundingBox())
 
+        for id in intersect_ids:
+            if id != feature_A.id():
+                if P0.intersects(inputlayer.getFeature(id).geometry()):
+                    P0_count += 1
+                if PF.intersects(inputlayer.getFeature(id).geometry()):
+                    PF_count += 1
 
         # print(P0_count,PF_count)
 
 
-        if any(count == 1 for count in [P0_count,PF_count]):
+        if any(count == 0 for count in [P0_count,PF_count]):
             # after checking, only add if its not a "culdesac"
             if check_for_culdesacs:
                 if not feature_A.geometry().within(checker_geom):
@@ -1079,11 +1091,35 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
 
 def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident',total_length_instead=False):
+	
+    """
+	Creates incidence field layers A and B based on the given input layer and incident layer.
+
+	:param inputlayer: The input layer on which the incidence field layers will be created.
+	:type inputlayer: QgsVectorLayer
+
+	:param incident_layer: The incident layer from which the features will be used to create the incidence field layers.
+	:type incident_layer: QgsVectorLayer
+
+	:param fieldname: The name of the field in the input layer that will store the incidence information. Defaults to 'incident'.
+	:type fieldname: str
+
+	:param total_length_instead: If True, the total length of intersecting features will be stored in the field. If False, the IDs of intersecting features will be stored. Defaults to False.
+	:type total_length_instead: bool
+
+	:return: The field ID of the created incidence field layer.
+	:rtype: int
+	"""
+
+    
 
     if total_length_instead:
         field_id = create_new_layerfield(inputlayer,fieldname,QVariant.Double)
     else:
         field_id = create_new_layerfield(inputlayer,fieldname,QVariant.String)
+
+    index = QgsSpatialIndex(incident_layer.getFeatures())
+
 
     with edit(inputlayer):
 
@@ -1092,8 +1128,15 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
             contained_list = []
             sum = 0 
 
-            for tested_feature in incident_layer.getFeatures():
-                # with not disjoint one can go back and forth
+
+            intersecting_ids = index.intersects(feature.geometry().boundingBox())
+
+
+            # for tested_feature in incident_layer.getFeatures():
+            for id in intersecting_ids:
+
+                tested_feature = incident_layer.getFeature(id)
+                # with not disjointed one can go back and forth
                 if not feature.geometry().disjoint(tested_feature.geometry()):
 
                     if total_length_instead:

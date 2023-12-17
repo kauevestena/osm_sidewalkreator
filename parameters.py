@@ -104,6 +104,9 @@ default_widths = {
     # '' : ,
     }
 
+# for cases of an unexpected value:
+fallback_default_width = 6.0
+
 # ASSETS:
 # names of the assets filenames:
 sidewalks_stylefilename = 'sidewalkstyles.qml'
