@@ -688,7 +688,7 @@ class sidewalkreator:
         create_fill_id_field(self.splitted_lines)
 
         # adding layers to canvas:
-        apply_style(self.splitted_lines,road_intersections_stylefilename)
+        apply_style(self.filtered_intersection_points,road_intersections_stylefilename)
 
         self.add_layer_canvas(self.filtered_intersection_points)
         self.add_layer_canvas(self.splitted_lines)
