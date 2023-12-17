@@ -472,7 +472,7 @@ class sidewalkreator:
             (self.dlg.opt_perp_crossings,'perpen-\ndicularly','perpendi-\ncularmente'),
             (self.dlg.label_inward_d,'distance\ninward','distância\nadentro'),
             (self.dlg.voronoi_checkbox,'Use Voronoi Polygons Rule','Usar Polígonos de Voronoi'),
-            (self.dlg.alongside_vor_checkbox,'Alongside with another option','Junto à Outra Opção'),
+            (self.dlg.alongside_vor_checkbox,'Alongside another option','Junto à Outra Opção'),
             (self.dlg.maxlensplit_checkbox,'Max Len.','Larg. Máx.'),
             (self.dlg.segsbynum_checkbox,'In x\nsegments','Em x\nsegmentos'),
             (self.dlg.onlyfacades_checkbox,'Only Facades',' Faces Q.'),
@@ -631,7 +631,9 @@ class sidewalkreator:
             for i in range(self.dlg.dead_end_iters_box.value()):
                 # without second input, the function will work just as before
                 remove_lines_from_no_block(self.splitted_lines)
-
+        
+        # adding same style again:
+        # style_line_random_colors(self.clipped_reproj_datalayer,highway_tag,self.streets_styledict)
 
         ##### creating points of intersection:
         intersection_points = get_intersections(self.splitted_lines,self.splitted_lines,'TEMPORARY_OUTPUT')
@@ -920,10 +922,12 @@ class sidewalkreator:
         # print(QgsProject.instance().mapLayers())
 
         self.add_layer_canvas(self.whole_sidewalks)
-        self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
+        # self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
+        apply_style(self.whole_sidewalks,sidewalks_stylefilename)
 
         self.add_layer_canvas(self.crossings_layer)
-        self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
+        # self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
+        apply_style(self.crossings_layer,crossings_stylefilename)
 
 
         # kerbs:
@@ -2563,6 +2567,9 @@ class sidewalkreator:
 
         self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
         self.dlg.datafetch_progressbar.setValue(100)
+
+        # setting style on roads:
+        # self.streets_styledict = style_line_random_colors(self.clipped_reproj_datalayer,highway_tag)
 
 
     def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):

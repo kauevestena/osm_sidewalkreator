@@ -906,7 +906,7 @@ dead-end-streets
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Alongside with another option</string>
+         <string>Alongside another option</string>
         </property>
        </widget>
       </item>

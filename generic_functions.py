@@ -4,11 +4,11 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from processing.tools import dataobjects
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
 
 from processing.gui.AlgorithmExecutor import execute_in_place
 
-import os, json
+import os, json #, random
 from math import isclose,pi
 
 
@@ -1348,3 +1348,45 @@ def remove_unconnected_lines_v2(inputlayer):
 
                 if not_intersecting:
                     inputlayer.deleteFeature(feat_id)
+
+# def generate_bounded_color(vmin=100,vmax=200):
+#     """Generate a random color with each channel limited to max_brightness."""
+#     r = random.randint(vmin,vmax)
+#     g = random.randint(vmin,vmax)
+#     b = random.randint(vmin,vmax)
+
+#     # returning as hex:
+#     return f'#{r:02x}{g:02x}{b:02x}'
+
+
+# def style_line_random_colors(layer, field_name,previous_dict=None):
+
+#     # renderer = layer.renderer()
+#     # symbol = renderer.symbol()
+
+#     # if symbol.type() == QgsSymbol.Line:
+#     categories = {}
+#     colors = {}
+
+#     fields = layer.fields()
+#     field_index = fields.indexFromName(field_name)
+#     unique_values = layer.uniqueValues(field_index)
+
+#     for value in unique_values:
+#         if previous_dict:
+#             if value in previous_dict:
+#                 categories[value] = QgsRendererCategory(str(value), QgsLineSymbol.createSimple({'color': previous_dict[value], 'width': .5}),str(value))
+
+#         else:
+#             color = generate_bounded_color()
+
+#             categories[value] = QgsRendererCategory(value, QgsLineSymbol.createSimple({'color': color, 'width': .5}),f'{value}')
+#             colors[value] = color
+
+#     renderer = QgsCategorizedSymbolRenderer(field_name, list(categories.values()))
+#     layer.setRenderer(renderer)
+
+#     layer.triggerRepaint()
+
+#     return colors
+
