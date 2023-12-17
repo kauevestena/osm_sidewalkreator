@@ -905,20 +905,27 @@ def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index
 
 
         for point in pointlist:
-            pC = qgsgeom_to_pointuple(point)
+            try:
+                pC = qgsgeom_to_pointuple(point)
 
 
-            angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+                angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
 
-            if angle > 180:
-                angle = 360 - angle
+                if angle > 180:
+                    angle = 360 - angle
 
-            anglelist.append(angle)
+                anglelist.append(angle)
+            except:
+                anglelist.append(360)
 
         if print_angles:
             print(anglelist)
 
-        index = anglelist.index(min(anglelist))
+        if anglelist:
+
+            index = anglelist.index(min(anglelist))
+        else:
+            index = 0
 
         if return_index:
             return index
@@ -953,8 +960,9 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
             return True,intersectiongeom
         else:
             # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearest to "referencepoint"
-            print(intersectiongeom.asWkt())
-            print(intersectiongeom.wkbType())
+            
+            # print(intersectiongeom.asWkt())
+            # print(intersectiongeom.wkbType())
 
             as_geomcollection = intersectiongeom.asGeometryCollection()
 

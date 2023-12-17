@@ -367,7 +367,7 @@ Compute Intersections</string>
     <string notr="true">background-color: rgb(255, 253, 197);</string>
    </property>
    <property name="text">
-    <string>Many Times its better to
+    <string>Sometimes it's better to
 correct errors on OSM data first!</string>
    </property>
    <property name="alignment">
@@ -1244,7 +1244,7 @@ dicularly</string>
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>min segment
+         <string>min road segment
 length</string>
         </property>
         <property name="alignment">

@@ -479,7 +479,7 @@ class sidewalkreator:
             (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
             (self.dlg.input_feature_text,"input feature:\n(-1: none)",'Feição de Entrada\n(-1: nenhuma)'),
 
-            (self.dlg.min_seg_len_label,"min segment\nlength",'comprimento\nmin. (seg.)'),
+            (self.dlg.min_seg_len_label,"min road\nsegment length",'comprimento min.\n(seg. via)'),
             (self.dlg.ch_remove_abovetol,"remove above tolerance",'remover se acima da tol.'),
 
 
@@ -1137,16 +1137,20 @@ class sidewalkreator:
                 '''
 
 
+                paralell_unsucessful = False
 
                 if self.dlg.opt_parallel_crossings.isChecked():
                     pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
 
                     # chosen index:
-                    ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0,True)
+                    try:
+                        ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0)
+                        dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],initial_vec_len)
+                    except:
+                        paralell_unsucessful = True
 
-                    dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],initial_vec_len)
 
-                if self.dlg.opt_perp_crossings.isChecked():
+                if self.dlg.opt_perp_crossings.isChecked() or paralell_unsucessful:
 
                     # creating a perpendicular vector:
                     #    first, we create a vector parallel to the current street segment
@@ -1222,25 +1226,29 @@ class sidewalkreator:
                 '''
                     in the next functions, we:
 
-                        - create the candidate points, intersecting lines with circle
+                        - create the candidate points, intersecting lines with a circle
 
                         - find the index of the point that forms the minor angle
 
                         - create the vector containing the direction of the crossing
                 '''
 
+                paralell_unsucessful = False
 
                 if self.dlg.opt_parallel_crossings.isChecked():
                     pts_inters_PF =  points_intersecting_buffer_boundary(PF,self.splitted_lines,list(PF_intersecting_widths))
 
 
                     # chosen index:
-                    ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
+                    try:
+                        ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
 
-                    dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],initial_vec_len)
+                        dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],initial_vec_len)
+                    except:
+                        paralell_unsucessful = True
 
 
-                if self.dlg.opt_perp_crossings.isChecked():
+                if self.dlg.opt_perp_crossings.isChecked() or paralell_unsucessful:
 
                     # creating a perpendicular vector:
                     #    first, we create a vector parallel to the current street segment

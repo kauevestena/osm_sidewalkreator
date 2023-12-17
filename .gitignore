@@ -159,3 +159,5 @@ temporary/*
 
 # REPORTS:
 reports/*
+
+tests.py
