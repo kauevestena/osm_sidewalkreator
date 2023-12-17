@@ -95,6 +95,13 @@ reports_path = os.path.join(basepath,'reports')
 
 assets_path = os.path.join(basepath,'assets')
 
+# this two are here because of the dependency structure
+# in future they should be moved to generic_functions
+def stylepath(filename):
+    return os.path.join(assets_path,filename)
+
+def apply_style(layer,filename):
+    layer.loadNamedStyle(stylepath(filename))
 
 basic_folderpathlist = [temps_path,reports_path,assets_path]
 for folderpath in basic_folderpathlist:
@@ -681,6 +688,8 @@ class sidewalkreator:
         create_fill_id_field(self.splitted_lines)
 
         # adding layers to canvas:
+        apply_style(self.splitted_lines,road_intersections_stylefilename)
+
         self.add_layer_canvas(self.filtered_intersection_points)
         self.add_layer_canvas(self.splitted_lines)
 
@@ -1792,9 +1801,10 @@ class sidewalkreator:
 
 
         # styling the sidewalks layer
-        self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
+        # self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
 
-        self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
+        # self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
+        apply_style(self.whole_sidewalks,sidewalks_stylefilename)
 
         # adding layers to canvas
         self.add_layer_canvas(self.exclusion_zones)
@@ -2232,9 +2242,10 @@ class sidewalkreator:
                                 self.iface.mapCanvas().refresh()
 
                                 # setting a default style for input polygons:
-                                inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
+                                # inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
 
-                                self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
+                                # self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
+                                apply_style(self.input_layer,inputpolygons_stylefilename)
 
                                 # enabling itens for next step
                                 self.dlg.datafetch.setEnabled(True)
@@ -2390,6 +2401,7 @@ class sidewalkreator:
                 self.dlg.datafetch_progressbar.setValue(55)
 
                 if draw_buildings:
+                    apply_style(self.reproj_buildings,buildings_stylefilename)
                     self.add_layer_canvas(self.reproj_buildings)
 
 
@@ -2459,9 +2471,10 @@ class sidewalkreator:
 
                 self.POIs_for_splitting_layer.setCrs(self.custom_localTM_crs)
 
-                pois_stylepath = os.path.join(assets_path,'addrs_centroids.qml')
+                # pois_stylepath = os.path.join(assets_path,'addrs_centroids2.qml')
 
-                self.POIs_for_splitting_layer.loadNamedStyle(pois_stylepath)
+                # self.POIs_for_splitting_layer.loadNamedStyle(pois_stylepath)
+                apply_style(self.POIs_for_splitting_layer,splitting_pois_stylefilename)
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 

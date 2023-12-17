@@ -114,6 +114,9 @@ inputpolygons_stylefilename = 'polygonstyles.qml'
 crossings_stylefilename = 'crossings.qml'
 kerbs_stylefilename = 'kerbs.qml'
 exclusion_stylefilename = 'exclusion_zones.qml'
+splitting_pois_stylefilename = 'addrs_centroids2.qml'
+buildings_stylefilename = 'buildings.qml'
+road_intersections_stylefilename = 'road_intersections.qml'
 
 
 
