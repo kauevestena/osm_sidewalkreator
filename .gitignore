@@ -161,3 +161,7 @@ temporary/*
 reports/*
 
 tests.py
+
+# gpkg temps
+*.gpkg-shm
+*.gpkg-wal
