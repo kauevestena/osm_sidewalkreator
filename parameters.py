@@ -76,6 +76,13 @@ default_widths = {
     'road' : 6.0,
     'living_street': 0.0,
 
+    # links:
+    "trunk_link" : 0,
+    'motorway_link' : 0,
+    'secondary_link' : 0,
+    "tertiary_link" : 0,
+    "primary_link" : 0,
+
 
     # values that must be ignored:
     'sidewalk' : 0,
@@ -92,19 +99,16 @@ default_widths = {
     'services' : 0,
     'footway' : 0,
     'track' : 0,
-    "tertiary_link" : 0,
-    "trunk_link" : 0,
-    "primary_link" : 0,
+
     'corridor' : 0 ,
     'steps' : 0,
     'street_lamp' : 0,
-    'motorway_link' : 0,
-    'secondary_link' : 0,
+
 
     # '' : ,
     }
 
-# for cases of an unexpected value:
+# for case(s) of an unexpected value:
 fallback_default_width = 6.0
 
 # ASSETS:
