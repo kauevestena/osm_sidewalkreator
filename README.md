@@ -46,6 +46,8 @@ The summary of what the plugin does is what follows:
 
 It is mostly intended for Acessibility Mapping.
 
+Though the data was generated thinking on the usage for OSM, one may use it for pedestrian network analysis out-of-the-box, or even for other purposes inside or outside QGIS.
+
 ## Known Issues:
 
 The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn't come bundled with QGIS, 
