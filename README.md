@@ -2,7 +2,9 @@
 
 [A Qgis plugin, officialy available at the official Plugin Repository!](https://plugins.qgis.org/plugins/osm_sidewalkreator/)
 
-![logo][project_logo]{width=400}
+
+<img src="assets/logos/sidewalkreator_logo.png" alt="Image" width="400">
+
 
 ## Scientific Publication is now Available!!
 
@@ -53,5 +55,3 @@ so you can install it manually with:
     
  In a future release I will try to use the GDAL driver for .osm removing even this dependency ;
 
-
-[project_logo]: assets/logos/sidewalkreator_logo.png
