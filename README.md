@@ -2,7 +2,7 @@
 
 [A Qgis plugin, officialy available at the official Plugin Repository!](https://plugins.qgis.org/plugins/osm_sidewalkreator/)
 
-![logo][project_logo]
+![logo][project_logo]{width=400}
 
 ## Scientific Publication is now Available!!
 
