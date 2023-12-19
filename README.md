@@ -54,4 +54,4 @@ so you can install it manually with:
  In a future release I will try to use the GDAL driver for .osm removing even this dependency ;
 
 
-[project_logo]: https://raw.githubusercontent.com/kauevestena/osm_sidewalkreator/assets/logos/sidewalkreator_logo.png
+[project_logo]: assets/logos/sidewalkreator_logo.png
