@@ -4,7 +4,9 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from processing.tools import dataobjects
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication, Qgis #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
+# from qgis.core import Qgis
+
 
 from processing.gui.AlgorithmExecutor import execute_in_place
 
@@ -853,7 +855,7 @@ def points_intersecting_buffer_boundary(input_point,inputlayer,featlist=None,buf
         inputlayer must have geometries of Line type
     '''
 
-    boundary = input_point.buffer(buffersize,segments).convertToType(1) # 1 is the value for "LineGeometry" in https://qgis.org/api/classQgsWkbTypes.html
+    boundary = input_point.buffer(buffersize,segments).convertToType(Qgis.GeometryType(1)) # 1 is the value for "LineGeometry" in https://api.qgis.org/api/classQgis.html#a84964253bb44012b246c20790799c04d
 
     # list storing the points that shall be returned:
     ret_list = []
