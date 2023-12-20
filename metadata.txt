@@ -20,7 +20,7 @@ repository=https://github.com/kauevestena/osm_sidewalkreator
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=Sure zones added, Consistent Styles for the temporary Layers added, Fixes on functional parts and bugs
 
 # Tags are comma separated with spaces allowed
 tags=openstreetmap, osm, vector
