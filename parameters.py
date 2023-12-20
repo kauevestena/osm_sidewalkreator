@@ -117,10 +117,16 @@ sidewalks_stylefilename = 'sidewalkstyles.qml'
 inputpolygons_stylefilename = 'polygonstyles.qml'
 crossings_stylefilename = 'crossings.qml'
 kerbs_stylefilename = 'kerbs.qml'
-exclusion_stylefilename = 'exclusion_zones.qml'
 splitting_pois_stylefilename = 'addrs_centroids2.qml'
 buildings_stylefilename = 'buildings.qml'
 road_intersections_stylefilename = 'road_intersections.qml'
+
+exclusion_stylefilename = 'exclusion_zones.qml'
+sure_stylefilename = 'sure_zones.qml'
+
+roads_p1_stylefilename = 'roads_p1.qml'
+roads_p2_stylefilename = 'roads_p2_main.qml'
+roads_p3_stylefilename = 'roads_p3.qml'
 
 
 

@@ -634,6 +634,9 @@ class sidewalkreator:
         
         # adding same style again:
         # style_line_random_colors(self.clipped_reproj_datalayer,highway_tag,self.streets_styledict)
+                
+        # adding the style:
+        apply_style(self.splitted_lines,roads_p2_stylefilename)
 
         ##### creating points of intersection:
         intersection_points = get_intersections(self.splitted_lines,self.splitted_lines,'TEMPORARY_OUTPUT')
@@ -928,7 +931,6 @@ class sidewalkreator:
         self.add_layer_canvas(self.crossings_layer)
         # self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
         apply_style(self.crossings_layer,crossings_stylefilename)
-
 
         # kerbs:
         create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
@@ -1659,9 +1661,12 @@ class sidewalkreator:
         '''
 
         """
-            NEW PART: exclusion zones        
+            NEW PART: exclusion zones & sure zones
         """
+
         exclusion_zones_featlist = []
+
+        sure_zones_featlist = []
 
         for i,feature in enumerate(self.splitted_lines.getFeatures()):
             attrdict = feature.attributeMap()
@@ -1678,58 +1683,86 @@ class sidewalkreator:
 
             geom = None
 
-            sidewalk_tag = attrdict.get('sidewalk')
+            geom_sure_zone = None
+
+
+            # all possibilities of sidewalk tag keys:
+            sidewalk_tag_value = attrdict.get('sidewalk')
+            sidewalk_both_tag_value = attrdict.get('sidewalk:both')
+            sidewalk_left_tag_value = attrdict.get('sidewalk:left')
+            sidewalk_right_tag_value = attrdict.get('sidewalk:right')
 
             # 0 is for "left"
             # 1 is for "right"
 
-            if sidewalk_tag:
-                if sidewalk_tag == 'no':
+            if sidewalk_tag_value:
+                if sidewalk_tag_value == 'no':
                     geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
-                elif sidewalk_tag == 'left':
+                elif sidewalk_tag_value == 'left':
                     geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
-                elif sidewalk_tag == 'right':
-                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
-                elif sidewalk_tag == 'both':
-                    continue
 
-            sidewalk_both_tag = attrdict.get('sidewalk:both')
-
-            if sidewalk_both_tag:
-                if sidewalk_both_tag == 'no':
-                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
-                if sidewalk_both_tag == 'both':
-                    continue
-
-            sidewalk_left_tag = attrdict.get('sidewalk:left')
-
-            if sidewalk_left_tag:
-                if sidewalk_left_tag == 'no':
+                    geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
+                elif sidewalk_tag_value == 'right':
                     geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
 
-            sidewalk_right_tag = attrdict.get('sidewalk:right')
+                    geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
 
-            if sidewalk_right_tag:
-                if sidewalk_right_tag == 'no':
-                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+                elif sidewalk_tag_value == 'both' or sidewalk_tag_value == 'yes':
+                    geom_sure_zone = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
+
+            elif sidewalk_both_tag_value:
+                if sidewalk_both_tag_value == 'no':
+                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
+                if sidewalk_both_tag_value == 'both' or sidewalk_both_tag_value == 'yes':
+                    geom_sure_zone = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)    
+                 
+            else:
+                if sidewalk_left_tag_value:
+                    if sidewalk_left_tag_value == 'no':
+                        geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
+                    elif sidewalk_left_tag_value == 'yes':
+                        geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+
+
+
+                if sidewalk_right_tag_value:
+                    if sidewalk_right_tag_value == 'no':
+                        if geom:
+                            exclusion_zones_featlist.append(geom_to_feature(QgsGeometry(geom),['negative_tag_representation']))
+
+                        geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+                    elif sidewalk_right_tag_value == 'yes':
+                        if geom_sure_zone:
+                            sure_zones_featlist.append(geom_to_feature(QgsGeometry(geom_sure_zone),['positive_tag_representation']))
+
+
+                        geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
             
 
             if geom:
-                as_feat = geom_to_feature(geom,['tag_repr'])
+                as_feat = geom_to_feature(geom,['negative_tag_representation'])
                 exclusion_zones_featlist.append(as_feat)
+
+            if geom_sure_zone:
+                as_feat_sure = geom_to_feature(geom_sure_zone,['positive_tag_representation'])
+                sure_zones_featlist.append(as_feat_sure)
             
 
 
-        # effectively creating the layer
+        # effectively creating the layers
         self.exclusion_zones = layer_from_featlist(exclusion_zones_featlist,'exclusion_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
+
+        self.sure_zones = layer_from_featlist(sure_zones_featlist,'sure_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
+
 
         # storing the feature count of exclusion zones:
         self.exclusion_zones_count = self.exclusion_zones.featureCount()
 
         ### setting styles and adding to canvas
-        exclusionzones_stylelayerpath = os.path.join(assets_path,exclusion_stylefilename)
-        self.exclusion_zones.loadNamedStyle(exclusionzones_stylelayerpath)
-
+        # exclusionzones_stylelayerpath = os.path.join(assets_path,exclusion_stylefilename)
+        # self.exclusion_zones.loadNamedStyle(exclusionzones_stylelayerpath)
+        apply_style(self.exclusion_zones,exclusion_stylefilename)
+        apply_style(self.sure_zones,sure_stylefilename)
 
 
 
@@ -1818,8 +1851,13 @@ class sidewalkreator:
         # self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
         apply_style(self.whole_sidewalks,sidewalks_stylefilename)
 
+        # and now on the roads, that are just simpler less important things:
+        apply_style(self.splitted_lines,roads_p3_stylefilename)
+
+
         # adding layers to canvas
         self.add_layer_canvas(self.exclusion_zones)
+        self.add_layer_canvas(self.sure_zones)
         self.add_layer_canvas(self.whole_sidewalks)
 
         # disabling what won't be needed afterwards
@@ -2549,7 +2587,7 @@ class sidewalkreator:
 
 
         # BUT... if there are sidewalks already drawn, one must step back!!
-        # if sidewalk_tag_value in self.unique_highway_values:
+        # if sidewalk_tag_value_value in self.unique_highway_values:
         #     # DISABLING STUFF
         #     if not self.ignore_sidewalks_already_drawn:
         #         self.disable_all_because_sidewalks()
@@ -2569,7 +2607,7 @@ class sidewalkreator:
         self.dlg.datafetch_progressbar.setValue(100)
 
         # setting style on roads:
-        # self.streets_styledict = style_line_random_colors(self.clipped_reproj_datalayer,highway_tag)
+        apply_style(self.clipped_reproj_datalayer,roads_p1_stylefilename)
 
 
     def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
