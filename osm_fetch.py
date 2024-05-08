@@ -3,13 +3,14 @@
 '''
 
 
-import requests, os, time, json
+import requests, os, time, json, tempfile
 # import codecs
 # import geopandas as gpd
 # from geopandas import read_file
 import osm2geojson
 from itertools import cycle
 from qgis.core import QgsApplication
+from osgeo import gdal
 
 # doing some stuff again to avoid circular imports:
 # homepath = os.path.expanduser('~')
@@ -193,8 +194,21 @@ def get_osm_data(querystring,tempfilesname,geomtype='LineString',print_response=
 
     filtered_geojson_dict = filter_gjsonfeats_bygeomtype(geojson_datadict,geomtype)
 
+    # QgsVectorDataProvider
 
+    with tempfile.TemporaryDirectory() as tempdirpath:
 
+        xml_filepath = os.path.join(tempdirpath,'temp_osm.xml')
+
+        with open(xml_filepath,'w+',encoding='utf-8') as xml_handle:
+            xml_handle.write(response.text)
+
+        ds = gdal.OpenEx(xml_filepath,allowed_drivers=['OSM'])
+
+        layer = ds.GetLayer()
+        feature = layer.GetFeature(0)
+
+        print(ds,layer,feature)
 
     print('conversion sucessfull!!')
 
