@@ -18,7 +18,7 @@ The experiments for the publication were carried out in a separate repository: h
 
 Please check it at: https://wiki.openstreetmap.org/wiki/OSM_SidewalKreator 
 
-The wiki speaks about the workflow in a deep level of detail.
+The wiki will speak about the workflow in a deep level of detail (still in progress).
 
 ## Presented at State of the Map 2022!
 Abstract at the proceedings: https://zenodo.org/record/7004523
@@ -54,6 +54,23 @@ The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn
 so you can install it manually with:
 
     <qgis_python_path> -m pip install shapely
-    
- In a future release I will try to use the GDAL driver for .osm removing even this dependency ;
+
+### For Flatpak QGIS:
+
+1) Open the flatpak shell for the qgis package:
+
+
+    flatpak run --command=sh org.qgis.qgis
+   
+3) Within the shell, type:
+
+
+    curl https://bootstrap.pypa.io/pip/pip.pyz -o pip.pyz
+   
+5) Install shapely:
+
+
+    python3 pip.pyz install shapely
+
+In a future release, from [this branch]([https://eurogeojournal.eu/index.php/egj/article/view/553](https://github.com/kauevestena/osm_sidewalkreator/tree/remove_dependencies)) this dependency shall be removed.
 
