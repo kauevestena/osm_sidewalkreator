@@ -108,23 +108,8 @@ for folderpath in basic_folderpathlist:
     create_dir_ifnotexists(folderpath)
 
 
-# importing osm2geojson directly or use the whl version:
-try:
-    import osm2geojson
-except:
-    # # try:
-    # #     # at first, try to install by pypi, using the up-to-date-version
-    # #     subprocess.check_call([sys.executable, "-m", "pip", "install", 'osm2geojson'])
-    # # except:
-    # if does not work use the frozen (whl) package
-    import sys
-    whl_path = os.path.join(basepath,'dependencies/osm2geojson-0.1.33-py3-none-any.whl')
-    sys.path.append(whl_path)
-    import osm2geojson
-
-
-# # then again, because its better to raise an error...
-import osm2geojson
+# osm2geojson import block removed as per refactoring instructions.
+# The functionality is now handled by osm_fetch.py using GDAL.
 # import ogr2osm
 
 
