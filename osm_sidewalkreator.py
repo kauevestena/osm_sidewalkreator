@@ -1018,7 +1018,7 @@ class sidewalkreator:
 
             featurewidth = float(feature_A[widths_fieldname]) #on Windows, sometimes interpreted as string...
 
-            feature_osm_id = feature_A['id']
+            feature_osm_id = feature_A['osm_id']
 
             feature_layer_id = feature_A.id()
 
