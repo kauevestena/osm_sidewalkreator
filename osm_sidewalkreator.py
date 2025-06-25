@@ -26,6 +26,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 
 # import os.path
 import os, requests, codecs, time
+
 # from os import environ
 
 # standard libraries
@@ -35,9 +36,23 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.gui import QgsMapLayerComboBox, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QAction
+
 # additional qgis/qt imports:
 from processing.gui.AlgorithmExecutor import execute_in_place
-from qgis.core import QgsMapLayerProxyModel, QgsFeature, QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, QgsApplication, edit, QgsGeometryUtils, QgsFeatureRequest, Qgis, NULL, QgsStatisticalSummary
+from qgis.core import (
+    QgsMapLayerProxyModel,
+    QgsFeature,
+    QgsCoordinateReferenceSystem,
+    QgsVectorLayer,
+    QgsProject,
+    QgsApplication,
+    edit,
+    QgsGeometryUtils,
+    QgsFeatureRequest,
+    Qgis,
+    NULL,
+    QgsStatisticalSummary,
+)
 from qgis.utils import iface
 
 
@@ -47,12 +62,11 @@ from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtCore import QVariant
 
 
-
 # Initialize Qt resources from file resources.py
 from .resources import *
+
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
-
 
 
 # for third-party libraries installation
@@ -86,24 +100,27 @@ from .generic_functions import *
 from .parameters import *
 
 profilepath = QgsApplication.qgisSettingsDirPath()
-base_pluginpath_p2 = 'python/plugins/osm_sidewalkreator'
-basepath = os.path.join(profilepath,base_pluginpath_p2)
-temps_path = os.path.join(basepath,'temporary')
+base_pluginpath_p2 = "python/plugins/osm_sidewalkreator"
+basepath = os.path.join(profilepath, base_pluginpath_p2)
+temps_path = os.path.join(basepath, "temporary")
 
 print(basepath)
-reports_path = os.path.join(basepath,'reports')
+reports_path = os.path.join(basepath, "reports")
 
-assets_path = os.path.join(basepath,'assets')
+assets_path = os.path.join(basepath, "assets")
+
 
 # this two are here because of the dependency structure
 # in future they should be moved to generic_functions
 def stylepath(filename):
-    return os.path.join(assets_path,filename)
+    return os.path.join(assets_path, filename)
 
-def apply_style(layer,filename):
+
+def apply_style(layer, filename):
     layer.loadNamedStyle(stylepath(filename))
 
-basic_folderpathlist = [temps_path,reports_path,assets_path]
+
+basic_folderpathlist = [temps_path, reports_path, assets_path]
 for folderpath in basic_folderpathlist:
     create_dir_ifnotexists(folderpath)
 
@@ -116,11 +133,12 @@ for folderpath in basic_folderpathlist:
 # # internal dependencies, part2:
 from .osm_fetch import *
 
+
 class sidewalkreator:
     """QGIS Plugin Implementation."""
 
     # to control current language:
-    current_lang = 'en'
+    current_lang = "en"
 
     # variables to control wheter change in language should change labels
     change_input_labels = True
@@ -140,14 +158,12 @@ class sidewalkreator:
     # if the plugin is ready to export results (avoid the problem when user click again at the plugin icon)
     export_ready = False
 
-
-    # a pre-declaration 
+    # a pre-declaration
     already_existing_sidewalks_layer = None
 
     # hint texts:
     en_hint = "Sometimes it's better to\ncorrect errors on OSM data first!"
-    ptbr_hint = 'Pode ser melhor consertar\nerros na base do OSM antes!'
-
+    ptbr_hint = "Pode ser melhor consertar\nerros na base do OSM antes!"
 
     def __init__(self, iface):
         """Constructor.
@@ -162,11 +178,10 @@ class sidewalkreator:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
+        locale = QSettings().value("locale/userLocale")[0:2]
         locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'sidewalkreator_{}.qm'.format(locale))
+            self.plugin_dir, "i18n", "sidewalkreator_{}.qm".format(locale)
+        )
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -175,13 +190,11 @@ class sidewalkreator:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&OSM SidewalKreator')
+        self.menu = self.tr("&OSM SidewalKreator")
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
-
-
 
         ###############################################
         ####    My code on __init__
@@ -189,15 +202,12 @@ class sidewalkreator:
         # language_selector
         # self.dlg.opt_ptbr.checked.connect(self.change_language)
 
-
         # self.session_debugpath = os.path.join(reports_path,'session_debug.txt')
 
         # with open(self.session_debugpath,'w+') as session_report:
         #     session_report.write('session_report:\n')
         #     # session_report.write(session_debugpath+'\n')
         #     # session_report.write(homepath)
-
-
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -212,8 +222,7 @@ class sidewalkreator:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('sidewalkreator', message)
-
+        return QCoreApplication.translate("sidewalkreator", message)
 
     def add_action(
         self,
@@ -225,7 +234,8 @@ class sidewalkreator:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
+        parent=None,
+    ):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -281,38 +291,31 @@ class sidewalkreator:
             self.iface.addToolBarIcon(action)
 
         if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
+            self.iface.addPluginToMenu(self.menu, action)
 
         self.actions.append(action)
 
         return action
 
     def initGui(self):
-
-
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/osm_sidewalkreator/icon.png'
+        icon_path = ":/plugins/osm_sidewalkreator/icon.png"
         self.add_action(
             icon_path,
-            text=self.tr(u'Create Sidewalks for OSM'),
+            text=self.tr("Create Sidewalks for OSM"),
             callback=self.run,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow(),
+        )
 
         # will be set False in run()
         self.first_start = True
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginMenu(
-                self.tr(u'&OSM SidewalKreator'),
-                action)
+            self.iface.removePluginMenu(self.tr("&OSM SidewalKreator"), action)
             self.iface.removeToolBarIcon(action)
-
 
     def run(self):
         """Run method that performs all the real work"""
@@ -323,45 +326,43 @@ class sidewalkreator:
             self.first_start = False
             self.dlg = sidewalkreatorDialog()
 
-
-
-
             # setting items that should not be visible at beginning:
             self.dlg.sidewalks_warning.setHidden(True)
             self.dlg.hint_text.setHidden(True)
             self.dlg.ignore_already_drawn_btn.setHidden(True)
 
-
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
             self.dlg.clean_data.clicked.connect(self.data_clean)
             self.dlg.generate_sidewalks.clicked.connect(self.draw_sidewalks)
-            self.dlg.ignore_already_drawn_btn.clicked.connect(self.ignore_already_drawn_fcn)
+            self.dlg.ignore_already_drawn_btn.clicked.connect(
+                self.ignore_already_drawn_fcn
+            )
             self.dlg.add_osm_basemap.clicked.connect(self.add_osm_basemap_func)
             self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
             self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
             self.dlg.split_sidewalks.clicked.connect(self.sidewalks_splitting)
             self.dlg.alongside_vor_checkbox.clicked.connect(self.alongside_voronoi_opts)
-            self.dlg.output_folder_selector.fileChanged.connect(self.change_folderselector_name)
-
-
-
-
+            self.dlg.output_folder_selector.fileChanged.connect(
+                self.change_folderselector_name
+            )
 
             # cancel means reset AND close
-            self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_fields)
-            self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.reset_fields)
+            self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(
+                self.reset_fields
+            )
+            self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(
+                self.reset_fields
+            )
             self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
-
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
             self.dlg.opt_en.clicked.connect(self.go_back_to_english)
             self.dlg.input_layer_selector.layerChanged.connect(self.get_input_layer)
-            self.dlg.input_layer_feature_selector.featureChanged.connect(self.get_input_feature)
-
-
-
+            self.dlg.input_layer_feature_selector.featureChanged.connect(
+                self.get_input_feature
+            )
 
             # # # handles and modifications/ors:
             self.dlg.input_layer_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
@@ -381,34 +382,33 @@ class sidewalkreator:
         if result:
             self.ok_ready = True
 
-
             if self.export_ready:
                 self.outputting_files()
 
-            self.reset_fields() # so "rebooting" for next execution
+            self.reset_fields()  # so "rebooting" for next execution
 
     ##################################
     ##### THE CLASS SCOPE
     ##################################
     def set_hint_text(self):
         self.dlg.hint_text.setText(
-            self.string_according_language(self.en_hint,self.ptbr_hint)
+            self.string_according_language(self.en_hint, self.ptbr_hint)
         )
 
-    def add_layer_canvas(self,layer):
+    def add_layer_canvas(self, layer):
         # canvas = QgsMapCanvas()
         QgsProject.instance().addMapLayer(layer)
         QgsMapCanvas().setExtent(layer.extent())
         # canvas.setLayerSet([QgsMapCanvasLayer(layer)])
 
-    def remove_layer_canvas(self,layername):
+    def remove_layer_canvas(self, layername):
         # canvas = QgsMapCanvas()
         id = QgsProject.instance().mapLayersByName(layername)[0]
         QgsProject.instance().removeMapLayer(id)
         # canvas.setLayerSet([QgsMapCanvasLayer(layer)])
 
     def change_language_ptbr(self):
-        self.current_lang = 'ptbr'
+        self.current_lang = "ptbr"
 
         # # frozing selection if you opt for ptbr:
         # self.dlg.opt_ptbr.setEnabled(False)
@@ -417,72 +417,148 @@ class sidewalkreator:
         self.change_all_labels_bylang()
 
     def go_back_to_english(self):
-        self.current_lang = 'en'
+        self.current_lang = "en"
 
         self.change_all_labels_bylang()
 
     def change_all_labels_bylang(self):
         info_tuples = [
             # tuples: (qt-dlg_element,english_text,ptbr_text)
-            (self.dlg.lang_label,"Language: ","Idioma: "),
-            (self.dlg.input_pol_label,"Input Polygon: ","Polígono de Entrada" ),
-            (self.dlg.table_txt1,'default widths for tag values','larguras-padrão para valores'),
-            (self.dlg.table_txt2,'"0" means ignore features','"0": ignorar feições'),
-            (self.dlg.output_file_label,'Output File:','Arquivo de Saída:'),
-            (self.dlg.datafetch,'Fetch Data','Obter Dados'),
-            (self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels),
-            (self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels),
-            (self.dlg.button_box.button(QDialogButtonBox.Cancel),"Cancel","Cancelar"),
-            (self.dlg.button_box.button(QDialogButtonBox.Reset),"Reset","Reiniciar"),
-            (self.dlg.clean_data,'Clean OSM Data and\nCompute Intersections','Limp. dados OSM e\nGerar Interseções'),
-            (self.dlg.sidewalks_warning,"Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,this stuff shall be handled properly...)","Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)"),
-            (self.dlg.check_if_overlaps_buildings,'Check if Overlaps\n Buildings\n(much slower)','Testar se Sobrepõe\nEdificações\n(mais lento)'),
-            (self.dlg.hint_text,self.en_hint,self.ptbr_hint),
-            (self.dlg.generate_sidewalks,'Generate Sidewalks','Gerar Calçadas'),
-            (self.dlg.ignore_already_drawn_btn,"I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",'Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)'),
-            (self.dlg.ch_ignore_buildings,'ignore buildings\n(much faster)','ignorar edificações\n(mais rápido)'),
-            (self.dlg.min_d_label,'Min Distance\nto Buildings','Distância Mínima\np. Edificaçoes'),
-            (self.dlg.min_d_label,'Min Distance\nto Buildings','Dist. Min.\np. Edificaçoes'),
-            (self.dlg.curveradius_label,'Curve\nRadius','Raio de\nCurvatura'),
-            (self.dlg.d_to_add_label,'Distance to\nadd to Width','D. Adic.\nàs Larguras'),
-            (self.dlg.min_width_label,'Min Width','Largura\nMínima'),
-            (self.dlg.add_osm_basemap,'+ OSM\nBase Map','+Mapa-Base\nOSM'),
-            (self.dlg.add_bing_base,'+ BING\nBase Img.','+Imagens\nBING'),
-            (self.dlg.generate_crossings,'Generate Crossings','Gerar Cruzamentos'),
-            (self.dlg.dead_end_iters_label,'Iters. to remove\ndead-end-streets\n(0 to keep all of them)','Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)'),
-            (self.dlg.split_sidewalks,'Split Sidewalk Geometries','Subdividir Calçadas (Geometrias)'),
-            (self.dlg.perc_tol_crossings_label,'len.\ntol.','tol.\ndist.'),
-            (self.dlg.perc_draw_kerbs_label,'Kerbs\nat','Kerb*\nem.'),
-            (self.dlg.opt_parallel_crossings,'in parallel to\ntransversal seg.','paralelo ao\nseg. transversal'),
-            (self.dlg.opt_perp_crossings,'perpen-\ndicularly','perpendi-\ncularmente'),
-            (self.dlg.label_inward_d,'distance\ninward','distância\nadentro'),
-            (self.dlg.voronoi_checkbox,'Use Voronoi Polygons Rule','Usar Polígonos de Voronoi'),
-            (self.dlg.alongside_vor_checkbox,'Alongside another option','Junto à Outra Opção'),
-            (self.dlg.maxlensplit_checkbox,'Max Len.','Larg. Máx.'),
-            (self.dlg.segsbynum_checkbox,'In x\nsegments','Em x\nsegmentos'),
-            (self.dlg.onlyfacades_checkbox,'Only Facades',' Faces Q.'),
-            (self.dlg.dontsplit_checkbox,"Don't Split",'Não Dividir'),
-            (self.dlg.input_feature_text,"input feature:\n(-1: none)",'Feição de Entrada\n(-1: nenhuma)'),
-
-            (self.dlg.min_seg_len_label,"min road\nsegment length",'comprimento min.\n(seg. via)'),
-            (self.dlg.ch_remove_abovetol,"remove above tolerance",'remover se acima da tol.'),
-
-
-
+            (self.dlg.lang_label, "Language: ", "Idioma: "),
+            (self.dlg.input_pol_label, "Input Polygon: ", "Polígono de Entrada"),
+            (
+                self.dlg.table_txt1,
+                "default widths for tag values",
+                "larguras-padrão para valores",
+            ),
+            (self.dlg.table_txt2, '"0" means ignore features', '"0": ignorar feições'),
+            (self.dlg.output_file_label, "Output File:", "Arquivo de Saída:"),
+            (self.dlg.datafetch, "Fetch Data", "Obter Dados"),
+            (
+                self.dlg.input_status,
+                "waiting a valid input...",
+                "aguardando uma entrada válida...",
+                self.change_input_labels,
+            ),
+            (
+                self.dlg.input_status_of_data,
+                "waiting for data...",
+                "aguardando dados...",
+                self.change_input_labels,
+            ),
+            (self.dlg.button_box.button(QDialogButtonBox.Cancel), "Cancel", "Cancelar"),
+            (self.dlg.button_box.button(QDialogButtonBox.Reset), "Reset", "Reiniciar"),
+            (
+                self.dlg.clean_data,
+                "Clean OSM Data and\nCompute Intersections",
+                "Limp. dados OSM e\nGerar Interseções",
+            ),
+            (
+                self.dlg.sidewalks_warning,
+                "Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,this stuff shall be handled properly...)",
+                "Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)",
+            ),
+            (
+                self.dlg.check_if_overlaps_buildings,
+                "Check if Overlaps\n Buildings\n(much slower)",
+                "Testar se Sobrepõe\nEdificações\n(mais lento)",
+            ),
+            (self.dlg.hint_text, self.en_hint, self.ptbr_hint),
+            (self.dlg.generate_sidewalks, "Generate Sidewalks", "Gerar Calçadas"),
+            (
+                self.dlg.ignore_already_drawn_btn,
+                "I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",
+                "Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)",
+            ),
+            (
+                self.dlg.ch_ignore_buildings,
+                "ignore buildings\n(much faster)",
+                "ignorar edificações\n(mais rápido)",
+            ),
+            (
+                self.dlg.min_d_label,
+                "Min Distance\nto Buildings",
+                "Distância Mínima\np. Edificaçoes",
+            ),
+            (
+                self.dlg.min_d_label,
+                "Min Distance\nto Buildings",
+                "Dist. Min.\np. Edificaçoes",
+            ),
+            (self.dlg.curveradius_label, "Curve\nRadius", "Raio de\nCurvatura"),
+            (
+                self.dlg.d_to_add_label,
+                "Distance to\nadd to Width",
+                "D. Adic.\nàs Larguras",
+            ),
+            (self.dlg.min_width_label, "Min Width", "Largura\nMínima"),
+            (self.dlg.add_osm_basemap, "+ OSM\nBase Map", "+Mapa-Base\nOSM"),
+            (self.dlg.add_bing_base, "+ BING\nBase Img.", "+Imagens\nBING"),
+            (self.dlg.generate_crossings, "Generate Crossings", "Gerar Cruzamentos"),
+            (
+                self.dlg.dead_end_iters_label,
+                "Iters. to remove\ndead-end-streets\n(0 to keep all of them)",
+                "Iter. p/ remover\nruas-sem-fim\n(0 para manter todas)",
+            ),
+            (
+                self.dlg.split_sidewalks,
+                "Split Sidewalk Geometries",
+                "Subdividir Calçadas (Geometrias)",
+            ),
+            (self.dlg.perc_tol_crossings_label, "len.\ntol.", "tol.\ndist."),
+            (self.dlg.perc_draw_kerbs_label, "Kerbs\nat", "Kerb*\nem."),
+            (
+                self.dlg.opt_parallel_crossings,
+                "in parallel to\ntransversal seg.",
+                "paralelo ao\nseg. transversal",
+            ),
+            (
+                self.dlg.opt_perp_crossings,
+                "perpen-\ndicularly",
+                "perpendi-\ncularmente",
+            ),
+            (self.dlg.label_inward_d, "distance\ninward", "distância\nadentro"),
+            (
+                self.dlg.voronoi_checkbox,
+                "Use Voronoi Polygons Rule",
+                "Usar Polígonos de Voronoi",
+            ),
+            (
+                self.dlg.alongside_vor_checkbox,
+                "Alongside another option",
+                "Junto à Outra Opção",
+            ),
+            (self.dlg.maxlensplit_checkbox, "Max Len.", "Larg. Máx."),
+            (self.dlg.segsbynum_checkbox, "In x\nsegments", "Em x\nsegmentos"),
+            (self.dlg.onlyfacades_checkbox, "Only Facades", " Faces Q."),
+            (self.dlg.dontsplit_checkbox, "Don't Split", "Não Dividir"),
+            (
+                self.dlg.input_feature_text,
+                "input feature:\n(-1: none)",
+                "Feição de Entrada\n(-1: nenhuma)",
+            ),
+            (
+                self.dlg.min_seg_len_label,
+                "min road\nsegment length",
+                "comprimento min.\n(seg. via)",
+            ),
+            (
+                self.dlg.ch_remove_abovetol,
+                "remove above tolerance",
+                "remover se acima da tol.",
+            ),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
-
         ]
-
 
         for info_set in info_tuples:
             # What an elegant solution!!!
             self.set_text_based_on_language(*info_set)
 
         preffix_tuples = [
-        (self.dlg.minimum_pois_box,'min. POIs: ','min. pts.: '),
+            (self.dlg.minimum_pois_box, "min. POIs: ", "min. pts.: "),
         ]
 
         for preffixes in preffix_tuples:
@@ -493,17 +569,21 @@ class sidewalkreator:
         # getting table values, before table deactivation
         highway_valuestable_dict = {}
 
-        for i,val in enumerate(self.unique_highway_values):
+        for i, val in enumerate(self.unique_highway_values):
             # self.dlg.higway_values_table
             try:
-                width_value = float(self.dlg.higway_values_table.item(i,1).text())
+                width_value = float(self.dlg.higway_values_table.item(i, 1).text())
             except:
                 # if the user input value not convertible to float, just use the value from
-                print('invalid input value: ',self.dlg.higway_values_table.item(i,1).text(),', using default: ',default_widths.get(val,fallback_default_width))
-                width_value = default_widths.get(val,fallback_default_width)
+                print(
+                    "invalid input value: ",
+                    self.dlg.higway_values_table.item(i, 1).text(),
+                    ", using default: ",
+                    default_widths.get(val, fallback_default_width),
+                )
+                width_value = default_widths.get(val, fallback_default_width)
 
             highway_valuestable_dict[val] = width_value
-
 
         # disabling what should not be used afterwards
         self.dlg.clean_data.setEnabled(False)
@@ -512,149 +592,184 @@ class sidewalkreator:
         self.dlg.higway_values_table.setEnabled(False)
 
         # removing undesired tag values:
-        for i,value in enumerate(self.unique_highway_values):
+        for i, value in enumerate(self.unique_highway_values):
             # if a too small value is set (including negatives, lol), then also remove it:
 
             # saving already existing sidewalks and crossings in layers:
             if value == "footway":
                 # for sidewalks:
-                already_existing_sidewalks_list = select_feats_by_attr(self.clipped_reproj_datalayer,'footway','sidewalk')
+                already_existing_sidewalks_list = select_feats_by_attr(
+                    self.clipped_reproj_datalayer, "footway", "sidewalk"
+                )
 
-                self.already_existing_sidewalks_layer = layer_from_featlist(already_existing_sidewalks_list,'already_existing_sidewalks','linestring',CRS=self.custom_localTM_crs)
+                self.already_existing_sidewalks_layer = layer_from_featlist(
+                    already_existing_sidewalks_list,
+                    "already_existing_sidewalks",
+                    "linestring",
+                    CRS=self.custom_localTM_crs,
+                )
 
-                #for crossings:
-                already_existing_crossings_list = select_feats_by_attr(self.clipped_reproj_datalayer,'footway','crossing')
+                # for crossings:
+                already_existing_crossings_list = select_feats_by_attr(
+                    self.clipped_reproj_datalayer, "footway", "crossing"
+                )
 
-                self.already_existing_crossings_layer = layer_from_featlist(already_existing_crossings_list,'already_existing_crossings','linestring',CRS=self.custom_localTM_crs)
+                self.already_existing_crossings_layer = layer_from_featlist(
+                    already_existing_crossings_list,
+                    "already_existing_crossings",
+                    "linestring",
+                    CRS=self.custom_localTM_crs,
+                )
 
-                ''' 
+                """ 
                 layer declaration inside a loop? 
                 Yes,
                     but it's granted to happen only once
-                '''
-
-
+                """
 
             if highway_valuestable_dict[value] < 0.5:
-                remove_features_byattr(self.clipped_reproj_datalayer,highway_tag,value)#self.unique_highway_values[i])
+                remove_features_byattr(
+                    self.clipped_reproj_datalayer, highway_tag, value
+                )  # self.unique_highway_values[i])
 
                 # creating the 'protoblocks' layer, is a poligonization of the streets layers
 
         # self.add_layer_canvas(self.already_existing_sidewalks_layer)
         # self.add_layer_canvas(self.already_existing_crossings_layer)
 
-        
-
         # protoblocks have been moved to here:
         self.protoblocks = polygonize_lines(self.clipped_reproj_datalayer)
-        self.protoblocks.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+        self.protoblocks.setCrs(self.custom_localTM_crs)  # better safe than sorry kkkk
 
-        '''
+        """
         
             NEW PROTOBLOCKS FILTERING TO INFER IF THERE'S ALREADY A SIDEWALK NETWORK DRAWN
         
-        '''
+        """
 
         if self.already_existing_sidewalks_layer:
 
-            create_incidence_field_layers_A_B(self.protoblocks,self.already_existing_sidewalks_layer,'inc_sidewalk_len',True)
+            create_incidence_field_layers_A_B(
+                self.protoblocks,
+                self.already_existing_sidewalks_layer,
+                "inc_sidewalk_len",
+                True,
+            )
 
             # calculating the approximate area of the enclosed already drawn sidewalks (assuming squared shape) in order to judge if the protoblock contains sidewalks:
 
-
-            protoblocks_ratio_id = create_new_layerfield(self.protoblocks,'sidewalks_ratio')
+            protoblocks_ratio_id = create_new_layerfield(
+                self.protoblocks, "sidewalks_ratio"
+            )
 
             with edit(self.protoblocks):
                 for feature in self.protoblocks.getFeatures():
 
                     # dividing by 4 approximates the side of a squared shape block
-                    ratio = (((feature['inc_sidewalk_len']/4)**2) / feature.geometry().area()) * 100
+                    ratio = (
+                        ((feature["inc_sidewalk_len"] / 4) ** 2)
+                        / feature.geometry().area()
+                    ) * 100
 
-                    self.protoblocks.changeAttributeValue(feature.id(),protoblocks_ratio_id,ratio)
+                    self.protoblocks.changeAttributeValue(
+                        feature.id(), protoblocks_ratio_id, ratio
+                    )
 
                     if ratio > cutoff_percent_protoblock:
                         self.protoblocks.deleteFeature(feature.id())
 
-
             # self.add_layer_canvas(self.protoblocks)
 
-
-        '''
+        """
         
             END OF THE NEW PROTOBLOCKS FILTERING
         
-        '''
-
+        """
 
         # dissolving so will become just one geometry:
         self.dissolved_protoblocks_0 = dissolve_tosinglegeom(self.protoblocks)
-        self.dissolved_protoblocks_0.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
+        self.dissolved_protoblocks_0.setCrs(
+            self.custom_localTM_crs
+        )  # better safe than sorry kkkk
 
-
-        #adding little buffer, so features touching boundaries will be fully within
-        self.dissolved_protoblocks_buff = generate_buffer(self.
-        dissolved_protoblocks_0,protoblocks_buffer)
-        self.dissolved_protoblocks_buff.setCrs(self.custom_localTM_crs) # better safe than sorry kkkk
-
+        # adding little buffer, so features touching boundaries will be fully within
+        self.dissolved_protoblocks_buff = generate_buffer(
+            self.dissolved_protoblocks_0, protoblocks_buffer
+        )
+        self.dissolved_protoblocks_buff.setCrs(
+            self.custom_localTM_crs
+        )  # better safe than sorry kkkk
 
         # self.add_layer_canvas(self.dissolved_protoblocks_buff)
         # self.add_layer_canvas(self.dissolved_protoblocks_0)
 
-
-
         # splitting into segments:
-        self.splitted_lines_name = self.string_according_language('Splitted_OSM_Lines','OSM_subdividido')
+        self.splitted_lines_name = self.string_according_language(
+            "Splitted_OSM_Lines", "OSM_subdividido"
+        )
 
-        self.splitted_lines = split_lines(self.clipped_reproj_datalayer,self.clipped_reproj_datalayer,'memory:'+self.splitted_lines_name)
+        self.splitted_lines = split_lines(
+            self.clipped_reproj_datalayer,
+            self.clipped_reproj_datalayer,
+            "memory:" + self.splitted_lines_name,
+        )
 
         self.splitted_lines.setCrs(self.custom_localTM_crs)
 
         # removing lines that does not serve to form a block ('quarteirão')
         if self.dlg.dead_end_iters_box.value() == 0:
-            remove_lines_from_no_block(self.splitted_lines,self.dissolved_protoblocks_buff)
+            remove_lines_from_no_block(
+                self.splitted_lines, self.dissolved_protoblocks_buff
+            )
         else:
             for i in range(self.dlg.dead_end_iters_box.value()):
                 # without second input, the function will work just as before
                 remove_lines_from_no_block(self.splitted_lines)
-        
+
         # adding same style again:
         # style_line_random_colors(self.clipped_reproj_datalayer,highway_tag,self.streets_styledict)
-                
+
         # adding the style:
-        apply_style(self.splitted_lines,roads_p2_stylefilename)
+        apply_style(self.splitted_lines, roads_p2_stylefilename)
 
         ##### creating points of intersection:
-        intersection_points = get_intersections(self.splitted_lines,self.splitted_lines,'TEMPORARY_OUTPUT')
+        intersection_points = get_intersections(
+            self.splitted_lines, self.splitted_lines, "TEMPORARY_OUTPUT"
+        )
 
         intersection_points.setCrs(self.custom_localTM_crs)
 
+        self.filtered_intersection_name = self.string_according_language(
+            "Road_Intersections", "Intersecoes_Ruas"
+        )
 
-        self.filtered_intersection_name = self.string_according_language('Road_Intersections','Intersecoes_Ruas')
-
-        self.filtered_intersection_points = remove_duplicate_geometries(intersection_points,'memory:'+self.filtered_intersection_name)
+        self.filtered_intersection_points = remove_duplicate_geometries(
+            intersection_points, "memory:" + self.filtered_intersection_name
+        )
 
         self.filtered_intersection_points.setCrs(self.custom_localTM_crs)
 
         # creating a voronoi polygons layer for the road_intersections, that may be used for validation projects
-        road_intersection_voronois_0 = gen_voronoi_polygons_layer(self.filtered_intersection_points)
+        road_intersection_voronois_0 = gen_voronoi_polygons_layer(
+            self.filtered_intersection_points
+        )
         road_intersection_voronois_0.setCrs(self.custom_localTM_crs)
 
         # TODO: check if will always work properly without being on same CRS
-        self.road_intersection_voronois = cliplayer_v2(road_intersection_voronois_0,self.only_inputfeature_layer)
+        self.road_intersection_voronois = cliplayer_v2(
+            road_intersection_voronois_0, self.only_inputfeature_layer
+        )
         self.road_intersection_voronois.setCrs(self.custom_localTM_crs)
-
 
         # self.add_layer_canvas(self.road_intersection_voronois)
 
-
         #### checking if there's a "width" column, adding if not:
         if not widths_fieldname in get_column_names(self.splitted_lines):
-            create_new_layerfield(self.splitted_lines,widths_fieldname)
+            create_new_layerfield(self.splitted_lines, widths_fieldname)
 
         # filling empty widths with values in the table:
         widths_index = self.splitted_lines.fields().indexOf(widths_fieldname)
         higway_index = self.splitted_lines.fields().indexOf(highway_tag)
-
 
         with edit(self.splitted_lines):
             for feature in self.splitted_lines.getFeatures():
@@ -663,7 +778,11 @@ class sidewalkreator:
                 # only fill if no value is present
                 if not feature_attrs_list[widths_index]:
                     highway_tag_val = feature_attrs_list[higway_index]
-                    self.splitted_lines.changeAttributeValue(feature.id(),widths_index,highway_valuestable_dict[highway_tag_val])
+                    self.splitted_lines.changeAttributeValue(
+                        feature.id(),
+                        widths_index,
+                        highway_valuestable_dict[highway_tag_val],
+                    )
                     """
                         THX: https://gis.stackexchange.com/a/133669/49900
 
@@ -673,20 +792,20 @@ class sidewalkreator:
 
                     """
 
-
         # filling a column with original id within layer to recover after a operation like
         create_fill_id_field(self.splitted_lines)
 
         # adding layers to canvas:
-        apply_style(self.filtered_intersection_points,road_intersections_stylefilename)
+        apply_style(self.filtered_intersection_points, road_intersections_stylefilename)
 
         self.add_layer_canvas(self.filtered_intersection_points)
         self.add_layer_canvas(self.splitted_lines)
 
-
         # hint texts:
-        self.en_hint = 'Hint: You Can Set Widths\nmanually for Each Segment...'
-        self.ptbr_hint = 'Dica: Você pode Inserir manualmente\numa Largura Para Cada Segmento!'
+        self.en_hint = "Hint: You Can Set Widths\nmanually for Each Segment..."
+        self.ptbr_hint = (
+            "Dica: Você pode Inserir manualmente\numa Largura Para Cada Segmento!"
+        )
         self.set_hint_text()
 
         # always cleaning stuff that user does not need anymore
@@ -705,8 +824,6 @@ class sidewalkreator:
         # its just to that part
         self.dlg.datafetch_progressbar.setEnabled(False)
 
-
-
         if not self.no_buildings:
             self.dlg.check_if_overlaps_buildings.setEnabled(True)
             self.dlg.min_d_label.setEnabled(True)
@@ -714,22 +831,19 @@ class sidewalkreator:
             self.dlg.min_width_box.setEnabled(True)
             self.dlg.min_width_label.setEnabled(True)
 
-
-
-
         # self.replace_vectorlayer(osm_higway_layer_finalname,outputpath_splitted)
 
     def add_osm_basemap_func(self):
-        layername = self.string_according_language('OSM Default','OSM Padrão')
+        layername = self.string_according_language("OSM Default", "OSM Padrão")
 
-        add_tms_layer(osm_basemap_str,layername)
+        add_tms_layer(osm_basemap_str, layername)
 
         self.dlg.add_osm_basemap.setEnabled(False)
 
     def add_bing_baseimg_func(self):
-        layername = self.string_according_language('BING Aerial','Imagens BING')
+        layername = self.string_according_language("BING Aerial", "Imagens BING")
 
-        add_tms_layer(bing_baseimg_str,layername)
+        add_tms_layer(bing_baseimg_str, layername)
 
         self.dlg.add_bing_base.setEnabled(False)
 
@@ -763,7 +877,6 @@ class sidewalkreator:
             self.dlg.onlyfacades_checkbox.setEnabled(False)
             self.dlg.dontsplit_checkbox.setEnabled(False)
 
-
     def sidewalks_splitting(self):
         # disabling what wouldnt be needed adterwards:
         self.dlg.split_sidewalks.setEnabled(False)
@@ -782,45 +895,56 @@ class sidewalkreator:
         self.dlg.hint_text.setHidden(True)
 
         #  just the name for a field that will be deleted afterwards
-        self.split_field_name = 'split_len'
-
+        self.split_field_name = "split_len"
 
         # action tree according to checkboxes:
         if not self.dlg.dontsplit_checkbox.isChecked():
             # firstly, splitting using protoblocks corners
 
             # finding which block "belongs" to each protoblock
-            create_incidence_field_layers_A_B(self.protoblocks,self.whole_sidewalks)
+            create_incidence_field_layers_A_B(self.protoblocks, self.whole_sidewalks)
             # self.add_layer_canvas(self.protoblocks)
 
             # creating field to store splitting distance:
-            self.split_len_field_id = create_new_layerfield(self.whole_sidewalks,self.split_field_name)
+            self.split_len_field_id = create_new_layerfield(
+                self.whole_sidewalks, self.split_field_name
+            )
 
-            #keeping only relevant vertices:
+            # keeping only relevant vertices:
             relevant_vertices = {}
             self.protoblock_wholesidewalk_inc_dict = {}
 
             self.protoblocks_idx_perc = {}
 
-            number_protoblocks = len([feature.id() for feature in self.protoblocks.getFeatures()])
+            number_protoblocks = len(
+                [feature.id() for feature in self.protoblocks.getFeatures()]
+            )
 
-            for i,feature in enumerate(self.protoblocks.getFeatures()):
-                self.dlg.split_progressbar.setValue(round(100*i/number_protoblocks))
-                self.protoblocks_idx_perc[feature.id()]=i
+            for i, feature in enumerate(self.protoblocks.getFeatures()):
+                self.dlg.split_progressbar.setValue(round(100 * i / number_protoblocks))
+                self.protoblocks_idx_perc[feature.id()] = i
                 # vertex_list = select_vertex_pol_nodes(feature)
 
                 # incident_sidewalk_number  = int(feature['incident'])
 
                 self.protoblock_wholesidewalk_inc_dict[feature.id()] = []
 
-                for incident in feature['incident'].split():
+                for incident in feature["incident"].split():
 
                     relevant_vertices[int(incident)] = select_vertex_pol_nodes(feature)
 
-                    self.protoblock_wholesidewalk_inc_dict[feature.id()].append(int(incident))
+                    self.protoblock_wholesidewalk_inc_dict[feature.id()].append(
+                        int(incident)
+                    )
 
-            self.protoblocks_idx_perc = {key: round(100*self.protoblocks_idx_perc[key]/len(self.protoblocks_idx_perc.keys())) for key in self.protoblocks_idx_perc.keys()}
-
+            self.protoblocks_idx_perc = {
+                key: round(
+                    100
+                    * self.protoblocks_idx_perc[key]
+                    / len(self.protoblocks_idx_perc.keys())
+                )
+                for key in self.protoblocks_idx_perc.keys()
+            }
 
             # print(feature['incident'],vertex_list)
 
@@ -831,12 +955,13 @@ class sidewalkreator:
             if self.dlg.voronoi_checkbox.isChecked():
                 self.dlg.split_progressbar.setValue(0)
 
-
                 self.voronoi_splitting()
 
                 if self.dlg.alongside_vor_checkbox.isChecked():
                     if self.dlg.maxlensplit_checkbox.isChecked():
-                        self.splitting_by_distance_or_ndivisions(self.dlg.maxlensplit_box.value())
+                        self.splitting_by_distance_or_ndivisions(
+                            self.dlg.maxlensplit_box.value()
+                        )
 
                     # elif self.dlg.maxlensplit_checkbox.isChecked():
                     #     pass
@@ -844,13 +969,16 @@ class sidewalkreator:
                 self.dlg.split_progressbar.setValue(0)
                 if self.dlg.maxlensplit_checkbox.isChecked():
 
-                    self.splitting_by_distance_or_ndivisions(self.dlg.maxlensplit_box.value())
+                    self.splitting_by_distance_or_ndivisions(
+                        self.dlg.maxlensplit_box.value()
+                    )
                 elif self.dlg.segsbynum_checkbox.isChecked():
 
-                    self.splitting_by_distance_or_ndivisions(self.dlg.segsbynum_box.value(),True)
+                    self.splitting_by_distance_or_ndivisions(
+                        self.dlg.segsbynum_box.value(), True
+                    )
 
-
-        else: # if we have voronoi and dontsplit:
+        else:  # if we have voronoi and dontsplit:
             self.dlg.split_progressbar.setValue(0)
 
             if self.dlg.voronoi_checkbox.isChecked():
@@ -872,24 +1000,42 @@ class sidewalkreator:
                
         """
 
-
-
         # lots of double points being reported:
-        self.whole_sidewalks = remove_duplicate_vertices(self.whole_sidewalks,tolerance=duplicate_points_tol)
-            
+        self.whole_sidewalks = remove_duplicate_vertices(
+            self.whole_sidewalks, tolerance=duplicate_points_tol
+        )
+
         # and then disjoint sidewalk stretches:
-        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.whole_sidewalks,tolerance=snap_disjointed_tol+0.01,behavior_code=0)
+        self.whole_sidewalks = snap_layers(
+            self.whole_sidewalks,
+            self.whole_sidewalks,
+            tolerance=snap_disjointed_tol + 0.01,
+            behavior_code=0,
+        )
 
         # # trying to solve lack of snapping in some crossings
-        self.crossings_layer = snap_layers(self.crossings_layer,self.whole_sidewalks,tolerance=.1,behavior_code=5,dontcheckinvalid=True,outputlayer='memory:CROSSINGS_')
+        self.crossings_layer = snap_layers(
+            self.crossings_layer,
+            self.whole_sidewalks,
+            tolerance=0.1,
+            behavior_code=5,
+            dontcheckinvalid=True,
+            outputlayer="memory:CROSSINGS_",
+        )
 
-
-        splitted_name = 'splitted_SIDEWALKS'
+        splitted_name = "splitted_SIDEWALKS"
 
         # snapping once again:
-        self.whole_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer,tolerance=0.1,behavior_code=1,dontcheckinvalid=True,outputlayer='memory:'+splitted_name)
-        
-        #trying to merge too small stretches with a neighbour for each
+        self.whole_sidewalks = snap_layers(
+            self.whole_sidewalks,
+            self.crossings_layer,
+            tolerance=0.1,
+            behavior_code=1,
+            dontcheckinvalid=True,
+            outputlayer="memory:" + splitted_name,
+        )
+
+        # trying to merge too small stretches with a neighbour for each
         self.try_to_merge_small_stretches()
 
         """
@@ -901,38 +1047,47 @@ class sidewalkreator:
         # # # if self.exclusion_zones.featureCount() != self.exclusion_zones_count:
         # # #     self.excluding_exclusion_zones()
 
-
         # workaround for the reference of layers changing
 
         self.remove_layer_canvas(self.whole_sidewalklayer_name)
-        self.remove_layer_canvas('CROSSINGS')
+        self.remove_layer_canvas("CROSSINGS")
 
         # print(QgsProject.instance().mapLayers())
 
         self.add_layer_canvas(self.whole_sidewalks)
         # self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
-        apply_style(self.whole_sidewalks,sidewalks_stylefilename)
+        apply_style(self.whole_sidewalks, sidewalks_stylefilename)
 
         self.add_layer_canvas(self.crossings_layer)
         # self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
-        apply_style(self.crossings_layer,crossings_stylefilename)
+        apply_style(self.crossings_layer, crossings_stylefilename)
 
         # kerbs:
-        create_filled_newlayerfield(self.kerbs_layer,'barrier','kerb',QVariant.String)
+        create_filled_newlayerfield(
+            self.kerbs_layer, "barrier", "kerb", QVariant.String
+        )
         # crossings:
-        create_filled_newlayerfield(self.crossings_layer,'highway','footway',QVariant.String)
-        create_filled_newlayerfield(self.crossings_layer,'footway','crossing',QVariant.String)
+        create_filled_newlayerfield(
+            self.crossings_layer, "highway", "footway", QVariant.String
+        )
+        create_filled_newlayerfield(
+            self.crossings_layer, "footway", "crossing", QVariant.String
+        )
 
-        '''
+        """
             tags to denote it's a sidewalk
             footway=sidewalk
             highway=footway
 
             then filling:
-        '''
+        """
 
-        create_filled_newlayerfield(self.whole_sidewalks,'highway','footway',QVariant.String)
-        create_filled_newlayerfield(self.whole_sidewalks,'footway','sidewalk',QVariant.String)
+        create_filled_newlayerfield(
+            self.whole_sidewalks, "highway", "footway", QVariant.String
+        )
+        create_filled_newlayerfield(
+            self.whole_sidewalks, "footway", "sidewalk", QVariant.String
+        )
 
         # enabling for aftewards:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
@@ -944,7 +1099,6 @@ class sidewalkreator:
 
         # global control variables:
         self.export_ready = True
-
 
     def draw_crossings(self):
 
@@ -962,14 +1116,13 @@ class sidewalkreator:
         self.dlg.min_seg_len_label.setEnabled(False)
         self.dlg.min_seg_len_box.setEnabled(False)
         self.dlg.ch_remove_abovetol.setEnabled(False)
-        
 
-        # moved from draw_sidewalks 
+        # moved from draw_sidewalks
         # to (probably) speed up intersections:
         self.dissolved_sidewalks = dissolve_tosinglegeom(self.whole_sidewalks)
-        self.dissolved_sidewalks_geom = get_first_feature_or_geom(self.dissolved_sidewalks,True)
-
-
+        self.dissolved_sidewalks_geom = get_first_feature_or_geom(
+            self.dissolved_sidewalks, True
+        )
 
         # analyzing if the endpoits of splitted lines are elegible for
         #   iterating again each street segment:
@@ -989,7 +1142,6 @@ class sidewalkreator:
         # for progressbar:
         # featcount = self.splitted_lines.featureCount()
 
-
         # storing the geometries that endpoints points belong
         endpoints_belonging = {}
 
@@ -997,37 +1149,44 @@ class sidewalkreator:
         inward_distances = {}
 
         # fieldname to store a distance to check crossings lenghts:
-        self.len_checking_fieldname = self.string_according_language('ortho_len_dif','dif_dist_orto')
-        self.crossings_len_fieldname = self.string_according_language('length','comprimento')
-        self.above_tol_fieldname = self.string_according_language('above_tol','acima_da_tolerancia')
-        self.nearest_centerpoint_fieldname= self.string_according_language('nearest_centerpoint','ponto_central_maisprox')
+        self.len_checking_fieldname = self.string_according_language(
+            "ortho_len_dif", "dif_dist_orto"
+        )
+        self.crossings_len_fieldname = self.string_according_language(
+            "length", "comprimento"
+        )
+        self.above_tol_fieldname = self.string_according_language(
+            "above_tol", "acima_da_tolerancia"
+        )
+        self.nearest_centerpoint_fieldname = self.string_according_language(
+            "nearest_centerpoint", "ponto_central_maisprox"
+        )
 
         index = QgsSpatialIndex(self.splitted_lines.getFeatures())
 
-        for i,feature_A in enumerate(self.splitted_lines.getFeatures()):
+        for i, feature_A in enumerate(self.splitted_lines.getFeatures()):
 
             # obtaining the two delimiting points:
 
-            P0 = qgs_point_geom_from_line_at(feature_A)    # first point
-            PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
+            P0 = qgs_point_geom_from_line_at(feature_A)  # first point
+            PF = qgs_point_geom_from_line_at(feature_A, -1)  # last point
 
             P0_count = 0
             PF_count = 0
 
             featurelen = feature_A.geometry().length()
 
-            featurewidth = float(feature_A[widths_fieldname]) #on Windows, sometimes interpreted as string...
+            featurewidth = float(
+                feature_A[widths_fieldname]
+            )  # on Windows, sometimes interpreted as string...
 
-            feature_osm_id = feature_A['osm_id']
+            feature_osm_id = feature_A["osm_id"]
 
             feature_layer_id = feature_A.id()
 
             # filling with the widths for intersection
-            P0_intersecting_widths = {} #[]
-            PF_intersecting_widths = {} #[]
-
-
-
+            P0_intersecting_widths = {}  # []
+            PF_intersecting_widths = {}  # []
 
             # tolerance for considering that a crossing center will have the crossing effectively drawn
             # a: two times (half width plus self.dlg.d_to_add_box.value())
@@ -1036,33 +1195,51 @@ class sidewalkreator:
             # # 3 times to KNN search
             # # KNN search was deprecated
 
-            P0_small_region = P0.buffer(.1,5).boundingBox()
-            PF_small_region = PF.buffer(.1,5).boundingBox()
+            P0_small_region = P0.buffer(0.1, 5).boundingBox()
+            PF_small_region = PF.buffer(0.1, 5).boundingBox()
 
             intersecting_ids_P0 = index.intersects(P0_small_region)
 
             if intersecting_ids_P0:
-                P0_count = len([id for id in intersecting_ids_P0 if self.splitted_lines.getFeature(id).geometry().intersects(P0.buffer(.1,5))]) 
+                P0_count = len(
+                    [
+                        id
+                        for id in intersecting_ids_P0
+                        if self.splitted_lines.getFeature(id)
+                        .geometry()
+                        .intersects(P0.buffer(0.1, 5))
+                    ]
+                )
 
                 for id in intersecting_ids_P0:
                     if id != feature_A.id():
-                        P0_intersecting_widths[id] = self.splitted_lines.getFeature(id)['width']
+                        P0_intersecting_widths[id] = self.splitted_lines.getFeature(id)[
+                            "width"
+                        ]
 
             intersecting_ids_PF = index.intersects(PF_small_region)
 
             if intersecting_ids_PF:
-                PF_count = len([id for id in intersecting_ids_PF if self.splitted_lines.getFeature(id).geometry().intersects(PF.buffer(.1,5))]) 
+                PF_count = len(
+                    [
+                        id
+                        for id in intersecting_ids_PF
+                        if self.splitted_lines.getFeature(id)
+                        .geometry()
+                        .intersects(PF.buffer(0.1, 5))
+                    ]
+                )
 
                 for id in intersecting_ids_PF:
                     if id != feature_A.id():
-                        PF_intersecting_widths[id] = self.splitted_lines.getFeature(id)['width']
-
+                        PF_intersecting_widths[id] = self.splitted_lines.getFeature(id)[
+                            "width"
+                        ]
 
             initial_vec_len = featurewidth + self.dlg.d_to_add_box.value()
 
             # print(i+1,P0_intersecting_widths)
             # print(i+1,PF_intersecting_widths,'\n')
-
 
             # print(i,P0_count,PF_count)
 
@@ -1075,9 +1252,15 @@ class sidewalkreator:
                 # an identifier for the point:
                 innerP0_id = f"{feature_layer_id}_P0"
 
-                tr_widthP0, trfeat_idP0 = get_major_dif_signed(featurewidth,P0_intersecting_widths)
+                tr_widthP0, trfeat_idP0 = get_major_dif_signed(
+                    featurewidth, P0_intersecting_widths
+                )
 
-                d_to_interpolate_P0 = (tr_widthP0 * 0.5) + self.curveradius + self.dlg.d_to_add_inward_box.value()
+                d_to_interpolate_P0 = (
+                    (tr_widthP0 * 0.5)
+                    + self.curveradius
+                    + self.dlg.d_to_add_inward_box.value()
+                )
 
                 # storing the distance to use if needed:
                 inward_distances[innerP0_id] = d_to_interpolate_P0
@@ -1088,7 +1271,9 @@ class sidewalkreator:
 
                     inward_distances[innerP0_id] = None
 
-                innerP0_0 = feature_A.geometry().interpolate(d_to_interpolate_P0) #(self.curveradius*1.5)
+                innerP0_0 = feature_A.geometry().interpolate(
+                    d_to_interpolate_P0
+                )  # (self.curveradius*1.5)
                 # print(distance_geom_another_layer(innerP0_0,self.whole_sidewalks,True,True))
 
                 # getting distances from inner_points to sidewalks:
@@ -1097,19 +1282,16 @@ class sidewalkreator:
 
                 # print(i+1,dlist_P0)
 
-
                 # transforming as a feature, storing osm id
                 innerP0_feat = QgsFeature()
                 innerP0_feat.setGeometry(innerP0_0)
-                innerP0_feat.setAttributes([feature_osm_id,innerP0_id])
+                innerP0_feat.setAttributes([feature_osm_id, innerP0_id])
                 inner_pts_featlist.append(innerP0_feat)
 
                 endpoints_belonging[innerP0_id] = feature_A
 
-
                 # # # part for the "cross-cut" segment
                 # # cr_feature_P0 = feature_from_fid(self.splitted_lines,trfeat_idP0)
-
 
                 # # # then: lineLocatePoint
                 # # # line = QgsGeometry.fromPolyline([line_start,line_end])
@@ -1117,7 +1299,7 @@ class sidewalkreator:
 
                 # testing by doing some buffer
 
-                '''
+                """
                     in the next functions, we:
 
                         - create the candidate points, intersecting lines with circle
@@ -1125,61 +1307,56 @@ class sidewalkreator:
                         - find the index of the point that forms the minor angle
 
                         - create the vector containing the direction of the crossing
-                '''
-
+                """
 
                 paralell_unsucessful = False
 
                 if self.dlg.opt_parallel_crossings.isChecked():
-                    pts_inters_P0 =  points_intersecting_buffer_boundary(P0,self.splitted_lines,list(P0_intersecting_widths))
+                    pts_inters_P0 = points_intersecting_buffer_boundary(
+                        P0, self.splitted_lines, list(P0_intersecting_widths)
+                    )
 
                     # chosen index:
                     try:
-                        ch_index = point_forms_minor_angle_w2(innerP0_0,P0,pts_inters_P0)
-                        dirvecs_dict[innerP0_id] = vector_from_2_pts(P0,pts_inters_P0[ch_index],initial_vec_len)
+                        ch_index = point_forms_minor_angle_w2(
+                            innerP0_0, P0, pts_inters_P0
+                        )
+                        dirvecs_dict[innerP0_id] = vector_from_2_pts(
+                            P0, pts_inters_P0[ch_index], initial_vec_len
+                        )
                     except:
                         paralell_unsucessful = True
-
 
                 if self.dlg.opt_perp_crossings.isChecked() or paralell_unsucessful:
 
                     # creating a perpendicular vector:
                     #    first, we create a vector parallel to the current street segment
-                    seg_parallel_vector = vector_from_2_pts(P0,innerP0_0,initial_vec_len)
+                    seg_parallel_vector = vector_from_2_pts(
+                        P0, innerP0_0, initial_vec_len
+                    )
 
                     dirvecs_dict[innerP0_id] = seg_parallel_vector.perpVector()
 
                     # now the direction perpendicular vector:
 
-
-
-
-
-
                 # this part should be done after decimating only elegible points
 
-
-
             # summing up to obtain points in each side and creating line   geometries to find intersections (at the function)
-
-
-
-
-
-
-
 
             # doing for the point at the end of segment:
             if PF_count > 2:
                 # an identifier for the point:
                 innerPF_id = f"{feature_layer_id}_PF"
 
+                tr_widthPF, trfeat_idPF = get_major_dif_signed(
+                    featurewidth, PF_intersecting_widths
+                )
 
-
-                tr_widthPF, trfeat_idPF = get_major_dif_signed(featurewidth,PF_intersecting_widths)
-
-
-                d_to_interpolate_PF = (tr_widthPF * 0.5) + self.curveradius + self.dlg.d_to_add_inward_box.value()
+                d_to_interpolate_PF = (
+                    (tr_widthPF * 0.5)
+                    + self.curveradius
+                    + self.dlg.d_to_add_inward_box.value()
+                )
 
                 # storing the distance to use if needed:
                 inward_distances[innerPF_id] = d_to_interpolate_PF
@@ -1190,10 +1367,10 @@ class sidewalkreator:
 
                     inward_distances[innerPF_id] = None
 
-
                 # since we are interpolating from the end and by QGIS 3.20 it does not support negative interpolation (to denote interpolating backwards), we just subtract from total feature length
-                innerPF_0 = feature_A.geometry().interpolate(featurelen-d_to_interpolate_PF)
-
+                innerPF_0 = feature_A.geometry().interpolate(
+                    featurelen - d_to_interpolate_PF
+                )
 
                 # print(distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,True))
 
@@ -1201,20 +1378,17 @@ class sidewalkreator:
                 # dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True)
                 # dlist_PF = distance_geom_another_layer(innerPF_0,self.whole_sidewalks,True,False,sidewalks_spatial_index,tol_search_d,3)
 
-
                 # print(dlist_PF,'\n')
 
                 # transforming as a feature, storing osm id
                 innerPF_feat = QgsFeature()
                 innerPF_feat.setGeometry(innerPF_0)
-                innerPF_feat.setAttributes([feature_osm_id,innerPF_id])
+                innerPF_feat.setAttributes([feature_osm_id, innerPF_id])
                 inner_pts_featlist.append(innerPF_feat)
 
                 endpoints_belonging[innerPF_id] = feature_A
 
-
-
-                '''
+                """
                     in the next functions, we:
 
                         - create the candidate points, intersecting lines with a circle
@@ -1222,28 +1396,34 @@ class sidewalkreator:
                         - find the index of the point that forms the minor angle
 
                         - create the vector containing the direction of the crossing
-                '''
+                """
 
                 paralell_unsucessful = False
 
                 if self.dlg.opt_parallel_crossings.isChecked():
-                    pts_inters_PF =  points_intersecting_buffer_boundary(PF,self.splitted_lines,list(PF_intersecting_widths))
-
+                    pts_inters_PF = points_intersecting_buffer_boundary(
+                        PF, self.splitted_lines, list(PF_intersecting_widths)
+                    )
 
                     # chosen index:
                     try:
-                        ch_index = point_forms_minor_angle_w2(innerPF_0,PF,pts_inters_PF,True)
+                        ch_index = point_forms_minor_angle_w2(
+                            innerPF_0, PF, pts_inters_PF, True
+                        )
 
-                        dirvecs_dict[innerPF_id] = vector_from_2_pts(PF,pts_inters_PF[ch_index],initial_vec_len)
+                        dirvecs_dict[innerPF_id] = vector_from_2_pts(
+                            PF, pts_inters_PF[ch_index], initial_vec_len
+                        )
                     except:
                         paralell_unsucessful = True
-
 
                 if self.dlg.opt_perp_crossings.isChecked() or paralell_unsucessful:
 
                     # creating a perpendicular vector:
                     #    first, we create a vector parallel to the current street segment
-                    seg_parallel_vector = vector_from_2_pts(PF,innerPF_0,initial_vec_len)
+                    seg_parallel_vector = vector_from_2_pts(
+                        PF, innerPF_0, initial_vec_len
+                    )
 
                     dirvecs_dict[innerPF_id] = seg_parallel_vector.perpVector()
 
@@ -1252,20 +1432,31 @@ class sidewalkreator:
 
             # # self.dlg.gencrossings_progressbar.setValue(int(i/featcount*100))
 
-
-        inner_crossings_layer_0 = layer_from_featlist(inner_pts_featlist,crossing_centers_layername,attrs_dict={'osm_generator_id':QVariant.String,'crossing_center_id':QVariant.String})
+        inner_crossings_layer_0 = layer_from_featlist(
+            inner_pts_featlist,
+            crossing_centers_layername,
+            attrs_dict={
+                "osm_generator_id": QVariant.String,
+                "crossing_center_id": QVariant.String,
+            },
+        )
         inner_crossings_layer_0.setCrs(self.custom_localTM_crs)
 
-
         # NEW METHOD to select elegible crossing centers: by buffer crossing centers and test if the tiny circles are within the big protoblocks layer
-        inner_crossings_buff = generate_buffer(inner_crossings_layer_0,1,5,False,'ROUND')
+        inner_crossings_buff = generate_buffer(
+            inner_crossings_layer_0, 1, 5, False, "ROUND"
+        )
         inner_crossings_buff.setCrs(self.custom_localTM_crs)
 
         # only circles within the dissolved protoblocks are mantained
-        keep_only_contained_within(inner_crossings_buff,self.dissolved_protoblocks_0)
+        keep_only_contained_within(inner_crossings_buff, self.dissolved_protoblocks_0)
 
         # clipping the crossing centers:
-        self.inner_crossings_layer = cliplayer_v2(inner_crossings_layer_0,inner_crossings_buff,'memory:'+crossing_centers_layername)
+        self.inner_crossings_layer = cliplayer_v2(
+            inner_crossings_layer_0,
+            inner_crossings_buff,
+            "memory:" + crossing_centers_layername,
+        )
 
         """
             Doing computation of all crossing points:
@@ -1285,10 +1476,9 @@ class sidewalkreator:
         # to create crrossing A's&E's layer
         self.crossings_A_E_pointlist = []
 
-
         for feature in self.inner_crossings_layer.getFeatures():
 
-            key = feature['crossing_center_id']
+            key = feature["crossing_center_id"]
 
             belonging_line = endpoints_belonging[key]
 
@@ -1297,14 +1487,21 @@ class sidewalkreator:
                 continue
 
             # define if is at beginning or not, to maybe reinterpolate point C
-            is_at_beginning = 'P0' in key
-
+            is_at_beginning = "P0" in key
 
             # line_generatrix = self.splitted_lines
 
-            pA_crossings,pE_crossings,new_pC_geom = self.two_intersections_byvector_with_sidewalks(dirvecs_dict[key],feature.geometry(),belonging_line,inward_distances[key],is_at_beginning)
+            pA_crossings, pE_crossings, new_pC_geom = (
+                self.two_intersections_byvector_with_sidewalks(
+                    dirvecs_dict[key],
+                    feature.geometry(),
+                    belonging_line,
+                    inward_distances[key],
+                    is_at_beginning,
+                )
+            )
 
-            if not any([pA_crossings,pE_crossings]):
+            if not any([pA_crossings, pE_crossings]):
                 # skip this crossing, as some problem was returned
                 continue
 
@@ -1315,40 +1512,32 @@ class sidewalkreator:
             else:
                 pC = new_pC_geom
 
-
             # if isinstance(pA_crossings,QgsGeometry):
-            segment_AC = QgsGeometry.fromPolylineXY([pA_crossings.asPoint(),pC])
+            segment_AC = QgsGeometry.fromPolylineXY([pA_crossings.asPoint(), pC])
             pA_feat = geom_to_feature(pA_crossings)
 
             # else:
             #     segment_AC = QgsGeometry.fromPolylineXY([pA_crossings,pC])
             #     pA_feat = geom_to_feature(pointXY_to_geometry(pA_crossings))
 
-
-
             # if isinstance(pE_crossings,QgsGeometry):
-            segment_EC = QgsGeometry.fromPolylineXY([pE_crossings.asPoint(),pC])
+            segment_EC = QgsGeometry.fromPolylineXY([pE_crossings.asPoint(), pC])
             pE_feat = geom_to_feature(pE_crossings)
 
             # else:
             #     segment_EC = QgsGeometry.fromPolylineXY([pE_crossings,pC])
             #     pE_feat = geom_to_feature(pointXY_to_geometry(pE_crossings))
 
-
-
             kerb_perc = self.dlg.perc_draw_kerbs_box.value()
 
-            pB = interpolate_by_percent(segment_AC,kerb_perc)
-            pD = interpolate_by_percent(segment_EC,kerb_perc)
-
-
+            pB = interpolate_by_percent(segment_AC, kerb_perc)
+            pD = interpolate_by_percent(segment_EC, kerb_perc)
 
             # pA OK
             pB_feat = geom_to_feature(pB)
             # pC OK
             pD_feat = geom_to_feature(pD)
             # pE OK
-
 
             # print(pA_feat,pE_feat)
 
@@ -1359,64 +1548,90 @@ class sidewalkreator:
             self.inner_crossings_layer.dataProvider().addFeature(pE_feat)
 
             # creating the crossings as line geometry:
-            crossing_pointlist = [pA_crossings.asPoint(),pB.asPoint(),pC,pD.asPoint(),pE_crossings.asPoint()]
-         
+            crossing_pointlist = [
+                pA_crossings.asPoint(),
+                pB.asPoint(),
+                pC,
+                pD.asPoint(),
+                pE_crossings.asPoint(),
+            ]
+
             crossing_geom = QgsGeometry.fromPolylineXY(crossing_pointlist)
 
-            crossing_as_feat = geom_to_feature(crossing_geom,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname])
+            crossing_as_feat = geom_to_feature(
+                crossing_geom,
+                [
+                    self.crossings_len_fieldname,
+                    self.len_checking_fieldname,
+                    self.above_tol_fieldname,
+                ],
+            )
 
-            ortholen = self.dlg.d_to_add_box.value() + float(belonging_line[widths_fieldname])
+            ortholen = self.dlg.d_to_add_box.value() + float(
+                belonging_line[widths_fieldname]
+            )
 
             tolerance_factor = self.dlg.perc_tol_crossings_box.value()
-            tol_len = ortholen * (1 + tolerance_factor/100) 
+            tol_len = ortholen * (1 + tolerance_factor / 100)
 
-            dif_from_ortholen = round(crossing_geom.length() - ortholen,3)
+            dif_from_ortholen = round(crossing_geom.length() - ortholen, 3)
 
-            above_tol = (crossing_geom.length()>tol_len)
+            above_tol = crossing_geom.length() > tol_len
 
             if self.dlg.ch_remove_abovetol.isChecked():
                 if above_tol:
                     continue
 
-            crossing_as_feat.setAttributes([round(crossing_geom.length(),3),dif_from_ortholen,above_tol])
+            crossing_as_feat.setAttributes(
+                [round(crossing_geom.length(), 3), dif_from_ortholen, above_tol]
+            )
 
             crossings_featlist.append(crossing_as_feat)
 
-
             kerbs_featlist.append(geom_to_feature(pB))
             kerbs_featlist.append(geom_to_feature(pD))
-
 
             # to add intersections: # DEPRECATED
             # self.crossings_A_E_pointlist.append(pA_feat.geometry())
             # self.crossings_A_E_pointlist.append(pE_feat.geometry())
 
-
-
-        
-
-
         # creating and styling the crossings and kerbs layers
-        self.crossings_layer = layer_from_featlist(crossings_featlist,crossings_layer_name,"LineString",{'length':QVariant.Double,self.len_checking_fieldname:QVariant.Double,self.above_tol_fieldname:QVariant.Bool,self.nearest_centerpoint_fieldname:QVariant.Double})
+        self.crossings_layer = layer_from_featlist(
+            crossings_featlist,
+            crossings_layer_name,
+            "LineString",
+            {
+                "length": QVariant.Double,
+                self.len_checking_fieldname: QVariant.Double,
+                self.above_tol_fieldname: QVariant.Bool,
+                self.nearest_centerpoint_fieldname: QVariant.Double,
+            },
+        )
         self.crossings_layer.setCrs(self.custom_localTM_crs)
-
 
         # finding the nearest crossing center, so in case of too short segments or double lanes, one can automatically filter out:
 
         # creating the layer
-        crossing_id_fieldname = 'crossing_id'
+        crossing_id_fieldname = "crossing_id"
 
         center_crossings_featlist = []
         for feature in self.crossings_layer.getFeatures():
             as_polyline = feature.geometry().asPolyline()
             # 0 1 2 3 4 index 2 are centerpoints
-            pC_feat = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[2]),[feature.id()])
+            pC_feat = geom_to_feature(
+                QgsGeometry.fromPointXY(as_polyline[2]), [feature.id()]
+            )
 
             # pC_feat.setAttributes([feature.id()])
 
             center_crossings_featlist.append(pC_feat)
 
-        center_crossings_layer = layer_from_featlist(center_crossings_featlist,'centerpoints',attrs_dict={crossing_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
+        center_crossings_layer = layer_from_featlist(
+            center_crossings_featlist,
+            "centerpoints",
+            attrs_dict={crossing_id_fieldname: QVariant.Int},
+            CRS=self.custom_localTM_crs,
+        )
 
         # spatial index and testing:
         centerpoint_spatial_index = gen_layer_spatial_index(center_crossings_layer)
@@ -1426,9 +1641,19 @@ class sidewalkreator:
         for feature in center_crossings_layer.getFeatures():
             as_pointXY = feature.geometry().asPoint()
 
-            knn_list = centerpoint_spatial_index.nearestNeighbor(as_pointXY,2,knn_max_dist)
+            knn_list = centerpoint_spatial_index.nearestNeighbor(
+                as_pointXY, 2, knn_max_dist
+            )
 
-            distances = [round(as_pointXY.distance(*centerpoint_spatial_index.geometry(id).asPoint()),3) for id in knn_list]
+            distances = [
+                round(
+                    as_pointXY.distance(
+                        *centerpoint_spatial_index.geometry(id).asPoint()
+                    ),
+                    3,
+                )
+                for id in knn_list
+            ]
 
             crossing_id = feature[crossing_id_fieldname]
 
@@ -1436,43 +1661,48 @@ class sidewalkreator:
                 if len(distances) >= 2:
                     nearest_dist_dict[crossing_id] = max(distances)
                 else:
-                   nearest_dist_dict[crossing_id] = NULL
+                    nearest_dist_dict[crossing_id] = NULL
             else:
                 nearest_dist_dict[crossing_id] = NULL
 
-        create_filled_newlayerfield(self.crossings_layer,self.nearest_centerpoint_fieldname,{'attr_by_id':nearest_dist_dict},QVariant.Double)
+        create_filled_newlayerfield(
+            self.crossings_layer,
+            self.nearest_centerpoint_fieldname,
+            {"attr_by_id": nearest_dist_dict},
+            QVariant.Double,
+        )
 
         # hint texts:
-        self.en_hint = 'Hint: check for bad crossings using attrs.\nyou can delete them,\nkerbs are autom. cleaned!'
-        self.ptbr_hint = 'Dica: Você pode\ndeletar manualmente cruzamentos\nvide a tabela de atributos para filtrar!'
+        self.en_hint = "Hint: check for bad crossings using attrs.\nyou can delete them,\nkerbs are autom. cleaned!"
+        self.ptbr_hint = "Dica: Você pode\ndeletar manualmente cruzamentos\nvide a tabela de atributos para filtrar!"
         self.set_hint_text()
-
 
         # adding crossing len to check for "bad" crossings:
         # create_new_layerfield(self.crossings_layer,'length')
 
         # create_filled_newlayerfield(self.crossings_layer,'length',{'geometry':'length'},QVariant.Double)
 
-        self.crossings_stylefile_path = os.path.join(assets_path,crossings_stylefilename)
+        self.crossings_stylefile_path = os.path.join(
+            assets_path, crossings_stylefilename
+        )
         self.crossings_layer.loadNamedStyle(self.crossings_stylefile_path)
 
-        self.kerbs_layer = layer_from_featlist(kerbs_featlist,kerbs_layer_name)
+        self.kerbs_layer = layer_from_featlist(kerbs_featlist, kerbs_layer_name)
         self.kerbs_layer.setCrs(self.custom_localTM_crs)
 
-
-        kerbs_stylefile_path = os.path.join(assets_path,kerbs_stylefilename)
+        kerbs_stylefile_path = os.path.join(assets_path, kerbs_stylefilename)
         self.kerbs_layer.loadNamedStyle(kerbs_stylefile_path)
-
 
         ###################################################### ADDING POINTS TO SIDEWALKS
         # before next steps, adding the intersection points to the sidewalks layer:
 
         # self.add_kerb_sidewalk_vertices()  # it was a good try, but still with troubles
 
-        temporary_snapped_sidewalks = snap_layers(self.whole_sidewalks,self.crossings_layer)
+        temporary_snapped_sidewalks = snap_layers(
+            self.whole_sidewalks, self.crossings_layer
+        )
 
-        swap_features_layer_another(self.whole_sidewalks,temporary_snapped_sidewalks)
-
+        swap_features_layer_another(self.whole_sidewalks, temporary_snapped_sidewalks)
 
         # self.add_layer_canvas(self.inner_crossings_layer)
         self.add_layer_canvas(self.crossings_layer)
@@ -1481,7 +1711,6 @@ class sidewalkreator:
         # self.add_layer_canvas(self.protoblocks)
         # self.add_layer_canvas(self.dissolved_protoblocks_0)
 
-
         # Enabling What Shall be used afterwards:
         self.dlg.split_sidewalks.setEnabled(True)
         self.dlg.split_progressbar.setEnabled(True)
@@ -1489,16 +1718,7 @@ class sidewalkreator:
         # configuring the options for the next step:
         self.prepare_split_options()
 
-
         # self.dlg.gencrossings_progressbar.setValue(100)
-
-
-
-
-
-
-
-
 
     def draw_sidewalks(self):
 
@@ -1507,16 +1727,15 @@ class sidewalkreator:
         self.dlg.generate_sidewalks.setEnabled(False)
         # self.dlg.hint_text.setHidden(True)
 
-
         # hint texts:
-        self.en_hint = 'Hint: you can manually delete sidewalks\nuse the att. table to filter!'
-        self.ptbr_hint = 'Você pode del. manualmente calçadas,\nvide a tabela de atributos para filtrar!'
+        self.en_hint = (
+            "Hint: you can manually delete sidewalks\nuse the att. table to filter!"
+        )
+        self.ptbr_hint = "Você pode del. manualmente calçadas,\nvide a tabela de atributos para filtrar!"
         self.set_hint_text()
-
 
         # if no buildings, we can directly generate a simply dissolved-big_buffer
         if self.no_buildings or not self.dlg.check_if_overlaps_buildings.isChecked():
-
 
             pass
 
@@ -1528,33 +1747,42 @@ class sidewalkreator:
             # first, we create a dissolved poligon, we may test what
             # then we check distances
 
-
             dissolved_buildings = dissolve_tosinglegeom(self.reproj_buildings)
 
-            dissolved_feature_geom = get_first_feature_or_geom(dissolved_buildings,True)
+            dissolved_feature_geom = get_first_feature_or_geom(
+                dissolved_buildings, True
+            )
 
             widths_index = self.splitted_lines.fields().indexOf(widths_fieldname)
 
             with edit(self.splitted_lines):
-                for i,feature in enumerate(self.splitted_lines.getFeatures()):
+                for i, feature in enumerate(self.splitted_lines.getFeatures()):
 
                     # distance to nearest building
-                    d_to_nearest_building = feature.geometry().distance(dissolved_feature_geom)
+                    d_to_nearest_building = feature.geometry().distance(
+                        dissolved_feature_geom
+                    )
 
                     # actually projected distance (half the width plus half the "distance to be add", avaliable at the GUI):
-                    if not isinstance(feature['width'],str):
-                        ac_prj_d = feature['width']/2 + self.dlg.d_to_add_box.value()/2
+                    if not isinstance(feature["width"], str):
+                        ac_prj_d = (
+                            feature["width"] / 2 + self.dlg.d_to_add_box.value() / 2
+                        )
                     else:
                         try:
-                            feat_width = float(feature['width'])
-                            ac_prj_d = feat_width/2 + self.dlg.d_to_add_box.value()/2
+                            feat_width = float(feature["width"])
+                            ac_prj_d = (
+                                feat_width / 2 + self.dlg.d_to_add_box.value() / 2
+                            )
 
                         except:
-                            print(feature['width'])
+                            print(feature["width"])
                             continue
 
                     # discounting the minimum distance, so it will always be considered
-                    dif = (d_to_nearest_building - self.dlg.min_d_buildings_box.value()) - ac_prj_d
+                    dif = (
+                        d_to_nearest_building - self.dlg.min_d_buildings_box.value()
+                    ) - ac_prj_d
 
                     # dividing and multiplying by 2 as buffer is done side-by-side
 
@@ -1566,13 +1794,10 @@ class sidewalkreator:
                             # imagine the worst case where someone has created  a building intersecting or nearly touching the very road
                             new_width = self.dlg.min_width_box.value()
 
-
                         # finally, editing the field when needed
-                        self.splitted_lines.changeAttributeValue(feature.id(),widths_index,new_width)
-
-
-
-
+                        self.splitted_lines.changeAttributeValue(
+                            feature.id(), widths_index, new_width
+                        )
 
                     # print(d_to_nearest_building,feature['width']/2,i)
 
@@ -1580,43 +1805,49 @@ class sidewalkreator:
 
         # print(buffer_distance_string)
 
-        self.proto_undissolved_buffer_step1 = generate_buffer(self.splitted_lines,buffer_distance_string,dissolve=False)
+        self.proto_undissolved_buffer_step1 = generate_buffer(
+            self.splitted_lines, buffer_distance_string, dissolve=False
+        )
 
         # rounding directly, as it avoids small polygons aswell
         # TODO: check if it's the best approach, or to do it feature-wise
         self.curveradius = self.dlg.curve_radius_box.value()
 
-        proto_dissolved_buffer_step2 = generate_buffer(dissolve_tosinglegeom(self.proto_undissolved_buffer_step1),self.curveradius)
+        proto_dissolved_buffer_step2 = generate_buffer(
+            dissolve_tosinglegeom(self.proto_undissolved_buffer_step1), self.curveradius
+        )
 
-        dissolved_buffer = generate_buffer(proto_dissolved_buffer_step2,-self.curveradius)
-
-
+        dissolved_buffer = generate_buffer(
+            proto_dissolved_buffer_step2, -self.curveradius
+        )
 
         # just for sanity always set the CRS
         dissolved_buffer.setCrs(self.custom_localTM_crs)
 
-
         # now generating the big buffer to extract the sidewalks
-        big_temporary_buffer = generate_buffer(dissolved_buffer,big_buffer_d)
+        big_temporary_buffer = generate_buffer(dissolved_buffer, big_buffer_d)
         big_temporary_buffer.setCrs(self.custom_localTM_crs)
 
         # difference layer:
-        diff_layer = compute_difference_layer(big_temporary_buffer,dissolved_buffer)
+        diff_layer = compute_difference_layer(big_temporary_buffer, dissolved_buffer)
         diff_layer.setCrs(self.custom_localTM_crs)
-
 
         # to singleparts:
         diff_layer_as_singleparts = convert_multipart_to_singleparts(diff_layer)
-        remove_biggest_polygon(diff_layer_as_singleparts,True) # also recording areas for later use
+        remove_biggest_polygon(
+            diff_layer_as_singleparts, True
+        )  # also recording areas for later use
         diff_layer_as_singleparts.setCrs(self.custom_localTM_crs)
 
-
-        self.whole_sidewalklayer_name = self.string_according_language('SIDEWALKS','CALÇADAS')
+        self.whole_sidewalklayer_name = self.string_according_language(
+            "SIDEWALKS", "CALÇADAS"
+        )
 
         # finally, the sidewalks as boundaries (before any division):
-        self.whole_sidewalks = extract_lines_from_polygons(diff_layer_as_singleparts,'memory:'+self.whole_sidewalklayer_name)
+        self.whole_sidewalks = extract_lines_from_polygons(
+            diff_layer_as_singleparts, "memory:" + self.whole_sidewalklayer_name
+        )
         self.whole_sidewalks.setCrs(self.custom_localTM_crs)
-
 
         # # # # # FOR CONVCAVE/CONVEX TEST
         # # # # # polygonized version of sidewalks, for latter use:
@@ -1632,18 +1863,18 @@ class sidewalkreator:
                 
         """
 
-        dissolved_protoblock_geom = get_first_feature_or_geom(self.dissolved_protoblocks_0,True)
-
+        dissolved_protoblock_geom = get_first_feature_or_geom(
+            self.dissolved_protoblocks_0, True
+        )
 
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
                 if feature.geometry().disjoint(dissolved_protoblock_geom):
                     self.whole_sidewalks.deleteFeature(feature.id())
-        
 
-        '''
+        """
         end of that new part
-        '''
+        """
 
         """
             NEW PART: exclusion zones & sure zones
@@ -1653,92 +1884,138 @@ class sidewalkreator:
 
         sure_zones_featlist = []
 
-        for i,feature in enumerate(self.splitted_lines.getFeatures()):
+        for i, feature in enumerate(self.splitted_lines.getFeatures()):
             attrdict = feature.attributeMap()
 
             # checking if no "sidewalk tag", case that can trigger a skipping
             if i == 0:
-                #kl is "keyslist"
+                # kl is "keyslist"
                 kl = list(attrdict.keys())
-                if not any(['sidewalk' in key for key in kl]):
+                if not any(["sidewalk" in key for key in kl]):
                     break
 
-            width_val = float(attrdict.get(widths_fieldname)) + self.dlg.d_to_add_box.value() + 1
-            half_width = (width_val/2) + 0.5
+            width_val = (
+                float(attrdict.get(widths_fieldname))
+                + self.dlg.d_to_add_box.value()
+                + 1
+            )
+            half_width = (width_val / 2) + 0.5
 
             geom = None
 
             geom_sure_zone = None
 
-
             # all possibilities of sidewalk tag keys:
-            sidewalk_tag_value = attrdict.get('sidewalk')
-            sidewalk_both_tag_value = attrdict.get('sidewalk:both')
-            sidewalk_left_tag_value = attrdict.get('sidewalk:left')
-            sidewalk_right_tag_value = attrdict.get('sidewalk:right')
+            sidewalk_tag_value = attrdict.get("sidewalk")
+            sidewalk_both_tag_value = attrdict.get("sidewalk:both")
+            sidewalk_left_tag_value = attrdict.get("sidewalk:left")
+            sidewalk_right_tag_value = attrdict.get("sidewalk:right")
 
             # 0 is for "left"
             # 1 is for "right"
 
             if sidewalk_tag_value:
-                if sidewalk_tag_value == 'no':
-                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
-                elif sidewalk_tag_value == 'left':
-                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+                if sidewalk_tag_value == "no":
+                    geom = feature.geometry().buffer(
+                        half_width, 5, Qgis.EndCapStyle(2), Qgis.JoinStyle(1), 1
+                    )
+                elif sidewalk_tag_value == "left":
+                    geom = feature.geometry().singleSidedBuffer(
+                        half_width, 5, Qgis.BufferSide(1)
+                    )
 
-                    geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
-                elif sidewalk_tag_value == 'right':
-                    geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
+                    geom_sure_zone = feature.geometry().singleSidedBuffer(
+                        half_width, 5, Qgis.BufferSide(0)
+                    )
+                elif sidewalk_tag_value == "right":
+                    geom = feature.geometry().singleSidedBuffer(
+                        half_width, 5, Qgis.BufferSide(0)
+                    )
 
-                    geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
+                    geom_sure_zone = feature.geometry().singleSidedBuffer(
+                        half_width, 5, Qgis.BufferSide(1)
+                    )
 
-                elif sidewalk_tag_value == 'both' or sidewalk_tag_value == 'yes':
-                    geom_sure_zone = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
+                elif sidewalk_tag_value == "both" or sidewalk_tag_value == "yes":
+                    geom_sure_zone = feature.geometry().buffer(
+                        half_width, 5, Qgis.EndCapStyle(2), Qgis.JoinStyle(1), 1
+                    )
 
             elif sidewalk_both_tag_value:
-                if sidewalk_both_tag_value == 'no':
-                    geom = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)
-                if sidewalk_both_tag_value == 'both' or sidewalk_both_tag_value == 'yes':
-                    geom_sure_zone = feature.geometry().buffer(half_width,5,Qgis.EndCapStyle(2),Qgis.JoinStyle(1),1)    
-                 
+                if sidewalk_both_tag_value == "no":
+                    geom = feature.geometry().buffer(
+                        half_width, 5, Qgis.EndCapStyle(2), Qgis.JoinStyle(1), 1
+                    )
+                if (
+                    sidewalk_both_tag_value == "both"
+                    or sidewalk_both_tag_value == "yes"
+                ):
+                    geom_sure_zone = feature.geometry().buffer(
+                        half_width, 5, Qgis.EndCapStyle(2), Qgis.JoinStyle(1), 1
+                    )
+
             else:
                 if sidewalk_left_tag_value:
-                    if sidewalk_left_tag_value == 'no':
-                        geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
-                    elif sidewalk_left_tag_value == 'yes':
-                        geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
-
-
+                    if sidewalk_left_tag_value == "no":
+                        geom = feature.geometry().singleSidedBuffer(
+                            half_width, 5, Qgis.BufferSide(0)
+                        )
+                    elif sidewalk_left_tag_value == "yes":
+                        geom_sure_zone = feature.geometry().singleSidedBuffer(
+                            half_width, 5, Qgis.BufferSide(1)
+                        )
 
                 if sidewalk_right_tag_value:
-                    if sidewalk_right_tag_value == 'no':
+                    if sidewalk_right_tag_value == "no":
                         if geom:
-                            exclusion_zones_featlist.append(geom_to_feature(QgsGeometry(geom),['negative_tag_representation']))
+                            exclusion_zones_featlist.append(
+                                geom_to_feature(
+                                    QgsGeometry(geom), ["negative_tag_representation"]
+                                )
+                            )
 
-                        geom =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(1))
-                    elif sidewalk_right_tag_value == 'yes':
+                        geom = feature.geometry().singleSidedBuffer(
+                            half_width, 5, Qgis.BufferSide(1)
+                        )
+                    elif sidewalk_right_tag_value == "yes":
                         if geom_sure_zone:
-                            sure_zones_featlist.append(geom_to_feature(QgsGeometry(geom_sure_zone),['positive_tag_representation']))
+                            sure_zones_featlist.append(
+                                geom_to_feature(
+                                    QgsGeometry(geom_sure_zone),
+                                    ["positive_tag_representation"],
+                                )
+                            )
 
-
-                        geom_sure_zone =  feature.geometry().singleSidedBuffer(half_width,5,Qgis.BufferSide(0))
-            
+                        geom_sure_zone = feature.geometry().singleSidedBuffer(
+                            half_width, 5, Qgis.BufferSide(0)
+                        )
 
             if geom:
-                as_feat = geom_to_feature(geom,['negative_tag_representation'])
+                as_feat = geom_to_feature(geom, ["negative_tag_representation"])
                 exclusion_zones_featlist.append(as_feat)
 
             if geom_sure_zone:
-                as_feat_sure = geom_to_feature(geom_sure_zone,['positive_tag_representation'])
+                as_feat_sure = geom_to_feature(
+                    geom_sure_zone, ["positive_tag_representation"]
+                )
                 sure_zones_featlist.append(as_feat_sure)
-            
-
 
         # effectively creating the layers
-        self.exclusion_zones = layer_from_featlist(exclusion_zones_featlist,'exclusion_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
+        self.exclusion_zones = layer_from_featlist(
+            exclusion_zones_featlist,
+            "exclusion_zones",
+            "Polygon",
+            {"source": QVariant.String},
+            CRS=self.custom_localTM_crs,
+        )
 
-        self.sure_zones = layer_from_featlist(sure_zones_featlist,'sure_zones','Polygon',{'source':QVariant.String},CRS=self.custom_localTM_crs)
-
+        self.sure_zones = layer_from_featlist(
+            sure_zones_featlist,
+            "sure_zones",
+            "Polygon",
+            {"source": QVariant.String},
+            CRS=self.custom_localTM_crs,
+        )
 
         # storing the feature count of exclusion zones:
         self.exclusion_zones_count = self.exclusion_zones.featureCount()
@@ -1746,22 +2023,17 @@ class sidewalkreator:
         ### setting styles and adding to canvas
         # exclusionzones_stylelayerpath = os.path.join(assets_path,exclusion_stylefilename)
         # self.exclusion_zones.loadNamedStyle(exclusionzones_stylelayerpath)
-        apply_style(self.exclusion_zones,exclusion_stylefilename)
-        apply_style(self.sure_zones,sure_stylefilename)
-
-
-
+        apply_style(self.exclusion_zones, exclusion_stylefilename)
+        apply_style(self.sure_zones, sure_stylefilename)
 
         # applying:
 
         # difference_inplace(self.whole_sidewalks,self.exclusion_zones)
 
-
         # applying the exclusion
 
         # print(self.whole_sidewalks.isEditCommandActive())
         # print(self.whole_sidewalks.isEditable())
-
 
         # with edit(self.whole_sidewalks):
         #     registry = QgsApplication.instance().processingRegistry()
@@ -1771,47 +2043,59 @@ class sidewalkreator:
         #     execute_in_place(alg, {'INPUT': self.whole_sidewalks,'OVERLAY':self.exclusion_zones})
 
         # self.unselect_all_from_all()
-  
 
-        '''
+        """
         end of that new part (exclusion zones, parts with no sidewalks)
-        '''
-
-
-
+        """
 
         # areas and ratios part
-        self.sidewalks_area_field_name = 'in_area'
-        self.sidewalks_area_field_idx = create_area_field(self.whole_sidewalks,self.sidewalks_area_field_name)  
+        self.sidewalks_area_field_name = "in_area"
+        self.sidewalks_area_field_idx = create_area_field(
+            self.whole_sidewalks, self.sidewalks_area_field_name
+        )
 
-        self.sidewalks_perimeter_field_name = 'perimeter'
-        self.sidewalks_perimeter_field_idx = create_perimeter_field(self.whole_sidewalks,self.sidewalks_perimeter_field_name) 
+        self.sidewalks_perimeter_field_name = "perimeter"
+        self.sidewalks_perimeter_field_idx = create_perimeter_field(
+            self.whole_sidewalks, self.sidewalks_perimeter_field_name
+        )
 
         # normalized perimeter/sqrt(area) ratio: declaration
-        self.norm_ratio_field_name = 'norm_ratio'
-        self.norm_ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.norm_ratio_field_name)
+        self.norm_ratio_field_name = "norm_ratio"
+        self.norm_ratio_field_idx = create_new_layerfield(
+            self.whole_sidewalks, self.norm_ratio_field_name
+        )
 
         # simple perimeter/area ratio: declaration
-        self.simple_ratio_field_name = 'simple_ratio'
-        self.simple_ratio_field_idx = create_new_layerfield(self.whole_sidewalks,self.simple_ratio_field_name)
+        self.simple_ratio_field_name = "simple_ratio"
+        self.simple_ratio_field_idx = create_new_layerfield(
+            self.whole_sidewalks, self.simple_ratio_field_name
+        )
 
         # creation of both ratios
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
-                attrdict = feature.attributeMap() # getting attributes
+                attrdict = feature.attributeMap()  # getting attributes
 
                 # normalized ratio
-                norm_ratio = attrdict[self.sidewalks_perimeter_field_name] / math.sqrt(attrdict[self.sidewalks_area_field_name])
+                norm_ratio = attrdict[self.sidewalks_perimeter_field_name] / math.sqrt(
+                    attrdict[self.sidewalks_area_field_name]
+                )
 
-                self.whole_sidewalks.changeAttributeValue(feature.id(),self.norm_ratio_field_idx,norm_ratio)
+                self.whole_sidewalks.changeAttributeValue(
+                    feature.id(), self.norm_ratio_field_idx, norm_ratio
+                )
 
                 # simple ratio
-                simple_ratio = attrdict[self.sidewalks_perimeter_field_name] / attrdict[self.sidewalks_area_field_name]
+                simple_ratio = (
+                    attrdict[self.sidewalks_perimeter_field_name]
+                    / attrdict[self.sidewalks_area_field_name]
+                )
 
-                self.whole_sidewalks.changeAttributeValue(feature.id(),self.simple_ratio_field_idx,simple_ratio)
+                self.whole_sidewalks.changeAttributeValue(
+                    feature.id(), self.simple_ratio_field_idx, simple_ratio
+                )
 
         # ratios_list = get_layercolumn_byname(self.whole_sidewalks,self.norm_ratio_field_name)
-
 
         # ratios_summ = QgsStatisticalSummary()
 
@@ -1829,16 +2113,14 @@ class sidewalkreator:
         #### APPLYING THE EXCLUSION:
         self.excluding_exclusion_zones()
 
-
         # styling the sidewalks layer
         # self.sidewalk_stylefile_path = os.path.join(assets_path,sidewalks_stylefilename)
 
         # self.whole_sidewalks.loadNamedStyle(self.sidewalk_stylefile_path)
-        apply_style(self.whole_sidewalks,sidewalks_stylefilename)
+        apply_style(self.whole_sidewalks, sidewalks_stylefilename)
 
         # and now on the roads, that are just simpler less important things:
-        apply_style(self.splitted_lines,roads_p3_stylefilename)
-
+        apply_style(self.splitted_lines, roads_p3_stylefilename)
 
         # adding layers to canvas
         self.add_layer_canvas(self.exclusion_zones)
@@ -1872,33 +2154,34 @@ class sidewalkreator:
         self.dlg.ch_remove_abovetol.setEnabled(True)
         # self.dlg.gencrossings_progressbar.setEnabled(True)
 
-
-
     def excluding_exclusion_zones(self):
         # called once or twice, so this one created
 
-        temp_sidewalk_w_exclusions = compute_difference_layer(self.whole_sidewalks,self.exclusion_zones)
+        temp_sidewalk_w_exclusions = compute_difference_layer(
+            self.whole_sidewalks, self.exclusion_zones
+        )
 
         temp_sidewalk_w_exclusions.setCrs(self.custom_localTM_crs)
 
-        swap_features_layer_another(self.whole_sidewalks,temp_sidewalk_w_exclusions)    
+        swap_features_layer_another(self.whole_sidewalks, temp_sidewalk_w_exclusions)
 
-    def string_according_language(self,en_str,ptbr_str):
-        if self.current_lang == 'en':
+    def string_according_language(self, en_str, ptbr_str):
+        if self.current_lang == "en":
             return en_str
         else:
             return ptbr_str
 
     def remove_temporary_layers(self):
 
-        is_temporary = [layer.isTemporary() for layer in QgsProject.instance().mapLayers().values()]
+        is_temporary = [
+            layer.isTemporary() for layer in QgsProject.instance().mapLayers().values()
+        ]
 
         layer_fullnames = [layer for layer in QgsProject.instance().mapLayers()]
 
-        for i,status in enumerate(is_temporary):
+        for i, status in enumerate(is_temporary):
             if status:
                 QgsProject.instance().removeMapLayer(layer_fullnames[i])
-
 
     # # def replace_vectorlayer(self,layername,newpath):
     # #     remove_layerlist([layername])
@@ -1921,7 +2204,6 @@ class sidewalkreator:
 
         self.dlg.dead_end_iters_label.setEnabled(False)
         self.dlg.dead_end_iters_box.setEnabled(False)
-
 
         # objects that must be hidden:
         self.dlg.generate_sidewalks.setHidden(True)
@@ -1968,14 +2250,13 @@ class sidewalkreator:
         self.dlg.output_file_label.setHidden(True)
         self.dlg.output_folder_selector.setHidden(True)
 
-
         # but enable the warning and the button:
         self.dlg.sidewalks_warning.setHidden(False)
-        self.dlg.sidewalks_warning.setGeometry(270,180, 331, 281)
+        self.dlg.sidewalks_warning.setGeometry(270, 180, 331, 281)
 
         self.dlg.ignore_already_drawn_btn.setHidden(False)
         self.dlg.ignore_already_drawn_btn.setEnabled(True)
-        self.dlg.ignore_already_drawn_btn.setGeometry(300,450, 261, 71)
+        self.dlg.ignore_already_drawn_btn.setGeometry(300, 450, 261, 71)
         # values from Qt Designer
 
     def ignore_already_drawn_fcn(self):
@@ -1986,18 +2267,13 @@ class sidewalkreator:
         # then right after its call we revert the variable value (bug 001 memories)
         self.ignore_sidewalks_already_drawn = True
 
-
         # print(self.ignore_sidewalks_already_drawn)
-
-
-
-
 
     def reset_fields(self):
         # stuff of feature selector:
         self.dlg.input_layer_feature_selector.setFeature(-1)
         self.dlg.input_layer_feature_selector.setEnabled(False)
-        self.dlg.input_feature_field.setText('')
+        self.dlg.input_feature_field.setText("")
 
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
@@ -2050,11 +2326,9 @@ class sidewalkreator:
         self.dlg.output_folder_selector.setEnabled(False)
         # self.dlg.gencrossings_progressbar.setEnabled(False)
 
-
         # self.dlg.gencrossings_progressbar.setValue(0)
         self.dlg.datafetch_progressbar.setValue(0)
         self.dlg.split_progressbar.setValue(0)
-
 
         self.dlg.min_d_buildings_box.setEnabled(False)
         self.dlg.min_d_label.setEnabled(False)
@@ -2072,20 +2346,17 @@ class sidewalkreator:
         # default value setting:
         self.dlg.min_d_buildings_box.setValue(min_d_to_building)
         self.dlg.curve_radius_box.setValue(default_curve_radius)
-        self.dlg.d_to_add_box.setValue(d_to_add_to_each_side*2)
-        self.dlg.min_width_box.setValue(minimal_buffer*2)
+        self.dlg.d_to_add_box.setValue(d_to_add_to_each_side * 2)
+        self.dlg.min_width_box.setValue(minimal_buffer * 2)
         self.dlg.perc_draw_kerbs_box.setValue(perc_draw_kerbs)
         self.dlg.perc_tol_crossings_box.setValue(perc_tol_crossings)
         self.dlg.d_to_add_inward_box.setValue(d_to_add_interp_d)
         self.dlg.min_seg_len_box.setValue(20)
 
-
-
-        #hidden elements
+        # hidden elements
         self.dlg.hint_text.setHidden(True)
         self.dlg.ignore_already_drawn_btn.setHidden(True)
         self.dlg.sidewalks_warning.setHidden(True)
-
 
         # table controlling
         self.dlg.higway_values_table.setRowCount(0)
@@ -2117,8 +2388,6 @@ class sidewalkreator:
         self.dlg.split_sidewalks.setHidden(False)
         self.dlg.split_progressbar.setHidden(False)
 
-
-
         self.dlg.perc_draw_kerbs_box.setHidden(False)
         self.dlg.perc_draw_kerbs_label.setHidden(False)
         self.dlg.perc_tol_crossings_box.setHidden(False)
@@ -2147,7 +2416,7 @@ class sidewalkreator:
 
         # self.dlg.gencrossings_progressbar.setHidden(False)
 
-        #checked/unchecked stuff:
+        # checked/unchecked stuff:
         self.dlg.opt_parallel_crossings.setChecked(True)
         self.dlg.onlyfacades_checkbox.setChecked(True)
         self.dlg.dontsplit_checkbox.setChecked(False)
@@ -2155,7 +2424,6 @@ class sidewalkreator:
         self.dlg.maxlensplit_checkbox.setChecked(False)
         self.dlg.voronoi_checkbox.setChecked(False)
         self.dlg.alongside_vor_checkbox.setChecked(False)
-
 
         # # control variables:
         # if self.ignore_sidewalks_already_drawn:
@@ -2166,20 +2434,30 @@ class sidewalkreator:
 
         self.export_ready = False
 
-
         # texts, for appearance:
-        self.set_text_based_on_language(self.dlg.input_status,'waiting a valid input...','aguardando uma entrada válida...',self.change_input_labels)
-        self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','aguardando dados...',self.change_input_labels)
+        self.set_text_based_on_language(
+            self.dlg.input_status,
+            "waiting a valid input...",
+            "aguardando uma entrada válida...",
+            self.change_input_labels,
+        )
+        self.set_text_based_on_language(
+            self.dlg.input_status_of_data,
+            "waiting for data...",
+            "aguardando dados...",
+            self.change_input_labels,
+        )
 
         # hint box:
         self.en_hint = "Sometimes it's better to\ncorrect errors on OSM data first!"
-        self.ptbr_hint = 'Pode ser melhor consertar\nerros na base do OSM antes!'
-
+        self.ptbr_hint = "Pode ser melhor consertar\nerros na base do OSM antes!"
 
         # to not exclude created layers and data when the "Ok" button is pressed:
         if not self.ok_ready:
             # also wipe data:
-            self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
+            self.remove_layers_and_wipe_files(
+                [osm_higway_layer_finalname, buildings_layername], temps_path
+            )
 
             # remove temporary layers:
             self.remove_temporary_layers()
@@ -2188,7 +2466,6 @@ class sidewalkreator:
 
         # and refresh canvas:
         self.iface.mapCanvas().refresh()
-
 
     def get_input_layer(self):
         self.input_layer = self.dlg.input_layer_selector.currentLayer()
@@ -2202,20 +2479,20 @@ class sidewalkreator:
 
                 self.input_feature = self.dlg.input_layer_feature_selector.feature()
 
-
                 self.dlg.input_layer_feature_selector.setEnabled(True)
                 self.dlg.input_layer_selector.setEnabled(False)
 
-                self.dlg.input_feature_field.setText(self.dlg.input_layer_feature_selector.displayExpression())
+                self.dlg.input_feature_field.setText(
+                    self.dlg.input_layer_feature_selector.displayExpression()
+                )
 
             else:
-                self.dlg.input_status.setText(self.string_according_language('temporary layers are not allowed','layers temporários não são permitidos'))
-
-
-
-
-
-
+                self.dlg.input_status.setText(
+                    self.string_according_language(
+                        "temporary layers are not allowed",
+                        "layers temporários não são permitidos",
+                    )
+                )
 
     def get_input_feature(self):
         # self.input_layer = QgsMapLayerComboBox.currentLayer()
@@ -2229,19 +2506,14 @@ class sidewalkreator:
 
                 self.input_feature = self.dlg.input_layer_feature_selector.feature()
 
-
                 # assuring 4326 as EPSG code for layer
                 # layer_4326 = reproject_layer(self.input_layer)
 
-
                 # input_feature = QgsFeature()
-
 
                 # iterat = layer_4326.getFeatures()
 
                 # iterat.nextFeature(input_feature)
-
-
 
                 if self.input_feature.hasGeometry():
                     # TODO: beware of qgis bugs...
@@ -2262,17 +2534,28 @@ class sidewalkreator:
                             self.maxLgt = bbox.xMaximum()
                             self.maxLat = bbox.yMaximum()
 
-
                             if self.input_polygon.isGeosValid():
 
                                 # zooming to inputlayer:
-                                if self.iface.mapCanvas().mapSettings().destinationCrs().authid() == CRS_LATLON_4326:
-                                    self.iface.mapCanvas().setExtent(self.input_feature.geometry().boundingBox())#self.input_layer_4326.extent())
+                                if (
+                                    self.iface.mapCanvas()
+                                    .mapSettings()
+                                    .destinationCrs()
+                                    .authid()
+                                    == CRS_LATLON_4326
+                                ):
+                                    self.iface.mapCanvas().setExtent(
+                                        self.input_feature.geometry().boundingBox()
+                                    )  # self.input_layer_4326.extent())
                                 else:
                                     bbox_4326 = get_bbox4326_currCRS(
                                         # self.input_layer_4326.extent(),
                                         self.input_feature.geometry().boundingBox(),
-                                        self.iface.mapCanvas().mapSettings().destinationCrs().authid())
+                                        self.iface.mapCanvas()
+                                        .mapSettings()
+                                        .destinationCrs()
+                                        .authid(),
+                                    )
                                     self.iface.mapCanvas().setExtent(bbox_4326)
                                 self.iface.mapCanvas().refresh()
 
@@ -2280,7 +2563,9 @@ class sidewalkreator:
                                 # inputpolygons_stylelayerpath = os.path.join(assets_path,inputpolygons_stylefilename)
 
                                 # self.input_layer.loadNamedStyle(inputpolygons_stylelayerpath)
-                                apply_style(self.input_layer,inputpolygons_stylefilename)
+                                apply_style(
+                                    self.input_layer, inputpolygons_stylefilename
+                                )
 
                                 # enabling itens for next step
                                 self.dlg.datafetch.setEnabled(True)
@@ -2291,52 +2576,61 @@ class sidewalkreator:
 
                                 # self.change_input_labels = False
                                 # self.dlg.input_status.setText('Valid Input!')
-                                self.set_text_based_on_language(self.dlg.input_status,'Valid Input!','Entrada Válida!')
+                                self.set_text_based_on_language(
+                                    self.dlg.input_status,
+                                    "Valid Input!",
+                                    "Entrada Válida!",
+                                )
                                 # self.dlg.input_status_of_data.setText('waiting for data...')
-                                self.set_text_based_on_language(self.dlg.input_status_of_data,'waiting for data...','Aguardando Dados...')
-
+                                self.set_text_based_on_language(
+                                    self.dlg.input_status_of_data,
+                                    "waiting for data...",
+                                    "Aguardando Dados...",
+                                )
 
                                 # for item in [self.minLgt,self.minLat,self.maxLgt,self.maxLat]:
                                 #     self.write_to_debug(item)
                     else:
-                        self.set_text_based_on_language(self.dlg.input_status,'Multi-Part Geometries are not Supported!!','Geometrias Multi-Parte não são suportadas!!')
+                        self.set_text_based_on_language(
+                            self.dlg.input_status,
+                            "Multi-Part Geometries are not Supported!!",
+                            "Geometrias Multi-Parte não são suportadas!!",
+                        )
                         self.dlg.datafetch.setEnabled(False)
                         self.dlg.ch_ignore_buildings.setEnabled(False)
 
                 else:
                     # self.dlg.input_status.setText('no geometries on input!!')
-                    self.set_text_based_on_language(self.dlg.input_status,'no geometries on input!!','Entrada sem geometrias!!')
+                    self.set_text_based_on_language(
+                        self.dlg.input_status,
+                        "no geometries on input!!",
+                        "Entrada sem geometrias!!",
+                    )
                     self.dlg.datafetch.setEnabled(False)
                     self.dlg.ch_ignore_buildings.setEnabled(False)
 
             else:
 
                 # self.dlg.input_status.setText('waiting a valid for input...')
-                self.set_text_based_on_language(self.dlg.input_status,'Waiting for a valid input...','Aguardando entrada válida...')
+                self.set_text_based_on_language(
+                    self.dlg.input_status,
+                    "Waiting for a valid input...",
+                    "Aguardando entrada válida...",
+                )
                 self.dlg.datafetch.setEnabled(False)
                 self.dlg.ch_ignore_buildings.setEnabled(False)
         except:
-            print('no input layer at this moment.')
+            print("no input layer at this moment.")
 
-
-
-
-
-
-
-
-
-    def remove_layers_and_wipe_files(self,layernamelist,folderpath=None):
-        '''
-            one can also pass no folderpath to just remove layerlist
-        '''
+    def remove_layers_and_wipe_files(self, layernamelist, folderpath=None):
+        """
+        one can also pass no folderpath to just remove layerlist
+        """
 
         remove_layerlist(layernamelist)
 
         # if folderpath:
         #     wipe_folder_files(folderpath)
-
-
 
     # called at "Fetch Data" or self.datafetch button
     def call_get_osm_data(self):
@@ -2352,32 +2646,35 @@ class sidewalkreator:
         self.dlg.timeout_box.setEnabled(False)
         self.dlg.timeout_label.setEnabled(False)
 
-
-
-
         # PART 1 : wiping old stuff
         # delete files from previous session:
         #   and remove layers from project
 
-        self.remove_layers_and_wipe_files([osm_higway_layer_finalname,buildings_layername],temps_path)
-        self.remove_temporary_layers() # also temporary layers that can be around
+        self.remove_layers_and_wipe_files(
+            [osm_higway_layer_finalname, buildings_layername], temps_path
+        )
+        self.remove_temporary_layers()  # also temporary layers that can be around
 
         self.dlg.datafetch_progressbar.setValue(10)
-
 
         # PART 2: Getting and transforming the data
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
 
-
         # OSM query
-        query_string = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt)
+        query_string = osm_query_string_by_bbox(
+            self.minLat, self.minLgt, self.maxLat, self.maxLgt
+        )
         # acquired file
 
-        data_geojson_string = get_osm_data(query_string,roads_layername,timeout=self.dlg.timeout_box.value(),return_as_string=True)
+        data_geojson_string = get_osm_data(
+            query_string,
+            roads_layername,
+            timeout=self.dlg.timeout_box.value(),
+            return_as_string=True,
+        )
 
         self.dlg.datafetch_progressbar.setValue(30)
-
 
         # clipped_path = data_geojsonpath.replace('.geojson','_clipped.geojson')
 
@@ -2386,60 +2683,86 @@ class sidewalkreator:
         # self.write_to_debug(clip_polygon_path)
 
         # adding as layer
-        osm_data_layer = QgsVectorLayer(data_geojson_string,roads_layername,"ogr")
+        osm_data_layer = QgsVectorLayer(data_geojson_string, roads_layername, "ogr")
 
         # creating an layer with only the input polygon:
         cleaned_input_feature = geom_to_feature(self.input_feature.geometry())
 
-        self.only_inputfeature_layer = layer_from_featlist([cleaned_input_feature],'input_feature','Polygon',CRS=crs_4326)
+        self.only_inputfeature_layer = layer_from_featlist(
+            [cleaned_input_feature], "input_feature", "Polygon", CRS=crs_4326
+        )
 
-
-        clipped_datalayer = cliplayer_v2(osm_data_layer,self.only_inputfeature_layer,'memory:clipped_roads_wgs84')
+        clipped_datalayer = cliplayer_v2(
+            osm_data_layer, self.only_inputfeature_layer, "memory:clipped_roads_wgs84"
+        )
 
         self.dlg.datafetch_progressbar.setValue(35)
-
-
 
         # clipped_datalayer = QgsVectorLayer(clipped_path,roads_layername,"ogr")
         # self.clipped_reproj_path = data_geojsonpath.replace('.geojson','_clipped_reproj.geojson')
 
-
         # # Custom CRS, to use metric stuff with minimal distortion
-        self.clipped_reproj_datalayer, self.custom_localTM_crs = reproject_layer_localTM(clipped_datalayer,None,osm_higway_layer_finalname,lgt_0=self.bbox_center.x())
+        self.clipped_reproj_datalayer, self.custom_localTM_crs = (
+            reproject_layer_localTM(
+                clipped_datalayer,
+                None,
+                osm_higway_layer_finalname,
+                lgt_0=self.bbox_center.x(),
+            )
+        )
 
         self.dlg.datafetch_progressbar.setValue(40)
-
-
 
         # # not the prettier way to get also the buildings (yes, could create a function, its not lazyness, I swear...):
         # # no need for clipping the buildings layer
 
         if not self.dlg.ch_ignore_buildings.isChecked() and use_buildings:
-            query_string_buildings = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'building',relation=include_relations)
-            buildings_geojson_string = get_osm_data(query_string_buildings,'osm_buildings_data','Polygon',timeout=self.dlg.timeout_box.value(),return_as_string=True)
-            buildings_brutelayer = QgsVectorLayer(buildings_geojson_string,'brute_buildings','ogr')
+            query_string_buildings = osm_query_string_by_bbox(
+                self.minLat,
+                self.minLgt,
+                self.maxLat,
+                self.maxLgt,
+                "building",
+                relation=include_relations,
+            )
+            buildings_geojson_string = get_osm_data(
+                query_string_buildings,
+                "osm_buildings_data",
+                "Polygon",
+                timeout=self.dlg.timeout_box.value(),
+                return_as_string=True,
+            )
+            buildings_brutelayer = QgsVectorLayer(
+                buildings_geojson_string, "brute_buildings", "ogr"
+            )
 
-            self.no_buildings = check_empty_layer(buildings_brutelayer) # asserts if there are buildings in the area
+            self.no_buildings = check_empty_layer(
+                buildings_brutelayer
+            )  # asserts if there are buildings in the area
 
             self.dlg.datafetch_progressbar.setValue(45)
-
 
             # do not add buildings if there's no need
             if not self.no_buildings:
 
-                self.dlg.check_if_overlaps_buildings.setChecked(True) # set as default option, since sidewalks can overlap buildings
+                self.dlg.check_if_overlaps_buildings.setChecked(
+                    True
+                )  # set as default option, since sidewalks can overlap buildings
 
                 # reproj_buildings_path = buildings_geojsonpath.replace('.geojson','_reproj.geojson')
                 self.dlg.datafetch_progressbar.setValue(50)
 
-                self.reproj_buildings, _ = reproject_layer_localTM(buildings_brutelayer,None,buildings_layername,lgt_0=self.bbox_center.x())
+                self.reproj_buildings, _ = reproject_layer_localTM(
+                    buildings_brutelayer,
+                    None,
+                    buildings_layername,
+                    lgt_0=self.bbox_center.x(),
+                )
                 self.dlg.datafetch_progressbar.setValue(55)
 
                 if draw_buildings:
-                    apply_style(self.reproj_buildings,buildings_stylefilename)
+                    apply_style(self.reproj_buildings, buildings_stylefilename)
                     self.add_layer_canvas(self.reproj_buildings)
-
-
 
                 buildings_centroids = gen_centroids_layer(self.reproj_buildings)
                 # self.add_layer_canvas(centroids)
@@ -2451,7 +2774,6 @@ class sidewalkreator:
 
             self.dlg.datafetch_progressbar.setValue(60)
 
-
             """
             # adresses parts (there are just points in osm database, generally from mapping agencies i.e. IBGE),
             # should be joined with centroids
@@ -2459,32 +2781,48 @@ class sidewalkreator:
             """
 
             # mostly a clone of get buildings snippet
-            query_string_addrs = osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,'addr:housenumber',node=True,way=False)
-            addrs_geojson_str = get_osm_data(query_string_addrs,'osm_addrs_data','Point',timeout=self.dlg.timeout_box.value(),return_as_string=True)
+            query_string_addrs = osm_query_string_by_bbox(
+                self.minLat,
+                self.minLgt,
+                self.maxLat,
+                self.maxLgt,
+                "addr:housenumber",
+                node=True,
+                way=False,
+            )
+            addrs_geojson_str = get_osm_data(
+                query_string_addrs,
+                "osm_addrs_data",
+                "Point",
+                timeout=self.dlg.timeout_box.value(),
+                return_as_string=True,
+            )
             self.dlg.datafetch_progressbar.setValue(65)
 
-            addrs_brutelayer = QgsVectorLayer(addrs_geojson_str,'brute_buildings','ogr')
+            addrs_brutelayer = QgsVectorLayer(
+                addrs_geojson_str, "brute_buildings", "ogr"
+            )
 
             self.no_addrs = check_empty_layer(addrs_brutelayer)
 
             self.dlg.datafetch_progressbar.setValue(70)
 
-
             if not self.no_addrs:
                 # reproj_addrs_path = addrs_geojsonpath.replace('.geojson','_reproj.geojson')
-                self.reproj_addrs, _ = reproject_layer_localTM(addrs_brutelayer,None,'addrs_points',lgt_0=self.bbox_center.x())
+                self.reproj_addrs, _ = reproject_layer_localTM(
+                    addrs_brutelayer, None, "addrs_points", lgt_0=self.bbox_center.x()
+                )
                 # self.add_layer_canvas(self.reproj_addrs)
 
             self.dlg.datafetch_progressbar.setValue(75)
 
-
-            '''
+            """
             now the cases to create combined layer w/wout centroids and adresses:
             both unavaliable: nothing to do, as there a variable @POI_split_avaliable already set for that case
             both avaliable: merge
             if only addrs, merge
             if only centoids, merge
-            '''
+            """
 
             if not self.no_buildings or not self.no_addrs:
                 self.POI_split_avaliable = True
@@ -2497,46 +2835,39 @@ class sidewalkreator:
                 if not self.no_addrs:
                     layersto_merge.append(self.reproj_addrs)
 
-                pois_splitting_name = self.string_according_language('addrs_and_buildings_centroids','enderecos_e_centroides')
+                pois_splitting_name = self.string_according_language(
+                    "addrs_and_buildings_centroids", "enderecos_e_centroides"
+                )
 
-                POIs_for_splitting_layer_p0 = mergelayers(layersto_merge,self.custom_localTM_crs)
+                POIs_for_splitting_layer_p0 = mergelayers(
+                    layersto_merge, self.custom_localTM_crs
+                )
 
-
-                self.POIs_for_splitting_layer = dissolve_tosinglegeom(POIs_for_splitting_layer_p0,'memory:'+pois_splitting_name)
+                self.POIs_for_splitting_layer = dissolve_tosinglegeom(
+                    POIs_for_splitting_layer_p0, "memory:" + pois_splitting_name
+                )
 
                 self.POIs_for_splitting_layer.setCrs(self.custom_localTM_crs)
 
                 # pois_stylepath = os.path.join(assets_path,'addrs_centroids2.qml')
 
                 # self.POIs_for_splitting_layer.loadNamedStyle(pois_stylepath)
-                apply_style(self.POIs_for_splitting_layer,splitting_pois_stylefilename)
+                apply_style(self.POIs_for_splitting_layer, splitting_pois_stylefilename)
 
                 self.add_layer_canvas(self.POIs_for_splitting_layer)
 
-
-
         self.dlg.datafetch_progressbar.setValue(90)
-
-
 
         # a little cleaning:
         #   move do self.data_clean?
         # it just removes lines that are really not connected to any other
         remove_unconnected_lines_v2(self.clipped_reproj_datalayer)
 
-
-
-
-
-
         # adding to canvas
         self.add_layer_canvas(self.clipped_reproj_datalayer)
 
         # PART 3: Getting Attributes and drawing table:
-        higway_list = get_layercolumn_byname(self.clipped_reproj_datalayer,highway_tag)
-
-
-
+        higway_list = get_layercolumn_byname(self.clipped_reproj_datalayer, highway_tag)
 
         self.dlg.datafetch_progressbar.setValue(95)
 
@@ -2548,28 +2879,31 @@ class sidewalkreator:
         self.dlg.higway_values_table.setRowCount(len(self.unique_highway_values))
         self.dlg.higway_values_table.setColumnCount(2)
 
-        if self.current_lang == 'en':
-            self.dlg.higway_values_table.setHorizontalHeaderLabels(['tag value','width'])
+        if self.current_lang == "en":
+            self.dlg.higway_values_table.setHorizontalHeaderLabels(
+                ["tag value", "width"]
+            )
         else:
-            self.dlg.higway_values_table.setHorizontalHeaderLabels(['valor','largura'])
-
+            self.dlg.higway_values_table.setHorizontalHeaderLabels(["valor", "largura"])
 
         # filling first colum --> higway:values and second --> defalt_values
-        for i,item in enumerate(self.unique_highway_values):
+        for i, item in enumerate(self.unique_highway_values):
             vvalue = self.unique_highway_values[i]
 
-            self.dlg.higway_values_table.setItem(i,0,QTableWidgetItem(vvalue))
+            self.dlg.higway_values_table.setItem(i, 0, QTableWidgetItem(vvalue))
 
-            self.dlg.higway_values_table.setItem(i,1,QTableWidgetItem(str(default_widths.get(vvalue,fallback_default_width))))
-
-
+            self.dlg.higway_values_table.setItem(
+                i,
+                1,
+                QTableWidgetItem(
+                    str(default_widths.get(vvalue, fallback_default_width))
+                ),
+            )
 
         # Finally, enabling next button:
         self.dlg.clean_data.setEnabled(True)
         self.dlg.dead_end_iters_label.setEnabled(True)
         self.dlg.dead_end_iters_box.setEnabled(True)
-
-
 
         # BUT... if there are sidewalks already drawn, one must step back!!
         # if sidewalk_tag_value_value in self.unique_highway_values:
@@ -2579,36 +2913,36 @@ class sidewalkreator:
 
         #         self.ignore_sidewalks_already_drawn = True
 
-
         # # # testing if inverse transformation is working:
         # # self.add_layer_canvas(reproject_layer(self.clipped_reproj_datalayer))
 
         self.dlg.hint_text.setHidden(False)
 
-  
-
-
-        self.set_text_based_on_language(self.dlg.input_status_of_data,'data acquired!','Dados Obtidos!!')
+        self.set_text_based_on_language(
+            self.dlg.input_status_of_data, "data acquired!", "Dados Obtidos!!"
+        )
         self.dlg.datafetch_progressbar.setValue(100)
 
         # setting style on roads:
-        apply_style(self.clipped_reproj_datalayer,roads_p1_stylefilename)
+        apply_style(self.clipped_reproj_datalayer, roads_p1_stylefilename)
 
-
-    def set_text_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
+    def set_text_based_on_language(
+        self, qt_object, en_txt, ptbr_txt, extra_control_bool=True
+    ):
         if extra_control_bool:
-            if self.current_lang == 'en':
+            if self.current_lang == "en":
                 qt_object.setText(en_txt)
             else:
                 qt_object.setText(ptbr_txt)
 
-    def set_prefix_based_on_language(self,qt_object,en_txt,ptbr_txt,extra_control_bool=True):
+    def set_prefix_based_on_language(
+        self, qt_object, en_txt, ptbr_txt, extra_control_bool=True
+    ):
         if extra_control_bool:
-            if self.current_lang == 'en':
+            if self.current_lang == "en":
                 qt_object.setPrefix(en_txt)
             else:
                 qt_object.setPrefix(ptbr_txt)
-
 
     # def write_to_debug(self,input_stringable,add_newline=True):
     #     with open(self.session_debugpath,'a+') as session_report:
@@ -2616,14 +2950,23 @@ class sidewalkreator:
     #         if add_newline:
     #             session_report.write('\n')
 
-    def two_intersections_byvector_with_sidewalks(self,vector,centerpoint,linefeature,curr_distance,is_at_beginning,print_points=False):
+    def two_intersections_byvector_with_sidewalks(
+        self,
+        vector,
+        centerpoint,
+        linefeature,
+        curr_distance,
+        is_at_beginning,
+        print_points=False,
+    ):
 
         new_PC_geometry = False
 
-
         # a tolerance for a max length check
         tolerance_factor = self.dlg.perc_tol_crossings_box.value()
-        max_len = (self.dlg.d_to_add_box.value() + float(linefeature[widths_fieldname])) * (1 + tolerance_factor/100) 
+        max_len = (
+            self.dlg.d_to_add_box.value() + float(linefeature[widths_fieldname])
+        ) * (1 + tolerance_factor / 100)
 
         # correct datatype (QgsPoint/QGSPointXY)
         if centerpoint.isMultipart():
@@ -2638,7 +2981,7 @@ class sidewalkreator:
         sideB_ok = False
 
         iter_num = 0
-        while not all([sideA_ok,sideB_ok]):
+        while not all([sideA_ok, sideB_ok]):
 
             # we may iterate, as the intersection can give more than one point or no point at all
 
@@ -2646,10 +2989,10 @@ class sidewalkreator:
 
             p_sideB = center_point - (vector * coef_sideB)
 
-            line_sideA = QgsGeometry.fromPolylineXY([center_point,p_sideA])
+            line_sideA = QgsGeometry.fromPolylineXY([center_point, p_sideA])
             intersec_sideA_0 = self.dissolved_sidewalks_geom.intersection(line_sideA)
 
-            line_sideB = QgsGeometry.fromPolylineXY([center_point,p_sideB])
+            line_sideB = QgsGeometry.fromPolylineXY([center_point, p_sideB])
             intersec_sideB_0 = self.dissolved_sidewalks_geom.intersection(line_sideB)
 
             # print(intersec_sideA_0)
@@ -2672,11 +3015,12 @@ class sidewalkreator:
             # time.sleep(10)
 
             # if not curr_distance:
-            sideA_ok,intersec_sideA = check_sidewalk_intersection(intersec_sideA_0,center_point)
-            sideB_ok,intersec_sideB = check_sidewalk_intersection(intersec_sideB_0,center_point)
-
-
-
+            sideA_ok, intersec_sideA = check_sidewalk_intersection(
+                intersec_sideA_0, center_point
+            )
+            sideB_ok, intersec_sideB = check_sidewalk_intersection(
+                intersec_sideB_0, center_point
+            )
 
             if not sideA_ok:
                 coef_sideA *= 2
@@ -2686,7 +3030,7 @@ class sidewalkreator:
             not_max_iters = iter_num < max_crossings_iterations
 
             # now the max distance checking:
-            '''
+            """
                 to go through there:
                     - the intersection must be found (sideA_ok,sideB_ok)
                     - a "curr_distance" filled with "none" means that the interpolation distance already could have passed halfway
@@ -2694,75 +3038,69 @@ class sidewalkreator:
 
                     we create the line, increment the distance, test if does not pass halfway and then interpolate a new centerpoint 
 
-            '''
+            """
 
-            if all([sideA_ok,sideB_ok,curr_distance,not_max_iters]):
-                line_AB = QgsGeometry.fromPolylineXY([intersec_sideA.asPoint(),intersec_sideB.asPoint()])
-
+            if all([sideA_ok, sideB_ok, curr_distance, not_max_iters]):
+                line_AB = QgsGeometry.fromPolylineXY(
+                    [intersec_sideA.asPoint(), intersec_sideB.asPoint()]
+                )
 
                 crossing_len = line_AB.length()
 
                 if crossing_len > abs_max_crossing_len:
-                    return None,None,False
-                    
+                    return None, None, False
 
                 # print(crossing_len,max_len,linefeature[widths_fieldname])
 
                 # print('entered the len test part 1')
 
-
                 if crossing_len > max_len:
                     # print('\t entered the len test part 2')
-
 
                     curr_distance += increment_inward
                     geom_len = linefeature.geometry().length()
 
-
-                    if curr_distance < geom_len/2:
+                    if curr_distance < geom_len / 2:
                         # print('\t\tentered the len test part 3')
                         # print(curr_distance,iter_num)
-
-
 
                         sideA_ok = False
                         sideB_ok = False
 
-
                         if is_at_beginning:
-                            new_PC_geometry = linefeature.geometry().interpolate(curr_distance).asPoint()
+                            new_PC_geometry = (
+                                linefeature.geometry()
+                                .interpolate(curr_distance)
+                                .asPoint()
+                            )
                         else:
-                            new_PC_geometry = linefeature.geometry().interpolate(geom_len-curr_distance).asPoint()
+                            new_PC_geometry = (
+                                linefeature.geometry()
+                                .interpolate(geom_len - curr_distance)
+                                .asPoint()
+                            )
 
                         center_point = new_PC_geometry
-
-
 
             iter_num += 1
 
             if iter_num > max_crossings_iterations:
                 # to stop iterating indefenitely and just skip the crossing
-                return None,None,False
-
+                return None, None, False
 
         if print_points:
-            print(intersec_sideA,intersec_sideB)
+            print(intersec_sideA, intersec_sideB)
 
+        return intersec_sideA, intersec_sideB, new_PC_geometry
 
-        return intersec_sideA,intersec_sideB,new_PC_geometry
-
-
-    def split_sidewalks_by_protoblocks(self,rel_vertices_dict):
+    def split_sidewalks_by_protoblocks(self, rel_vertices_dict):
 
         # for inplace, thx: https://gis.stackexchange.com/a/412130/49900
 
-
-        self.unselect_all_from_all() # prevent from any selection
-
+        self.unselect_all_from_all()  # prevent from any selection
 
         with edit(self.whole_sidewalks):
             # thx, again: https://gis.stackexchange.com/a/130622/49900
-
 
             request = QgsFeatureRequest()
             request.setFilterFids(list(rel_vertices_dict.keys()))
@@ -2771,14 +3109,15 @@ class sidewalkreator:
 
             segments_as_list = []
 
-
             for feature in features:
-                centroid  = feature.geometry().centroid().asPoint()
-                centroid  = QgsPoint(feature.geometry().centroid().asPoint())
+                centroid = feature.geometry().centroid().asPoint()
+                centroid = QgsPoint(feature.geometry().centroid().asPoint())
 
-                for i,vertex in enumerate(rel_vertices_dict[feature.id()]):
+                for i, vertex in enumerate(rel_vertices_dict[feature.id()]):
 
-                    segments_as_list.append(QgsGeometry.fromPolyline([centroid,QgsPoint(vertex)]))
+                    segments_as_list.append(
+                        QgsGeometry.fromPolyline([centroid, QgsPoint(vertex)])
+                    )
 
                     # if i == 0 or i == 1:
                     #     segment_as_list.append(vertex)
@@ -2789,8 +3128,6 @@ class sidewalkreator:
                     # else:
                     #     break
 
-
-
                 # print(segment_as_list)
 
                 # Any similarity between this part and code at "generic_functions.segments_to_add_points_tolinelayer" purely coincidental (or no kkkk)
@@ -2799,7 +3136,9 @@ class sidewalkreator:
 
             segments_asfeatlist = [geom_to_feature(segments_asMultiLineString)]
 
-            segments_aslayer = layer_from_featlist(segments_asfeatlist,'segments_intersections','LineString')
+            segments_aslayer = layer_from_featlist(
+                segments_asfeatlist, "segments_intersections", "LineString"
+            )
             segments_aslayer.setCrs(self.custom_localTM_crs)
 
             registry = QgsApplication.instance().processingRegistry()
@@ -2810,21 +3149,14 @@ class sidewalkreator:
 
             # self.add_layer_canvas(segments_aslayer)
 
-
             # Run the algorithm using 'in-place' edits
-            params = {'INPUT': self.whole_sidewalks,'LINES': segments_aslayer}
+            params = {"INPUT": self.whole_sidewalks, "LINES": segments_aslayer}
             execute_in_place(alg, params)
 
             # for feature in self.whole_sidewalks.getFeatures():
 
-
-
-
-
         # somehow it keeps features selected, so:
         self.unselect_all_from_all()
-
-
 
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
@@ -2835,10 +3167,8 @@ class sidewalkreator:
         # # # taking a look here:
         ### SUSPENDED: PROBABLY ERROR PRONE CODE
 
-
         # #     for feature in self.protoblocks.getFeatures():
         # #         self.dlg.split_progressbar.setValue(self.protoblocks_idx_perc[feature.id()])
-
 
         # #         n_whole_incidents = len(self.protoblock_wholesidewalk_inc_dict[feature.id()])
 
@@ -2851,7 +3181,6 @@ class sidewalkreator:
 
         # #             interest_id = self.protoblock_wholesidewalk_inc_dict[feature.id()][0]
 
-
         # #             # print(len(contained_geoms),len(rel_vertices_dict[interest_id]))
 
         # #             # print(contained_feats)
@@ -2860,13 +3189,11 @@ class sidewalkreator:
         # #             IF CONTAINED FEATURES ARE BIGGER THAN THEY SHOULD BE, UNITE THE TINYEST WITH THE REMNANT WITH LESS POINTS
         # #             """
 
-
         # #             if len(contained_feats) == (len(rel_vertices_dict[interest_id]) + 1):
         # #                 ids = [c_feat.id() for c_feat in contained_feats]
         # #                 lenghts = [c_feat.geometry().length() for c_feat in contained_feats]
 
         # #                 # lenghts = {c_feat.key():len(c_feat.geometry()) for cfeat in contained_feats}
-
 
         # #                 pos_min_id_feature = lenghts.index(min(lenghts))
         # #                 min_len_id = ids[pos_min_id_feature]
@@ -2879,8 +3206,6 @@ class sidewalkreator:
 
         # #                 touching_features_n_vertex = []
 
-
-
         # #                 for feature in contained_feats:
         # #                     if feature.id() != min_len_id:
         # #                         # if not min_len_feat.geometry().disjoint(feature.geometry()):
@@ -2890,16 +3215,13 @@ class sidewalkreator:
 
         # #                             touching_features_n_vertex.append(count_of_vertex(feature))
 
-
         # #                 # print(touching_features_n_vertex)
-                        
 
         # #                 if len(touching_features) >= 1:
         # #                     # print(touching_features[0].geometry().combine(min_len_feat.geometry()),'1')
         # #                     # print(min_len_feat.geometry().combine(touching_features[0].geometry()),'2','\n')
 
         # #                     chosen_feature = touching_features[0]
-
 
         # #                     if len(touching_features) > 1:
 
@@ -2937,23 +3259,13 @@ class sidewalkreator:
         # #                         self.whole_sidewalks.changeGeometry(chosen_feature.id(),merged_line)
         # #                         self.whole_sidewalks.deleteFeature(min_len_feat.id())
 
-
         # #         # else: # TODO: treat cases with 2 or more per protoblock
 
         # for feature in self.whole_sidewalks.getFeatures():
         #     geom = feature.geometry()
         #     geom.convertToSingleType()
         #     print(len(geom.asPolyline()),geom.length())
-            # print(len(feature.geometry().asPolyline()))
-
-
-
-
-
-
-
-
-
+        # print(len(feature.geometry().asPolyline()))
 
     def add_kerb_sidewalk_vertices(self):
         # trying based on: https://gis.stackexchange.com/a/57024/49900 thx anyway
@@ -2964,14 +3276,11 @@ class sidewalkreator:
 
         # TODO: check if sidewalk is a concave or convex ring
 
-
         with edit(self.whole_sidewalks):
             for feature in self.whole_sidewalks.getFeatures():
                 geom = feature.geometry().mergeLines()
 
-                buffer = geom.buffer(1,5)
-
-
+                buffer = geom.buffer(1, 5)
 
                 # centroid = buffer.centroid()
 
@@ -2983,7 +3292,6 @@ class sidewalkreator:
                 # # print('\n',feature.id())
 
                 for vertex in incident_list:
-
 
                     # d, p1, i1, i2 = geom.closestSegmentWithContext(vertex)
 
@@ -2999,21 +3307,16 @@ class sidewalkreator:
                     # print(id,prev,next)
                     # print('closest vertex with context',geom.closestVertexWithContext(vertex))
 
-                    _,id = geom.closestVertexWithContext(vertex)
-
-
+                    _, id = geom.closestVertexWithContext(vertex)
 
                     # vertex = QgsGeometry(QgsPoint(vertex))
 
-                    prev,nnext = geom.adjacentVertices(id)
-
+                    prev, nnext = geom.adjacentVertices(id)
 
                     if nnext == -1:
 
-                        geom.insertVertex(QgsPoint(vertex),1)
+                        geom.insertVertex(QgsPoint(vertex), 1)
                         # print('-1 case')
-
-
 
                     else:
 
@@ -3027,24 +3330,16 @@ class sidewalkreator:
 
                         # print(d_self,d_nearest,prev,id,nnext, d_self > d_nearest)
 
-
-
                         if d_self > d_nearest:
-                            geom.insertVertex(QgsPoint(vertex),id+1)
+                            geom.insertVertex(QgsPoint(vertex), id + 1)
                         else:
-                            geom.insertVertex(QgsPoint(vertex),id)
-
-
-
-
+                            geom.insertVertex(QgsPoint(vertex), id)
 
                     # geom.insertVertex(QgsPoint(vertex),id)
 
-
-                self.whole_sidewalks.changeGeometry(feature.id(),geom)
+                self.whole_sidewalks.changeGeometry(feature.id(), geom)
                 # print(len(geom.asPolyline()))
                 # print(geom)
-
 
     def unselect_all_from_all(self):
         # # thx: https://gis.stackexchange.com/a/200412/49900
@@ -3055,7 +3350,6 @@ class sidewalkreator:
         #         break
         # # this seems to be a better solution, but actually renders some mess...
 
-
         # thx: https://gis.stackexchange.com/a/82326/49900
         mc = self.iface.mapCanvas()
 
@@ -3065,8 +3359,7 @@ class sidewalkreator:
 
         mc.refresh()
 
-
-    def fill_splitting_lengths(self,value,isbynumber=False,percent_add=0.01):
+    def fill_splitting_lengths(self, value, isbynumber=False, percent_add=0.01):
         # field for splitting with that neat function from processing "split by maximum length"
 
         # percent to add and rounding are protections against creation of very tiny small segments caused by floating point issues
@@ -3075,49 +3368,49 @@ class sidewalkreator:
             for feature in self.whole_sidewalks.getFeatures():
                 f_length = feature.geometry().length()
 
-                if isbynumber: # always an integer, so...
+                if isbynumber:  # always an integer, so...
                     if value > 1:
-                        split_len = (f_length/value)
-                        split_len += split_len*percent_add
-                        split_len = round(split_len,2)
+                        split_len = f_length / value
+                        split_len += split_len * percent_add
+                        split_len = round(split_len, 2)
                     else:
-                        split_len = 2*f_length
-
+                        split_len = 2 * f_length
 
                 else:
-                    if value < (f_length + (f_length*percent_add)):
-                        number_splits = round(f_length/value)
+                    if value < (f_length + (f_length * percent_add)):
+                        number_splits = round(f_length / value)
                         if number_splits > 1:
-                            split_len = (f_length/number_splits )
+                            split_len = f_length / number_splits
 
-                            split_len += split_len*percent_add
-                            split_len = round(split_len,2)
+                            split_len += split_len * percent_add
+                            split_len = round(split_len, 2)
                         else:
-                            split_len = 2*f_length
+                            split_len = 2 * f_length
                     else:
-                        split_len = 2*f_length
+                        split_len = 2 * f_length
 
+                self.whole_sidewalks.changeAttributeValue(
+                    feature.id(), self.split_len_field_id, split_len
+                )
 
-                self.whole_sidewalks.changeAttributeValue(feature.id(),self.split_len_field_id,split_len)
+    def splitting_by_distance_or_ndivisions(self, value, isbynumber=False):
 
-
-    def splitting_by_distance_or_ndivisions(self,value,isbynumber=False):
-
-        self.fill_splitting_lengths(value,isbynumber)
+        self.fill_splitting_lengths(value, isbynumber)
 
         split_expression = f'"{self.split_field_name}"'
 
         # print(split_expression)
 
-        temporary_splitted_sidewalks = split_lines_by_max_len(self.whole_sidewalks,split_expression)
+        temporary_splitted_sidewalks = split_lines_by_max_len(
+            self.whole_sidewalks, split_expression
+        )
 
         # self.add_layer_canvas(temporary_splitted_sidewalks)
 
-        swap_features_layer_another(self.whole_sidewalks,temporary_splitted_sidewalks)
-
+        swap_features_layer_another(self.whole_sidewalks, temporary_splitted_sidewalks)
 
     def voronoi_splitting(self):
-        POIs_geom = get_first_feature_or_geom(self.POIs_for_splitting_layer,True)
+        POIs_geom = get_first_feature_or_geom(self.POIs_for_splitting_layer, True)
 
         # collected_sidewalk_layer = collected_geoms_layer(self.whole_sidewalks)
 
@@ -3134,7 +3427,6 @@ class sidewalkreator:
 
             contained_POIs = feature.geometry().intersection(POIs_geom)
 
-
             if not contained_POIs.isEmpty() and contained_POIs.isMultipart():
                 # print(contained_POIs.isMultipart())
                 num_pois = len(contained_POIs.asMultiPoint())
@@ -3142,19 +3434,21 @@ class sidewalkreator:
                 num_pois = 0
 
             if num_pois > self.dlg.minimum_pois_box.value():
-                voronoi_polygons = contained_POIs.voronoiDiagram(feature.geometry()).asGeometryCollection()
-
+                voronoi_polygons = contained_POIs.voronoiDiagram(
+                    feature.geometry()
+                ).asGeometryCollection()
 
                 # a nifty use of list comprehension for sure
-                voronois += [geom_to_feature(polygon.intersection(feature.geometry())) for polygon in voronoi_polygons]
+                voronois += [
+                    geom_to_feature(polygon.intersection(feature.geometry()))
+                    for polygon in voronoi_polygons
+                ]
             else:
                 voronois += [geom_to_feature(feature.geometry())]
 
             # voronoi_polygons = voronoi_polygons.collectGeometry(voronoi_polygons)
 
             # voronoi_multipolygon = voronoi_polygons.collectGeometry(voronoi_polygons.asGeometryCollection())
-
-
 
             # if generate_voronoi_layer:
             #     voronois.append(geom_to_feature(voronoi_multipolygon))
@@ -3163,26 +3457,23 @@ class sidewalkreator:
 
             # splitted_sidewalk_parts = voronoi_multipolygon.intersection(contained_sidewalk_pieces).asGeometryCollection()
 
-
             # for segment in splitted_sidewalk_parts:
             #     if segment.type() == 1:
             #         sdwlk_splitted.append(geom_to_feature(segment))
 
-
-
-
             # print(clipped_voronoi)
 
-
-        self.voronois_as_layer = layer_from_featlist(voronois,'voronois','Polygon')
+        self.voronois_as_layer = layer_from_featlist(voronois, "voronois", "Polygon")
 
         self.voronois_as_layer.setCrs(self.custom_localTM_crs)
 
         # self.add_layer_canvas(self.voronois_as_layer)
 
-        vor_splitted_sidewalks = vec_layers_intersection(self.whole_sidewalks,self.voronois_as_layer)
+        vor_splitted_sidewalks = vec_layers_intersection(
+            self.whole_sidewalks, self.voronois_as_layer
+        )
 
-        swap_features_layer_another(self.whole_sidewalks,vor_splitted_sidewalks)
+        swap_features_layer_another(self.whole_sidewalks, vor_splitted_sidewalks)
 
         # splits_as_layer = layer_from_featlist(sdwlk_splitted,'vor_splits','linestring')
 
@@ -3190,26 +3481,32 @@ class sidewalkreator:
 
         # self.add_layer_canvas(splits_as_layer)
 
-
     def change_folderselector_name(self):
 
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
         # TODO: check only in the last part of the folderpath
 
-        if inputdirpath != '':
-            if not 'sidewalkreator' in inputdirpath:
-                out_description = self.string_according_language('out','saidas')
-                outfoldername = f'sidewalkreator_{out_description}_{int(datetime.datetime.utcnow().timestamp())}'
+        if inputdirpath != "":
+            if not "sidewalkreator" in inputdirpath:
+                out_description = self.string_according_language("out", "saidas")
+                outfoldername = f"sidewalkreator_{out_description}_{int(datetime.datetime.utcnow().timestamp())}"
 
-                outfolderpath = os.path.join(inputdirpath,outfoldername)
+                outfolderpath = os.path.join(inputdirpath, outfoldername)
 
                 self.dlg.output_folder_selector.setFilePath(outfolderpath)
 
-
     def outputting_files(self):
         # removing length from crossings, as we do not want to export'em
-        remove_layerfields(self.crossings_layer,[self.crossings_len_fieldname,self.len_checking_fieldname,self.above_tol_fieldname,self.nearest_centerpoint_fieldname])
+        remove_layerfields(
+            self.crossings_layer,
+            [
+                self.crossings_len_fieldname,
+                self.len_checking_fieldname,
+                self.above_tol_fieldname,
+                self.nearest_centerpoint_fieldname,
+            ],
+        )
 
         # creating again the Kerbs layer, so if the user delete any crossing, there will be no loose kerbs:
         new_kerbs_list = []
@@ -3217,7 +3514,6 @@ class sidewalkreator:
         # to handle alternate schema as requested in github (ALT_SCHEMA)
         alt_crossings_centers = []
         alt_crossings_ends = []
-
 
         for feature in self.crossings_layer.getFeatures():
             as_polyline = feature.geometry().asPolyline()
@@ -3227,40 +3523,65 @@ class sidewalkreator:
                 pB = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[1]))
                 pD = geom_to_feature(QgsGeometry.fromPointXY(as_polyline[3]))
 
-                new_kerbs_list += [pB,pD]
+                new_kerbs_list += [pB, pD]
 
                 # (ALT_SCHEMA)
-                end1 = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[0],as_polyline[1]]))
-                end2 = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[3],as_polyline[4]]))
+                end1 = geom_to_feature(
+                    QgsGeometry.fromPolylineXY([as_polyline[0], as_polyline[1]])
+                )
+                end2 = geom_to_feature(
+                    QgsGeometry.fromPolylineXY([as_polyline[3], as_polyline[4]])
+                )
 
                 alt_crossings_ends.append(end1)
                 alt_crossings_ends.append(end2)
 
-
-                center_part = geom_to_feature(QgsGeometry.fromPolylineXY([as_polyline[1],as_polyline[2],as_polyline[3]]))
+                center_part = geom_to_feature(
+                    QgsGeometry.fromPolylineXY(
+                        [as_polyline[1], as_polyline[2], as_polyline[3]]
+                    )
+                )
 
                 alt_crossings_centers.append(center_part)
 
         # (ALT_SCHEMA)
-        alt_crossings_ends_layer = layer_from_featlist(alt_crossings_ends,'alt_crossings_ends',"LineString",CRS=self.custom_localTM_crs)
+        alt_crossings_ends_layer = layer_from_featlist(
+            alt_crossings_ends,
+            "alt_crossings_ends",
+            "LineString",
+            CRS=self.custom_localTM_crs,
+        )
 
-        create_filled_newlayerfield(alt_crossings_ends_layer,'highway','footway',QVariant.String)
-        create_filled_newlayerfield(alt_crossings_ends_layer,'footway','sidewalk',QVariant.String)
+        create_filled_newlayerfield(
+            alt_crossings_ends_layer, "highway", "footway", QVariant.String
+        )
+        create_filled_newlayerfield(
+            alt_crossings_ends_layer, "footway", "sidewalk", QVariant.String
+        )
 
+        alt_crossings_centers_layer = layer_from_featlist(
+            alt_crossings_centers,
+            "alt_crossings_centers",
+            "LineString",
+            CRS=self.custom_localTM_crs,
+        )
 
-        alt_crossings_centers_layer = layer_from_featlist(alt_crossings_centers,'alt_crossings_centers',"LineString",CRS=self.custom_localTM_crs)
-
-        create_filled_newlayerfield(alt_crossings_centers_layer,'highway','footway',QVariant.String)
-        create_filled_newlayerfield(alt_crossings_centers_layer,'footway','crossing',QVariant.String)
-
+        create_filled_newlayerfield(
+            alt_crossings_centers_layer, "highway", "footway", QVariant.String
+        )
+        create_filled_newlayerfield(
+            alt_crossings_centers_layer, "footway", "crossing", QVariant.String
+        )
 
         # kerbs
         temp_kerbs_layer = layer_from_featlist(new_kerbs_list)
         temp_kerbs_layer.setCrs(self.custom_localTM_crs)
 
-        create_filled_newlayerfield(temp_kerbs_layer,'barrier','kerb',QVariant.String)
+        create_filled_newlayerfield(
+            temp_kerbs_layer, "barrier", "kerb", QVariant.String
+        )
 
-        swap_features_layer_another(self.kerbs_layer,temp_kerbs_layer)
+        swap_features_layer_another(self.kerbs_layer, temp_kerbs_layer)
 
         self.kerbs_layer.setCrs(self.custom_localTM_crs)
 
@@ -3270,29 +3591,57 @@ class sidewalkreator:
         # os.makedirs(inputdirpath)
         create_dir_ifnotexists(inputdirpath)
 
-        aux_foldername = self.string_according_language('auxiliary_files','arquivos_auxiliares')
+        aux_foldername = self.string_according_language(
+            "auxiliary_files", "arquivos_auxiliares"
+        )
 
-        self.aux_files_dirpath = os.path.join(inputdirpath,aux_foldername)
+        self.aux_files_dirpath = os.path.join(inputdirpath, aux_foldername)
 
         # os.makedirs(self.aux_files_dirpath)
         create_dir_ifnotexists(self.aux_files_dirpath)
 
         # converting final layers
-        sidewalks_path = os.path.join(inputdirpath,self.string_according_language('sidewalks4326.geojson','calcadas4326.geojson'))
-        crossings_path = os.path.join(inputdirpath,self.string_according_language('crossings4326.geojson','travessias4326.geojson'))
-        kerbs_path = os.path.join(inputdirpath,self.string_according_language('kerbs4326.geojson','acessos4326.geojson'))
+        sidewalks_path = os.path.join(
+            inputdirpath,
+            self.string_according_language(
+                "sidewalks4326.geojson", "calcadas4326.geojson"
+            ),
+        )
+        crossings_path = os.path.join(
+            inputdirpath,
+            self.string_according_language(
+                "crossings4326.geojson", "travessias4326.geojson"
+            ),
+        )
+        kerbs_path = os.path.join(
+            inputdirpath,
+            self.string_according_language("kerbs4326.geojson", "acessos4326.geojson"),
+        )
 
         # (ALT_SCHEMA)
-        alt_crossings_ends_path = os.path.join(self.aux_files_dirpath,self.string_according_language('alt_crossings_ends4326.geojson','travessias_alt_fim4326.geojson'))
-        alt_crossings_centers_path = os.path.join(self.aux_files_dirpath,self.string_according_language('alt_crossings_centers326.geojson','travessias_alt_centros4326.geojson'))
-        outlayers_altpaths = [alt_crossings_ends_path,alt_crossings_centers_path]
-
-
+        alt_crossings_ends_path = os.path.join(
+            self.aux_files_dirpath,
+            self.string_according_language(
+                "alt_crossings_ends4326.geojson", "travessias_alt_fim4326.geojson"
+            ),
+        )
+        alt_crossings_centers_path = os.path.join(
+            self.aux_files_dirpath,
+            self.string_according_language(
+                "alt_crossings_centers326.geojson", "travessias_alt_centros4326.geojson"
+            ),
+        )
+        outlayers_altpaths = [alt_crossings_ends_path, alt_crossings_centers_path]
 
         # input pol layer
-        inputpol_layer_path = os.path.join(self.aux_files_dirpath,self.string_according_language('input_polygon.geojson','poligono_entrada.geojson'))
+        inputpol_layer_path = os.path.join(
+            self.aux_files_dirpath,
+            self.string_according_language(
+                "input_polygon.geojson", "poligono_entrada.geojson"
+            ),
+        )
 
-        outlayers_gjsonpaths = [crossings_path,kerbs_path,sidewalks_path]
+        outlayers_gjsonpaths = [crossings_path, kerbs_path, sidewalks_path]
 
         # also the bounding polygon:
         # inpol_feat = geom_to_feature(self.input_polygon)
@@ -3300,42 +3649,56 @@ class sidewalkreator:
         # input_polygon_layer = layer_from_featlist([inpol_feat],'input_polygon','polygon',output_type=inputpol_layer_path)
 
         # sidewalks_4326 =
-        reproject_layer(convert_multipart_to_singleparts(self.whole_sidewalks),output_mode=sidewalks_path)
+        reproject_layer(
+            convert_multipart_to_singleparts(self.whole_sidewalks),
+            output_mode=sidewalks_path,
+        )
         # crossings_4326 =
-        reproject_layer(self.crossings_layer,output_mode=crossings_path)
+        reproject_layer(self.crossings_layer, output_mode=crossings_path)
         # kerbs_4326 =
-        reproject_layer(self.kerbs_layer,output_mode=kerbs_path)
+        reproject_layer(self.kerbs_layer, output_mode=kerbs_path)
 
         # (ALT_SCHEMA)
-        reproject_layer(alt_crossings_ends_layer,output_mode=alt_crossings_ends_path)
-        reproject_layer(alt_crossings_centers_layer,output_mode=alt_crossings_centers_path)
-
-
+        reproject_layer(alt_crossings_ends_layer, output_mode=alt_crossings_ends_path)
+        reproject_layer(
+            alt_crossings_centers_layer, output_mode=alt_crossings_centers_path
+        )
 
         # outputting the input polygon:
 
         # input_polygon4326 =
-        reproject_layer(self.only_inputfeature_layer,output_mode=inputpol_layer_path)
+        reproject_layer(self.only_inputfeature_layer, output_mode=inputpol_layer_path)
 
-
-        '''
+        """
         # merging all the 3 output geojsons, since:
             - QGIS does not support Points and LineStrings in the same layer (or any combination of 2 types of geometry, including multi types), so we are doing merging as a python dict, outside QGIS API
             - GEOJSON supports that each feature have its own type
             - JOSM handles topology (snappings) properly if everything is in the same GEOJSON
-        # '''
+        # """
 
-        output_geojson_path = os.path.join(inputdirpath,self.string_according_language('sidewalkreator_output.geojson','saidas_sidewalkreator.geojson'))
+        output_geojson_path = os.path.join(
+            inputdirpath,
+            self.string_according_language(
+                "sidewalkreator_output.geojson", "saidas_sidewalkreator.geojson"
+            ),
+        )
 
-        merge_geojsons(outlayers_gjsonpaths,output_geojson_path)
+        merge_geojsons(outlayers_gjsonpaths, output_geojson_path)
 
         time.sleep(0.1)
 
         # (ALT_SCHEMA)
-        output_alt_geojson_path = os.path.join(self.aux_files_dirpath,self.string_according_language('sidewalkreator_output_alt_scheme.geojson','saidas_sidewalkreator_esq_alternativo.geojson'))
-        merge_geojsons(outlayers_altpaths+[kerbs_path,sidewalks_path],output_alt_geojson_path)
+        output_alt_geojson_path = os.path.join(
+            self.aux_files_dirpath,
+            self.string_according_language(
+                "sidewalkreator_output_alt_scheme.geojson",
+                "saidas_sidewalkreator_esq_alternativo.geojson",
+            ),
+        )
+        merge_geojsons(
+            outlayers_altpaths + [kerbs_path, sidewalks_path], output_alt_geojson_path
+        )
         time.sleep(0.1)
-
 
         # cleaning up,since they are just temporary
         delete_filelist_that_exists(outlayers_gjsonpaths)
@@ -3343,58 +3706,121 @@ class sidewalkreator:
         # (ALT_SCHEMA) last one
         delete_filelist_that_exists(outlayers_altpaths)
 
-
         # auxiliary files:
         if self.dlg.voronoi_checkbox.isChecked():
-            voronoi_outpath  = os.path.join(self.aux_files_dirpath,'voronois.geojson')
-            reproject_layer(self.voronois_as_layer,output_mode=voronoi_outpath)
+            voronoi_outpath = os.path.join(self.aux_files_dirpath, "voronois.geojson")
+            reproject_layer(self.voronois_as_layer, output_mode=voronoi_outpath)
 
-        protoblocks_outpath = os.path.join(self.aux_files_dirpath,'protoblocks.geojson')
-        reproject_layer(self.protoblocks,output_mode=protoblocks_outpath)
-
+        protoblocks_outpath = os.path.join(
+            self.aux_files_dirpath, "protoblocks.geojson"
+        )
+        reproject_layer(self.protoblocks, output_mode=protoblocks_outpath)
 
         # generating a file containing the recommended changeset comment:
-        changeset_comment_path = os.path.join(inputdirpath,self.string_according_language('changeset_comment.txt','comentario_changeset.txt'))
+        changeset_comment_path = os.path.join(
+            inputdirpath,
+            self.string_according_language(
+                "changeset_comment.txt", "comentario_changeset.txt"
+            ),
+        )
 
-        with open(changeset_comment_path,'w+') as changesetext_handler:
+        with open(changeset_comment_path, "w+") as changesetext_handler:
             chgset_text_en = "Sidewalks and Crossings created by the QGIS Plugin 'OSM SidewalKreator', the user was advised to check the resulting data before the upload #SidewalKreator #LabGeoLivreUFPR #mapealivreUFPR"
 
             chgset_text_ptbr = "Calçadas (sidewalks) e cruzamentos  criados pelo plugin para QGIS 'OSM SidewalKreator', o usuário foi alertado que deve conferir as feições resultantes antes de qualquer upload #SidewalKreator #LabGeoLivreUFPR #mapealivreUFPR"
 
-            changesetext_handler.write(self.string_according_language(chgset_text_en,chgset_text_ptbr))
+            changesetext_handler.write(
+                self.string_according_language(chgset_text_en, chgset_text_ptbr)
+            )
 
-        parameters_dump = {'ignore_buildings':self.dlg.ch_ignore_buildings.isChecked(),'timeout (s)':self.dlg.timeout_box.value(),'iters_for_DE_streets':self.dlg.dead_end_iters_box.value(),'check_overlapping':self.dlg.check_if_overlaps_buildings.isChecked(),'distance to add (both sides) to street width (m)':self.dlg.d_to_add_box.value(),'curve radius (m)':self.dlg.curve_radius_box.value(),'draw kerbs at (%)':self.dlg.curve_radius_box.value(),'inward distance (m)':self.dlg.d_to_add_inward_box.value(),'crossings in parallel to transversal segments ':self.dlg.opt_parallel_crossings.isChecked(),'crossings drawn perpendicularly':self.dlg.opt_perp_crossings.isChecked(),'use voronoi polygons':self.dlg.voronoi_checkbox.isChecked(),'minimum_POIS':self.dlg.minimum_pois_box.value(),'split by facades':self.dlg.onlyfacades_checkbox.isChecked(),'dont split at all':self.dlg.dontsplit_checkbox.isChecked()}
+        parameters_dump = {
+            "ignore_buildings": self.dlg.ch_ignore_buildings.isChecked(),
+            "timeout (s)": self.dlg.timeout_box.value(),
+            "iters_for_DE_streets": self.dlg.dead_end_iters_box.value(),
+            "check_overlapping": self.dlg.check_if_overlaps_buildings.isChecked(),
+            "distance to add (both sides) to street width (m)": self.dlg.d_to_add_box.value(),
+            "curve radius (m)": self.dlg.curve_radius_box.value(),
+            "draw kerbs at (%)": self.dlg.curve_radius_box.value(),
+            "inward distance (m)": self.dlg.d_to_add_inward_box.value(),
+            "crossings in parallel to transversal segments ": self.dlg.opt_parallel_crossings.isChecked(),
+            "crossings drawn perpendicularly": self.dlg.opt_perp_crossings.isChecked(),
+            "use voronoi polygons": self.dlg.voronoi_checkbox.isChecked(),
+            "minimum_POIS": self.dlg.minimum_pois_box.value(),
+            "split by facades": self.dlg.onlyfacades_checkbox.isChecked(),
+            "dont split at all": self.dlg.dontsplit_checkbox.isChecked(),
+        }
 
         if self.dlg.check_if_overlaps_buildings.isChecked():
-            parameters_dump['min_distance_to_buildings (m)'] = self.dlg.min_d_buildings_box.value()
-            parameters_dump['min street width (m)'] = self.dlg.min_width_box.value()
+            parameters_dump["min_distance_to_buildings (m)"] = (
+                self.dlg.min_d_buildings_box.value()
+            )
+            parameters_dump["min street width (m)"] = self.dlg.min_width_box.value()
 
         if self.dlg.maxlensplit_checkbox.isChecked():
-            parameters_dump['split by maxlength'] = self.dlg.maxlensplit_box.value()
+            parameters_dump["split by maxlength"] = self.dlg.maxlensplit_box.value()
 
         if self.dlg.segsbynum_checkbox.isChecked():
-            parameters_dump['split by x segments'] = self.dlg.segsbynum_box.value()
+            parameters_dump["split by x segments"] = self.dlg.segsbynum_box.value()
 
-        parameters_dump_outpath = os.path.join(self.aux_files_dirpath,'parameters_dump.json')
-        dump_json(parameters_dump,parameters_dump_outpath)
-
+        parameters_dump_outpath = os.path.join(
+            self.aux_files_dirpath, "parameters_dump.json"
+        )
+        dump_json(parameters_dump, parameters_dump_outpath)
 
         # dumping overpass queries for the output layers:
         # so you may can then
-        overpass_sidewalks_path = os.path.join(inputdirpath,'overpass_sidewalks.txt')
-        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='sidewalk',dump_path=overpass_sidewalks_path)
+        overpass_sidewalks_path = os.path.join(inputdirpath, "overpass_sidewalks.txt")
+        osm_query_string_by_bbox(
+            self.minLat,
+            self.minLgt,
+            self.maxLat,
+            self.maxLgt,
+            interest_key="footway",
+            interest_value="sidewalk",
+            dump_path=overpass_sidewalks_path,
+        )
 
-        overpass_kerbs_path = os.path.join(inputdirpath,'overpass_kerbs.txt')
-        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='barrier',interest_value='kerb',dump_path=overpass_kerbs_path,node=True,way=False)
+        overpass_kerbs_path = os.path.join(inputdirpath, "overpass_kerbs.txt")
+        osm_query_string_by_bbox(
+            self.minLat,
+            self.minLgt,
+            self.maxLat,
+            self.maxLgt,
+            interest_key="barrier",
+            interest_value="kerb",
+            dump_path=overpass_kerbs_path,
+            node=True,
+            way=False,
+        )
 
-        overpass_crossings_path = os.path.join(inputdirpath,'overpass_crossings.txt')
-        osm_query_string_by_bbox(self.minLat,self.minLgt,self.maxLat,self.maxLgt,interest_key='footway',interest_value='crossing',dump_path=overpass_kerbs_path,node=True,way=False)
+        overpass_crossings_path = os.path.join(inputdirpath, "overpass_crossings.txt")
+        osm_query_string_by_bbox(
+            self.minLat,
+            self.minLgt,
+            self.maxLat,
+            self.maxLgt,
+            interest_key="footway",
+            interest_value="crossing",
+            dump_path=overpass_kerbs_path,
+            node=True,
+            way=False,
+        )
 
         # dumping extra layers:
-        extra_layers = {self.string_according_language('inner_crossings','cruzamentos interiores'):self.filtered_intersection_points,self.string_according_language('raw_buffers','buffers_originais'):self.proto_undissolved_buffer_step1,self.string_according_language('crossing_centers_voronois','voronois_intersecoes_ruas'):self.road_intersection_voronois}
+        extra_layers = {
+            self.string_according_language(
+                "inner_crossings", "cruzamentos interiores"
+            ): self.filtered_intersection_points,
+            self.string_according_language(
+                "raw_buffers", "buffers_originais"
+            ): self.proto_undissolved_buffer_step1,
+            self.string_according_language(
+                "crossing_centers_voronois", "voronois_intersecoes_ruas"
+            ): self.road_intersection_voronois,
+        }
 
         for key in extra_layers:
-            self.reproject_and_export(key,extra_layers[key])
+            self.reproject_and_export(key, extra_layers[key])
 
         # disabling for the next cycle:
         self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -3402,35 +3828,38 @@ class sidewalkreator:
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")
 
-
         # the sucess message in the QGIS GUI:
-        sucess_category = self.string_according_language("Sucess",'Sucesso')
+        sucess_category = self.string_according_language("Sucess", "Sucesso")
 
-        sucess_message = self.string_according_language("You Can Now Proceed To JOSM, import the output GEOJSON and changeset comment!!!",'Você pode proceder ao JOSM e importar o GEOJSON de saída e o comentário para o changeset!!!')
+        sucess_message = self.string_according_language(
+            "You Can Now Proceed To JOSM, import the output GEOJSON and changeset comment!!!",
+            "Você pode proceder ao JOSM e importar o GEOJSON de saída e o comentário para o changeset!!!",
+        )
 
-        iface.messageBar().pushMessage(sucess_category,sucess_message, level=Qgis.Success,duration=30)
+        iface.messageBar().pushMessage(
+            sucess_category, sucess_message, level=Qgis.Success, duration=30
+        )
 
-    def reproject_and_export(self,layername,inputlayer,outfolderpath=None):
+    def reproject_and_export(self, layername, inputlayer, outfolderpath=None):
 
         if not outfolderpath:
             outfolderpath = self.aux_files_dirpath
 
-        outpath = os.path.join(outfolderpath,layername+'.geojson')
+        outpath = os.path.join(outfolderpath, layername + ".geojson")
 
-        reproject_layer(inputlayer,output_mode=outpath)
+        reproject_layer(inputlayer, output_mode=outpath)
 
     def try_to_merge_small_stretches(self):
-        '''
-            this may be the ending chapter of the "too small stretches" arc of the entire saga
-        '''
+        """
+        this may be the ending chapter of the "too small stretches" arc of the entire saga
+        """
 
-        orig_id_fieldname = 'original_id'
+        orig_id_fieldname = "original_id"
 
         # pass # paz tb ('peace aswell' in portuguese, lol)
 
         # creating the field with the original id to use later
-        create_fill_id_field(self.whole_sidewalks,orig_id_fieldname)
-
+        create_fill_id_field(self.whole_sidewalks, orig_id_fieldname)
 
         # filling with the lengths of the too small stretches
         # small_len_dict = {}
@@ -3442,17 +3871,24 @@ class sidewalkreator:
 
             if len < min_stretch_size:
                 # small_len_dict[feature.id()] = len
-                # # using the buffer strategy to speed-up feature selecting 
+                # # using the buffer strategy to speed-up feature selecting
                 # small_bufs_dict[feature.id()] = feature.geometry().buffer(.5,5)
                 tiny_feats_dict[feature.id()] = feature
 
-        too_small_stretches = layer_from_featlist(list(tiny_feats_dict.values()),'too_small_stretches','linestring',{orig_id_fieldname:QVariant.Int},CRS=self.custom_localTM_crs)
+        too_small_stretches = layer_from_featlist(
+            list(tiny_feats_dict.values()),
+            "too_small_stretches",
+            "linestring",
+            {orig_id_fieldname: QVariant.Int},
+            CRS=self.custom_localTM_crs,
+        )
 
-        small_buffs_layer = generate_buffer(too_small_stretches,.5,dissolve=True)
-        
+        small_buffs_layer = generate_buffer(too_small_stretches, 0.5, dissolve=True)
 
         # using intersection, as not managed to get with "overlaps"
-        extracted_adj_lines = extract_with_spatial_relation(self.whole_sidewalks,small_buffs_layer,[0])
+        extracted_adj_lines = extract_with_spatial_relation(
+            self.whole_sidewalks, small_buffs_layer, [0]
+        )
 
         # removing the too small:
         with edit(extracted_adj_lines):
@@ -3473,53 +3909,47 @@ class sidewalkreator:
                 # MARKED FOR IMPROVEMENT WITH QgsSpatialIndex
 
                 for feat2 in extracted_adj_lines.getFeatures():
-                    if not feat2.id in already_used_adj: # to avoid a feature to be used 2 times, or acess a not existent anymore feature
-                        if tiny_feats_dict[feat_id].geometry().touches(feat2.geometry()):
-                            # touching_times_dict[feat_id] += 1 
+                    if (
+                        not feat2.id in already_used_adj
+                    ):  # to avoid a feature to be used 2 times, or acess a not existent anymore feature
+                        if (
+                            tiny_feats_dict[feat_id]
+                            .geometry()
+                            .touches(feat2.geometry())
+                        ):
+                            # touching_times_dict[feat_id] += 1
 
                             # touchers[feat_id].append(feat2[orig_id_fieldname])
 
-                            # collecting the geometry and the 
-                            collected_mls = QgsGeometry.collectGeometry([tiny_feats_dict[feat_id].geometry(),feat2.geometry()])
+                            # collecting the geometry and the
+                            collected_mls = QgsGeometry.collectGeometry(
+                                [tiny_feats_dict[feat_id].geometry(), feat2.geometry()]
+                            )
 
                             rejoined_ls = collected_mls.mergeLines()
 
                             # if the rejoining was sucessful we jsut need to replace the geometry at the small segment and remove the other feature from layer, and break
                             if rejoined_ls.wkbType() == 2:
 
-                                self.whole_sidewalks.changeGeometry(feat_id,rejoined_ls) # replacing with the rejoined
-                                self.whole_sidewalks.deleteFeature(feat2[orig_id_fieldname]) #deleting the other one
+                                self.whole_sidewalks.changeGeometry(
+                                    feat_id, rejoined_ls
+                                )  # replacing with the rejoined
+                                self.whole_sidewalks.deleteFeature(
+                                    feat2[orig_id_fieldname]
+                                )  # deleting the other one
                                 already_used_adj.append(feat2.id())
 
-                                break # so, go for the next small stretch
+                                break  # so, go for the next small stretch
 
                                 # print(feat2.geometry().length())
         # print(already_used_adj)
 
-        #remove the layerfield: It wont be necessary anymore
-        remove_layerfields(self.whole_sidewalks,[orig_id_fieldname])
-
+        # remove the layerfield: It wont be necessary anymore
+        remove_layerfields(self.whole_sidewalks, [orig_id_fieldname])
 
         # print(touching_times_dict,'\n\n')
         # print(touchers)
 
-
-
-
         # self.add_layer_canvas(too_small_stretches)
         # self.add_layer_canvas(small_buffs_layer)
         # self.add_layer_canvas(extracted_adj_lines)
-
-
-
-
-            
-
-
-
-
-
-
-
-
-
