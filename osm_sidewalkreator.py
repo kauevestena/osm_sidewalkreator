@@ -3589,6 +3589,10 @@ class sidewalkreator:
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
+        # join the current unix epoch to the "inputdirpath" to avoid overwriting:
+        unix_epoch = str(int(datetime.datetime.now().timestamp()))
+        inputdirpath = os.path.join(inputdirpath, unix_epoch)
+
         # os.makedirs(inputdirpath)
         create_dir_ifnotexists(inputdirpath)
 
