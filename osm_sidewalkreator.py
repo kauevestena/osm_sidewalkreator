@@ -58,6 +58,7 @@ from qgis.utils import iface
 
 # pure Qt imports, keep at minimun =P
 from PyQt5.QtWidgets import QTableWidgetItem
+from qgis.PyQt import QtWidgets # Added for type checking
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtCore import QVariant
 
@@ -3588,6 +3589,10 @@ class sidewalkreator:
         # base and path stuff:
         inputdirpath = self.dlg.output_folder_selector.filePath()
 
+        # join the current unix epoch to the "inputdirpath" to avoid overwriting:
+        unix_epoch = str(int(datetime.datetime.now().timestamp()))
+        inputdirpath = os.path.join(inputdirpath, unix_epoch)
+
         # os.makedirs(inputdirpath)
         create_dir_ifnotexists(inputdirpath)
 
@@ -3733,34 +3738,31 @@ class sidewalkreator:
                 self.string_according_language(chgset_text_en, chgset_text_ptbr)
             )
 
-        parameters_dump = {
-            "ignore_buildings": self.dlg.ch_ignore_buildings.isChecked(),
-            "timeout (s)": self.dlg.timeout_box.value(),
-            "iters_for_DE_streets": self.dlg.dead_end_iters_box.value(),
-            "check_overlapping": self.dlg.check_if_overlaps_buildings.isChecked(),
-            "distance to add (both sides) to street width (m)": self.dlg.d_to_add_box.value(),
-            "curve radius (m)": self.dlg.curve_radius_box.value(),
-            "draw kerbs at (%)": self.dlg.curve_radius_box.value(),
-            "inward distance (m)": self.dlg.d_to_add_inward_box.value(),
-            "crossings in parallel to transversal segments ": self.dlg.opt_parallel_crossings.isChecked(),
-            "crossings drawn perpendicularly": self.dlg.opt_perp_crossings.isChecked(),
-            "use voronoi polygons": self.dlg.voronoi_checkbox.isChecked(),
-            "minimum_POIS": self.dlg.minimum_pois_box.value(),
-            "split by facades": self.dlg.onlyfacades_checkbox.isChecked(),
-            "dont split at all": self.dlg.dontsplit_checkbox.isChecked(),
-        }
+        parameters_dump = {}
+        # Iterate over all widgets in the dialog
+        for widget_name in dir(self.dlg):
+            widget = getattr(self.dlg, widget_name)
+            # Check if it's a relevant GUI element (e.g., QCheckBox, QSpinBox, QDoubleSpinBox, QRadioButton)
+            if isinstance(widget, QtWidgets.QCheckBox):
+                parameters_dump[widget_name] = widget.isChecked()
+            elif isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+                parameters_dump[widget_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QRadioButton):
+                if widget.isChecked():
+                    parameters_dump[widget.objectName()] = True
+            elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
+                 parameters_dump[widget_name] = widget.text() if isinstance(widget, QtWidgets.QLineEdit) else widget.toPlainText()
+            elif isinstance(widget, (QtWidgets.QComboBox, QgsMapLayerComboBox)):
+                parameters_dump[widget_name] = widget.currentText()
+            elif isinstance(widget, QgsMapLayerComboBox):
+                parameters_dump[widget_name] = widget.currentLayer().name() if widget.currentLayer() else None
+            # Add more widget types if needed
 
-        if self.dlg.check_if_overlaps_buildings.isChecked():
-            parameters_dump["min_distance_to_buildings (m)"] = (
-                self.dlg.min_d_buildings_box.value()
-            )
-            parameters_dump["min street width (m)"] = self.dlg.min_width_box.value()
-
-        if self.dlg.maxlensplit_checkbox.isChecked():
-            parameters_dump["split by maxlength"] = self.dlg.maxlensplit_box.value()
-
-        if self.dlg.segsbynum_checkbox.isChecked():
-            parameters_dump["split by x segments"] = self.dlg.segsbynum_box.value()
+        # Specific handling for grouped radio buttons if necessary (example)
+        # if self.dlg.opt_parallel_crossings.isChecked():
+        #     parameters_dump["crossing_orientation"] = "parallel"
+        # elif self.dlg.opt_perp_crossings.isChecked():
+        #     parameters_dump["crossing_orientation"] = "perpendicular"
 
         parameters_dump_outpath = os.path.join(
             self.aux_files_dirpath, "parameters_dump.json"
