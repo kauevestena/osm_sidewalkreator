@@ -57,7 +57,8 @@ from qgis.utils import iface
 
 
 # pure Qt imports, keep at minimun =P
-from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem, QFileDialog
+from qgis.PyQt import QtWidgets # Added for type checking
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtCore import QVariant
 
@@ -75,6 +76,7 @@ import sys
 
 # for output folder unique naming
 import datetime
+import json # Added for loading parameters
 
 # small calculations
 import math
@@ -346,6 +348,8 @@ class sidewalkreator:
             self.dlg.output_folder_selector.fileChanged.connect(
                 self.change_folderselector_name
             )
+            self.dlg.load_parameters_button.clicked.connect(self.load_parameters)
+            self.dlg.dump_parameters_button.clicked.connect(self.dump_parameters)
 
             # cancel means reset AND close
             self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(
@@ -547,7 +551,8 @@ class sidewalkreator:
                 "remove above tolerance",
                 "remover se acima da tol.",
             ),
-            # (self.dlg.,'',''),
+            (self.dlg.load_parameters_button, "Load Parameters", "Carregar Parâmetros"),
+            (self.dlg.dump_parameters_button, "Dump Parameters", "Salvar Parâmetros"),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -3733,34 +3738,31 @@ class sidewalkreator:
                 self.string_according_language(chgset_text_en, chgset_text_ptbr)
             )
 
-        parameters_dump = {
-            "ignore_buildings": self.dlg.ch_ignore_buildings.isChecked(),
-            "timeout (s)": self.dlg.timeout_box.value(),
-            "iters_for_DE_streets": self.dlg.dead_end_iters_box.value(),
-            "check_overlapping": self.dlg.check_if_overlaps_buildings.isChecked(),
-            "distance to add (both sides) to street width (m)": self.dlg.d_to_add_box.value(),
-            "curve radius (m)": self.dlg.curve_radius_box.value(),
-            "draw kerbs at (%)": self.dlg.curve_radius_box.value(),
-            "inward distance (m)": self.dlg.d_to_add_inward_box.value(),
-            "crossings in parallel to transversal segments ": self.dlg.opt_parallel_crossings.isChecked(),
-            "crossings drawn perpendicularly": self.dlg.opt_perp_crossings.isChecked(),
-            "use voronoi polygons": self.dlg.voronoi_checkbox.isChecked(),
-            "minimum_POIS": self.dlg.minimum_pois_box.value(),
-            "split by facades": self.dlg.onlyfacades_checkbox.isChecked(),
-            "dont split at all": self.dlg.dontsplit_checkbox.isChecked(),
-        }
+        parameters_dump = {}
+        # Iterate over all widgets in the dialog
+        for widget_name in dir(self.dlg):
+            widget = getattr(self.dlg, widget_name)
+            # Check if it's a relevant GUI element (e.g., QCheckBox, QSpinBox, QDoubleSpinBox, QRadioButton)
+            if isinstance(widget, QtWidgets.QCheckBox):
+                parameters_dump[widget_name] = widget.isChecked()
+            elif isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+                parameters_dump[widget_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QRadioButton):
+                if widget.isChecked():
+                    parameters_dump[widget.objectName()] = True
+            elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
+                 parameters_dump[widget_name] = widget.text() if isinstance(widget, QtWidgets.QLineEdit) else widget.toPlainText()
+            elif isinstance(widget, (QtWidgets.QComboBox, QgsMapLayerComboBox)):
+                parameters_dump[widget_name] = widget.currentText()
+            elif isinstance(widget, QgsMapLayerComboBox):
+                parameters_dump[widget_name] = widget.currentLayer().name() if widget.currentLayer() else None
+            # Add more widget types if needed
 
-        if self.dlg.check_if_overlaps_buildings.isChecked():
-            parameters_dump["min_distance_to_buildings (m)"] = (
-                self.dlg.min_d_buildings_box.value()
-            )
-            parameters_dump["min street width (m)"] = self.dlg.min_width_box.value()
-
-        if self.dlg.maxlensplit_checkbox.isChecked():
-            parameters_dump["split by maxlength"] = self.dlg.maxlensplit_box.value()
-
-        if self.dlg.segsbynum_checkbox.isChecked():
-            parameters_dump["split by x segments"] = self.dlg.segsbynum_box.value()
+        # Specific handling for grouped radio buttons if necessary (example)
+        # if self.dlg.opt_parallel_crossings.isChecked():
+        #     parameters_dump["crossing_orientation"] = "parallel"
+        # elif self.dlg.opt_perp_crossings.isChecked():
+        #     parameters_dump["crossing_orientation"] = "perpendicular"
 
         parameters_dump_outpath = os.path.join(
             self.aux_files_dirpath, "parameters_dump.json"
@@ -3953,3 +3955,156 @@ class sidewalkreator:
         # self.add_layer_canvas(too_small_stretches)
         # self.add_layer_canvas(small_buffs_layer)
         # self.add_layer_canvas(extracted_adj_lines)
+
+    def dump_parameters(self):
+        """Saves the current GUI parameters to a JSON file."""
+        parameters_dump = {}
+        for widget_name in dir(self.dlg):
+            widget = getattr(self.dlg, widget_name)
+            if isinstance(widget, QtWidgets.QCheckBox):
+                parameters_dump[widget_name] = widget.isChecked()
+            elif isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+                parameters_dump[widget_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QRadioButton):
+                if widget.isChecked():
+                    parameters_dump[widget.objectName()] = True
+            elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
+                parameters_dump[widget_name] = widget.text() if isinstance(widget, QtWidgets.QLineEdit) else widget.toPlainText()
+            elif isinstance(widget, (QtWidgets.QComboBox, QgsMapLayerComboBox)):
+                if isinstance(widget, QgsMapLayerComboBox):
+                    parameters_dump[widget_name] = widget.currentLayer().name() if widget.currentLayer() else None
+                else:
+                    parameters_dump[widget_name] = widget.currentText()
+
+        if not parameters_dump:
+            self.iface.messageBar().pushMessage(
+                self.tr("Error"),
+                self.tr("No parameters found to dump."),
+                level=Qgis.Critical,
+                duration=5,
+            )
+            return
+
+        # Prompt user for file path
+        filePath, _ = QFileDialog.getSaveFileName(
+            self.dlg, self.tr("Save Parameters"), "", self.tr("JSON Files (*.json)")
+        )
+
+        if filePath:
+            try:
+                dump_json(parameters_dump, filePath)
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"),
+                    self.tr(f"Parameters successfully dumped to {filePath}"),
+                    level=Qgis.Success,
+                    duration=5,
+                )
+            except Exception as e:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Error"),
+                    self.tr(f"Failed to dump parameters: {e}"),
+                    level=Qgis.Critical,
+                    duration=5,
+                )
+
+    def load_parameters(self):
+        """Loads GUI parameters from a JSON file."""
+        filePath, _ = QFileDialog.getOpenFileName(
+            self.dlg, self.tr("Load Parameters"), "", self.tr("JSON Files (*.json)")
+        )
+
+        if filePath:
+            try:
+                with open(filePath, "r") as f:
+                    parameters_load = json.load(f)
+            except Exception as e:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Error"),
+                    self.tr(f"Failed to read parameters file: {e}"),
+                    level=Qgis.Critical,
+                    duration=5,
+                )
+                return
+
+            loaded_count = 0
+            skipped_count = 0
+            error_count = 0
+
+            for widget_name, value in parameters_load.items():
+                widget = getattr(self.dlg, widget_name, None)
+                if widget:
+                    try:
+                        if isinstance(widget, QtWidgets.QCheckBox):
+                            widget.setChecked(bool(value))
+                            loaded_count += 1
+                        elif isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+                            widget.setValue(float(value)) # Ensure float for QDoubleSpinBox
+                            loaded_count += 1
+                        elif isinstance(widget, QtWidgets.QRadioButton):
+                            # For radio buttons, the value in JSON indicates if it should be checked.
+                            # We assume object names in JSON match those in the UI.
+                            if bool(value): # Only try to check if the value is True
+                                widget.setChecked(True)
+                                loaded_count += 1
+                            # Not incrementing loaded_count for False, as only one in a group can be true.
+                        elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
+                            if isinstance(widget, QtWidgets.QLineEdit):
+                                widget.setText(str(value))
+                            else:
+                                widget.setPlainText(str(value))
+                            loaded_count += 1
+                        elif isinstance(widget, QgsMapLayerComboBox):
+                            if value: # Layer name is specified
+                                layer = QgsProject.instance().mapLayersByName(str(value))
+                                if layer:
+                                    widget.setLayer(layer[0])
+                                    loaded_count += 1
+                                else:
+                                    self.iface.messageBar().pushMessage(
+                                        self.tr("Warning"),
+                                        self.tr(f"Layer '{value}' for '{widget_name}' not found."),
+                                        level=Qgis.Warning,
+                                        duration=3,
+                                    )
+                                    skipped_count +=1
+                            else: # No layer specified (None)
+                                widget.setLayer(None)
+                                loaded_count += 1
+                        elif isinstance(widget, QtWidgets.QComboBox):
+                            index = widget.findText(str(value))
+                            if index != -1:
+                                widget.setCurrentIndex(index)
+                                loaded_count += 1
+                            else:
+                                self.iface.messageBar().pushMessage(
+                                    self.tr("Warning"),
+                                    self.tr(f"Value '{value}' for '{widget_name}' not found in ComboBox options."),
+                                    level=Qgis.Warning,
+                                    duration=3,
+                                )
+                                skipped_count += 1
+                    except Exception as e:
+                        self.iface.messageBar().pushMessage(
+                            self.tr("Error"),
+                            self.tr(f"Error setting widget '{widget_name}': {e}"),
+                            level=Qgis.Warning, # Warning for individual widget errors
+                            duration=3,
+                        )
+                        error_count += 1
+                else:
+                    self.iface.messageBar().pushMessage(
+                        self.tr("Warning"),
+                        self.tr(f"Widget '{widget_name}' not found in GUI. Skipping."),
+                        level=Qgis.Warning,
+                        duration=3,
+                    )
+                    skipped_count += 1
+
+            success_msg = self.tr(f"Parameters loaded: {loaded_count} set, {skipped_count} skipped, {error_count} errors.")
+            if error_count > 0 or skipped_count > 0:
+                 self.iface.messageBar().pushMessage(self.tr("Info"), success_msg, level=Qgis.Warning, duration=7)
+            else:
+                 self.iface.messageBar().pushMessage(self.tr("Success"), success_msg, level=Qgis.Success, duration=5)
+
+    # Make sure to import json at the top of your file:
+    # import json
