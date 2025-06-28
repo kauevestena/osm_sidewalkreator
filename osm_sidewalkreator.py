@@ -57,8 +57,8 @@ from qgis.utils import iface
 
 
 # pure Qt imports, keep at minimun =P
-from PyQt5.QtWidgets import QTableWidgetItem
-from qgis.PyQt import QtWidgets # Added for type checking
+from PyQt5.QtWidgets import QTableWidgetItem, QFileDialog
+from qgis.PyQt import QtWidgets  # Added for type checking
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtCore import QVariant
 
@@ -76,6 +76,7 @@ import sys
 
 # for output folder unique naming
 import datetime
+import json  # Added for loading parameters
 
 # small calculations
 import math
@@ -328,17 +329,13 @@ class sidewalkreator:
             self.dlg = sidewalkreatorDialog()
 
             # setting items that should not be visible at beginning:
-            self.dlg.sidewalks_warning.setHidden(True)
             self.dlg.hint_text.setHidden(True)
-            self.dlg.ignore_already_drawn_btn.setHidden(True)
 
             # # # THE FUNCTION CONNECTIONS
             self.dlg.datafetch.clicked.connect(self.call_get_osm_data)
             self.dlg.clean_data.clicked.connect(self.data_clean)
             self.dlg.generate_sidewalks.clicked.connect(self.draw_sidewalks)
-            self.dlg.ignore_already_drawn_btn.clicked.connect(
-                self.ignore_already_drawn_fcn
-            )
+
             self.dlg.add_osm_basemap.clicked.connect(self.add_osm_basemap_func)
             self.dlg.add_bing_base.clicked.connect(self.add_bing_baseimg_func)
             self.dlg.generate_crossings.clicked.connect(self.draw_crossings)
@@ -347,6 +344,8 @@ class sidewalkreator:
             self.dlg.output_folder_selector.fileChanged.connect(
                 self.change_folderselector_name
             )
+            self.dlg.load_parameters_button.clicked.connect(self.load_parameters)
+            self.dlg.dump_parameters_button.clicked.connect(self.dump_parameters)
 
             # cancel means reset AND close
             self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(
@@ -455,22 +454,12 @@ class sidewalkreator:
                 "Limp. dados OSM e\nGerar Interseções",
             ),
             (
-                self.dlg.sidewalks_warning,
-                "Some Sidewalks are already drawn!!! You must reshape your input polygon!!!\n(in a future release,this stuff shall be handled properly...)",
-                "Já há algumas calçadas mapeadas!! Você deverá Redesenhar seu polígono de entrada!!\n(em uma versão futura será lidado adequadamente)",
-            ),
-            (
                 self.dlg.check_if_overlaps_buildings,
                 "Check if Overlaps\n Buildings\n(much slower)",
                 "Testar se Sobrepõe\nEdificações\n(mais lento)",
             ),
             (self.dlg.hint_text, self.en_hint, self.ptbr_hint),
             (self.dlg.generate_sidewalks, "Generate Sidewalks", "Gerar Calçadas"),
-            (
-                self.dlg.ignore_already_drawn_btn,
-                "I Have Reviewed the Data\nAnd It's OK!!\n(or want to draw anyway)",
-                "Eu Revisei os Dados\nE está tudo certo!!\n(ou gerar de qualquer jeito)",
-            ),
             (
                 self.dlg.ch_ignore_buildings,
                 "ignore buildings\n(much faster)",
@@ -548,7 +537,8 @@ class sidewalkreator:
                 "remove above tolerance",
                 "remover se acima da tol.",
             ),
-            # (self.dlg.,'',''),
+            (self.dlg.load_parameters_button, "Load Parameters", "Carregar Parâmetros"),
+            (self.dlg.dump_parameters_button, "Dump Parameters", "Salvar Parâmetros"),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
             # (self.dlg.,'',''),
@@ -2251,15 +2241,6 @@ class sidewalkreator:
         self.dlg.output_file_label.setHidden(True)
         self.dlg.output_folder_selector.setHidden(True)
 
-        # but enable the warning and the button:
-        self.dlg.sidewalks_warning.setHidden(False)
-        self.dlg.sidewalks_warning.setGeometry(270, 180, 331, 281)
-
-        self.dlg.ignore_already_drawn_btn.setHidden(False)
-        self.dlg.ignore_already_drawn_btn.setEnabled(True)
-        self.dlg.ignore_already_drawn_btn.setGeometry(300, 450, 261, 71)
-        # values from Qt Designer
-
     def ignore_already_drawn_fcn(self):
 
         self.reset_fields()
@@ -2291,7 +2272,6 @@ class sidewalkreator:
         self.dlg.generate_sidewalks.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setEnabled(False)
         self.dlg.check_if_overlaps_buildings.setChecked(False)
-        self.dlg.ignore_already_drawn_btn.setEnabled(False)
         self.dlg.datafetch_progressbar.setEnabled(False)
         self.dlg.dead_end_iters_label.setEnabled(False)
         self.dlg.dead_end_iters_box.setEnabled(False)
@@ -2356,8 +2336,6 @@ class sidewalkreator:
 
         # hidden elements
         self.dlg.hint_text.setHidden(True)
-        self.dlg.ignore_already_drawn_btn.setHidden(True)
-        self.dlg.sidewalks_warning.setHidden(True)
 
         # table controlling
         self.dlg.higway_values_table.setRowCount(0)
@@ -3751,11 +3729,17 @@ class sidewalkreator:
                 if widget.isChecked():
                     parameters_dump[widget.objectName()] = True
             elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
-                 parameters_dump[widget_name] = widget.text() if isinstance(widget, QtWidgets.QLineEdit) else widget.toPlainText()
+                parameters_dump[widget_name] = (
+                    widget.text()
+                    if isinstance(widget, QtWidgets.QLineEdit)
+                    else widget.toPlainText()
+                )
             elif isinstance(widget, (QtWidgets.QComboBox, QgsMapLayerComboBox)):
                 parameters_dump[widget_name] = widget.currentText()
             elif isinstance(widget, QgsMapLayerComboBox):
-                parameters_dump[widget_name] = widget.currentLayer().name() if widget.currentLayer() else None
+                parameters_dump[widget_name] = (
+                    widget.currentLayer().name() if widget.currentLayer() else None
+                )
             # Add more widget types if needed
 
         # Specific handling for grouped radio buttons if necessary (example)
@@ -3955,3 +3939,183 @@ class sidewalkreator:
         # self.add_layer_canvas(too_small_stretches)
         # self.add_layer_canvas(small_buffs_layer)
         # self.add_layer_canvas(extracted_adj_lines)
+
+    def dump_parameters(self):
+        """Saves the current GUI parameters to a JSON file."""
+        parameters_dump = {}
+        for widget_name in dir(self.dlg):
+            widget = getattr(self.dlg, widget_name)
+            if isinstance(widget, QtWidgets.QCheckBox):
+                parameters_dump[widget_name] = widget.isChecked()
+            elif isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
+                parameters_dump[widget_name] = widget.value()
+            elif isinstance(widget, QtWidgets.QRadioButton):
+                if widget.isChecked():
+                    parameters_dump[widget.objectName()] = True
+            elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)):
+                parameters_dump[widget_name] = (
+                    widget.text()
+                    if isinstance(widget, QtWidgets.QLineEdit)
+                    else widget.toPlainText()
+                )
+            elif isinstance(widget, (QtWidgets.QComboBox, QgsMapLayerComboBox)):
+                if isinstance(widget, QgsMapLayerComboBox):
+                    parameters_dump[widget_name] = (
+                        widget.currentLayer().name() if widget.currentLayer() else None
+                    )
+                else:
+                    parameters_dump[widget_name] = widget.currentText()
+
+        if not parameters_dump:
+            self.iface.messageBar().pushMessage(
+                self.tr("Error"),
+                self.tr("No parameters found to dump."),
+                level=Qgis.Critical,
+                duration=5,
+            )
+            return
+
+        # Prompt user for file path
+        filePath, _ = QFileDialog.getSaveFileName(
+            self.dlg, self.tr("Save Parameters"), "", self.tr("JSON Files (*.json)")
+        )
+
+        if filePath:
+            try:
+                if not filePath.endswith(".json"):
+                    filePath += ".json"
+
+                dump_json(parameters_dump, filePath)
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"),
+                    self.tr(f"Parameters successfully dumped to {filePath}"),
+                    level=Qgis.Success,
+                    duration=5,
+                )
+            except Exception as e:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Error"),
+                    self.tr(f"Failed to dump parameters: {e}"),
+                    level=Qgis.Critical,
+                    duration=5,
+                )
+
+    def load_parameters(self):
+        """Loads GUI parameters from a JSON file."""
+        filePath, _ = QFileDialog.getOpenFileName(
+            self.dlg, self.tr("Load Parameters"), "", self.tr("JSON Files (*.json)")
+        )
+
+        if filePath:
+            try:
+                with open(filePath, "r") as f:
+                    parameters_load = json.load(f)
+            except Exception as e:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Error"),
+                    self.tr(f"Failed to read parameters file: {e}"),
+                    level=Qgis.Critical,
+                    duration=5,
+                )
+                return
+
+            loaded_count = 0
+            skipped_count = 0
+            error_count = 0
+
+            for widget_name, value in parameters_load.items():
+                widget = getattr(self.dlg, widget_name, None)
+                if widget:
+                    try:
+                        if isinstance(widget, QtWidgets.QCheckBox):
+                            widget.setChecked(bool(value))
+                            loaded_count += 1
+                        elif isinstance(
+                            widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)
+                        ):
+                            widget.setValue(
+                                float(value)
+                            )  # Ensure float for QDoubleSpinBox
+                            loaded_count += 1
+                        elif isinstance(widget, QtWidgets.QRadioButton):
+                            # For radio buttons, the value in JSON indicates if it should be checked.
+                            # We assume object names in JSON match those in the UI.
+                            if bool(value):  # Only try to check if the value is True
+                                widget.setChecked(True)
+                                loaded_count += 1
+                            # Not incrementing loaded_count for False, as only one in a group can be true.
+                        elif isinstance(
+                            widget, (QtWidgets.QLineEdit, QtWidgets.QTextEdit)
+                        ):
+                            if isinstance(widget, QtWidgets.QLineEdit):
+                                widget.setText(str(value))
+                            else:
+                                widget.setPlainText(str(value))
+                            loaded_count += 1
+                        elif isinstance(widget, QgsMapLayerComboBox):
+                            if value:  # Layer name is specified
+                                layer = QgsProject.instance().mapLayersByName(
+                                    str(value)
+                                )
+                                if layer:
+                                    widget.setLayer(layer[0])
+                                    loaded_count += 1
+                                else:
+                                    self.iface.messageBar().pushMessage(
+                                        self.tr("Warning"),
+                                        self.tr(
+                                            f"Layer '{value}' for '{widget_name}' not found."
+                                        ),
+                                        level=Qgis.Warning,
+                                        duration=3,
+                                    )
+                                    skipped_count += 1
+                            else:  # No layer specified (None)
+                                widget.setLayer(None)
+                                loaded_count += 1
+                        elif isinstance(widget, QtWidgets.QComboBox):
+                            index = widget.findText(str(value))
+                            if index != -1:
+                                widget.setCurrentIndex(index)
+                                loaded_count += 1
+                            else:
+                                self.iface.messageBar().pushMessage(
+                                    self.tr("Warning"),
+                                    self.tr(
+                                        f"Value '{value}' for '{widget_name}' not found in ComboBox options."
+                                    ),
+                                    level=Qgis.Warning,
+                                    duration=3,
+                                )
+                                skipped_count += 1
+                    except Exception as e:
+                        self.iface.messageBar().pushMessage(
+                            self.tr("Error"),
+                            self.tr(f"Error setting widget '{widget_name}': {e}"),
+                            level=Qgis.Warning,  # Warning for individual widget errors
+                            duration=3,
+                        )
+                        error_count += 1
+                else:
+                    self.iface.messageBar().pushMessage(
+                        self.tr("Warning"),
+                        self.tr(f"Widget '{widget_name}' not found in GUI. Skipping."),
+                        level=Qgis.Warning,
+                        duration=3,
+                    )
+                    skipped_count += 1
+
+            success_msg = self.tr(
+                f"Parameters loaded: {loaded_count} set, {skipped_count} skipped, {error_count} errors."
+            )
+            if error_count > 0 or skipped_count > 0:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Info"), success_msg, level=Qgis.Warning, duration=7
+                )
+            else:
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"), success_msg, level=Qgis.Success, duration=5
+                )
+
+    # Make sure to import json at the top of your file:
+    # import json

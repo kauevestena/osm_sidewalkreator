@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1010</width>
-    <height>657</height>
+    <height>667</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,6 +33,32 @@
    </property>
    <property name="centerButtons">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="load_parameters_button">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>610</y>
+     <width>100</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Load Params</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="dump_parameters_button">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>610</y>
+     <width>100</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Dump Params</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">
@@ -118,8 +144,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>300</x>
-     <y>610</y>
+     <x>440</x>
+     <y>620</y>
      <width>391</width>
      <height>41</height>
     </rect>
@@ -140,8 +166,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>610</y>
+     <x>200</x>
+     <y>620</y>
      <width>211</width>
      <height>31</height>
     </rect>
@@ -292,40 +318,6 @@ Compute Intersections</string>
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="sidewalks_warning">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>640</x>
-     <y>630</y>
-     <width>331</width>
-     <height>281</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>20</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>Some Sidewalks are already drawn!!! You must reshape your input polygon!!!
-(in a future release,this stuff shall be handled properly...)</string>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::PlainText</enum>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
   <widget class="QPushButton" name="generate_sidewalks">
    <property name="enabled">
     <bool>false</bool>
@@ -401,24 +393,6 @@ correct errors on OSM data first!</string>
    </property>
    <property name="tristate">
     <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="ignore_already_drawn_btn">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>1000</x>
-     <y>450</y>
-     <width>261</width>
-     <height>71</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>I Have Reviewed the Data
-And It's OK!!
-(or want to draw anyway)</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="ch_ignore_buildings">
@@ -707,7 +681,7 @@ Base Img.</string>
    <property name="geometry">
     <rect>
      <x>410</x>
-     <y>437</y>
+     <y>447</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -772,7 +746,7 @@ dead-end-streets
    <property name="geometry">
     <rect>
      <x>390</x>
-     <y>572</y>
+     <y>580</y>
      <width>261</width>
      <height>31</height>
     </rect>
@@ -848,9 +822,9 @@ dead-end-streets
    <property name="geometry">
     <rect>
      <x>280</x>
-     <y>470</y>
+     <y>480</y>
      <width>553</width>
-     <height>91</height>
+     <height>94</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -1046,7 +1020,7 @@ segments</string>
    <property name="geometry">
     <rect>
      <x>660</x>
-     <y>578</y>
+     <y>586</y>
      <width>118</width>
      <height>19</height>
     </rect>
@@ -1107,7 +1081,7 @@ segments</string>
      <x>270</x>
      <y>350</y>
      <width>577</width>
-     <height>88</height>
+     <height>94</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout_2">
