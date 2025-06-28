@@ -4033,9 +4033,10 @@ class sidewalkreator:
                         elif isinstance(
                             widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)
                         ):
-                            widget.setValue(
-                                float(value)
-                            )  # Ensure float for QDoubleSpinBox
+                            if isinstance(widget, QtWidgets.QSpinBox):
+                                widget.setValue(int(float(value)))
+                            elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+                                widget.setValue(float(value))
                             loaded_count += 1
                         elif isinstance(widget, QtWidgets.QRadioButton):
                             # For radio buttons, the value in JSON indicates if it should be checked.
