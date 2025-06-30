@@ -583,52 +583,63 @@ class sidewalkreator:
         self.dlg.higway_values_table.setEnabled(False)
 
         # removing undesired tag values:
-        for i, value in enumerate(self.unique_highway_values):
-            # if a too small value is set (including negatives, lol), then also remove it:
+        ids_to_delete_in_clipped_layer = set() # Use a set to avoid duplicate IDs
+        values_for_deletion_criteria = set()
 
-            # saving already existing sidewalks and crossings in layers:
+        for value in self.unique_highway_values:
+            # Check for existing sidewalks and crossings first, regardless of width criteria
             if value == "footway":
                 # for sidewalks:
                 already_existing_sidewalks_list = select_feats_by_attr(
                     self.clipped_reproj_datalayer, "footway", "sidewalk"
                 )
-
-                self.already_existing_sidewalks_layer = layer_from_featlist(
-                    already_existing_sidewalks_list,
-                    "already_existing_sidewalks",
-                    "linestring",
-                    CRS=self.custom_localTM_crs,
-                )
+                if already_existing_sidewalks_list: # only create layer if features exist
+                    self.already_existing_sidewalks_layer = layer_from_featlist(
+                        already_existing_sidewalks_list,
+                        "already_existing_sidewalks",
+                        "linestring",
+                        CRS=self.custom_localTM_crs,
+                    )
+                else:
+                    self.already_existing_sidewalks_layer = None # Ensure it's None if no features
 
                 # for crossings:
                 already_existing_crossings_list = select_feats_by_attr(
                     self.clipped_reproj_datalayer, "footway", "crossing"
                 )
+                if already_existing_crossings_list: # only create layer if features exist
+                    self.already_existing_crossings_layer = layer_from_featlist(
+                        already_existing_crossings_list,
+                        "already_existing_crossings",
+                        "linestring",
+                        CRS=self.custom_localTM_crs,
+                    )
+                else:
+                    self.already_existing_crossings_layer = None # Ensure it's None
 
-                self.already_existing_crossings_layer = layer_from_featlist(
-                    already_existing_crossings_list,
-                    "already_existing_crossings",
-                    "linestring",
-                    CRS=self.custom_localTM_crs,
-                )
+            # Accumulate values that meet the deletion criteria (width < 0.5)
+            if highway_valuestable_dict.get(value, float('inf')) < 0.5:
+                values_for_deletion_criteria.add(value)
 
-                """ 
-                layer declaration inside a loop? 
-                Yes,
-                    but it's granted to happen only once
-                """
+        # Now, iterate once through the layer to collect IDs for deletion
+        if values_for_deletion_criteria:
+            field_idx = self.clipped_reproj_datalayer.fields().lookupField(highway_tag)
+            if field_idx != -1:
+                for feature in self.clipped_reproj_datalayer.getFeatures():
+                    if feature.attribute(field_idx) in values_for_deletion_criteria:
+                        ids_to_delete_in_clipped_layer.add(feature.id())
+            else:
+                print(f"Warning: '{highway_tag}' not found in layer '{self.clipped_reproj_datalayer.name()}' for deletion criteria.")
 
-            if highway_valuestable_dict[value] < 0.5:
-                remove_features_byattr(
-                    self.clipped_reproj_datalayer, highway_tag, value
-                )  # self.unique_highway_values[i])
+        # Perform the actual deletion in a single batch
+        if ids_to_delete_in_clipped_layer:
+            with edit(self.clipped_reproj_datalayer):
+                self.clipped_reproj_datalayer.deleteFeatures(list(ids_to_delete_in_clipped_layer))
 
-                # creating the 'protoblocks' layer, is a poligonization of the streets layers
+        # self.add_layer_canvas(self.already_existing_sidewalks_layer) # Conditional add if layer exists
+        # self.add_layer_canvas(self.already_existing_crossings_layer) # Conditional add
 
-        # self.add_layer_canvas(self.already_existing_sidewalks_layer)
-        # self.add_layer_canvas(self.already_existing_crossings_layer)
-
-        # protoblocks have been moved to here:
+        # protoblocks are created from the (potentially modified) clipped_reproj_datalayer
         self.protoblocks = polygonize_lines(self.clipped_reproj_datalayer)
         self.protoblocks.setCrs(self.custom_localTM_crs)  # better safe than sorry kkkk
 
@@ -1114,6 +1125,11 @@ class sidewalkreator:
         self.dissolved_sidewalks_geom = get_first_feature_or_geom(
             self.dissolved_sidewalks, True
         )
+        # Prepare geometry for faster intersection tests if supported
+        if self.dissolved_sidewalks_geom and hasattr(self.dissolved_sidewalks_geom, 'prepareGeometry'):
+            if not self.dissolved_sidewalks_geom.prepareGeometry():
+                print("Warning: Failed to prepare geometry for dissolved_sidewalks_geom.")
+
 
         # analyzing if the endpoits of splitted lines are elegible for
         #   iterating again each street segment:
@@ -3883,52 +3899,76 @@ class sidewalkreator:
                     extracted_adj_lines.deleteFeature(feature.id())
 
         # now iterating the features, testing all the selected against the remaining ones
-        # touching_times_dict = {}
-        # touchers = {}
         already_used_adj = []
+
+        # Build spatial index for extracted_adj_lines
+        # Ensure generic_functions.py has `gen_layer_spatial_index` if not already imported
+        # from .generic_functions import gen_layer_spatial_index # Assuming it's there or imported elsewhere
+        adj_lines_index = gen_layer_spatial_index(extracted_adj_lines)
 
         with edit(self.whole_sidewalks):
             for feat_id in tiny_feats_dict:
-                # touching_times_dict[feat_id] = 0
-                # touchers[feat_id] = []
+                tiny_feature_geom = tiny_feats_dict[feat_id].geometry()
 
-                # MARKED FOR IMPROVEMENT WITH QgsSpatialIndex
+                # Use a small buffer around the tiny feature for candidate search
+                # The buffer distance can be fine-tuned, e.g., snap_disjointed_tol
+                search_rect = tiny_feature_geom.buffer(0.1, 5).boundingBox() # Small buffer for touch candidates
+                candidate_ids = adj_lines_index.intersects(search_rect)
 
-                for feat2 in extracted_adj_lines.getFeatures():
-                    if (
-                        not feat2.id in already_used_adj
-                    ):  # to avoid a feature to be used 2 times, or acess a not existent anymore feature
-                        if (
-                            tiny_feats_dict[feat_id]
-                            .geometry()
-                            .touches(feat2.geometry())
-                        ):
-                            # touching_times_dict[feat_id] += 1
+                for adj_feat_id in candidate_ids:
+                    if adj_feat_id in already_used_adj:
+                        continue
 
-                            # touchers[feat_id].append(feat2[orig_id_fieldname])
+                    # Need to fetch the actual feature from extracted_adj_lines
+                    # QgsSpatialIndex might store FIDs, but we need the feature object for its original_id and geometry
+                    # However, QgsSpatialIndex can also store feature geometries directly if FlagStoreFeatureGeometries is used.
+                    # Assuming gen_layer_spatial_index uses FlagStoreFeatureGeometries or we fetch by ID.
+                    # For simplicity, let's assume we need to fetch. If gen_layer_spatial_index stores geometries, this can be optimized.
 
-                            # collecting the geometry and the
-                            collected_mls = QgsGeometry.collectGeometry(
-                                [tiny_feats_dict[feat_id].geometry(), feat2.geometry()]
-                            )
+                    # feat2 = extracted_adj_lines.getFeature(adj_feat_id)
+                    # It's better if extracted_adj_lines is indexed by its actual FID if different from sequential IDs.
+                    # Let's refine this. If extracted_adj_lines has features removed, its FIDs might not be sequential.
+                    # A robust way: get all features from extracted_adj_lines once into a dict if it's not too large,
+                    # or ensure gen_layer_spatial_index allows retrieving the feature/geometry.
 
-                            rejoined_ls = collected_mls.mergeLines()
+                    # For now, assuming adj_feat_id is the FID usable with getFeature
+                    # A potential issue: if extracted_adj_lines had features deleted, its FIDs might not be contiguous.
+                    # The `candidate_ids` from `adj_lines_index.intersects()` are the FIDs.
 
-                            # if the rejoining was sucessful we jsut need to replace the geometry at the small segment and remove the other feature from layer, and break
-                            if rejoined_ls.wkbType() == 2:
+                    feat2_request = QgsFeatureRequest().setFilterFid(adj_feat_id)
+                    feat2_iterator = extracted_adj_lines.getFeatures(feat2_request)
+                    try:
+                        feat2 = next(feat2_iterator)
+                    except StopIteration:
+                        continue # Should not happen if index is in sync
 
-                                self.whole_sidewalks.changeGeometry(
-                                    feat_id, rejoined_ls
-                                )  # replacing with the rejoined
-                                self.whole_sidewalks.deleteFeature(
-                                    feat2[orig_id_fieldname]
-                                )  # deleting the other one
-                                already_used_adj.append(feat2.id())
+                    if feat2.id() in already_used_adj: # Double check, id() is more robust if FIDs are complex
+                        continue
 
-                                break  # so, go for the next small stretch
+                    if tiny_feature_geom.touches(feat2.geometry()):
+                        # collecting the geometry and the
+                        collected_mls = QgsGeometry.collectGeometry(
+                            [tiny_feature_geom, feat2.geometry()]
+                        )
 
-                                # print(feat2.geometry().length())
-        # print(already_used_adj)
+                        rejoined_ls = collected_mls.mergeLines()
+
+                        # if the rejoining was sucessful we jsut need to replace the geometry at the small segment and remove the other feature from layer, and break
+                        if rejoined_ls.wkbType() == 2:
+                            self.whole_sidewalks.changeGeometry(
+                                feat_id, rejoined_ls
+                            )  # replacing with the rejoined
+
+                            # Use original_id from feat2 to delete from self.whole_sidewalks
+                            # feat2 itself is from extracted_adj_lines, which is a subset of self.whole_sidewalks
+                            # So, feat2[orig_id_fieldname] is the ID in self.whole_sidewalks to delete
+                            id_to_delete_in_whole_sidewalks = feat2[orig_id_fieldname]
+                            self.whole_sidewalks.deleteFeature(id_to_delete_in_whole_sidewalks)
+
+                            already_used_adj.append(feat2.id()) # Keep track of used features from extracted_adj_lines
+                            # also mark the one that was merged from tiny_feats_dict as used in a way, or remove from tiny_feats_dict?
+                            # The outer loop iterates feat_id from tiny_feats_dict. If it's merged, it's effectively processed.
+                            break  # Move to the next tiny_feature (next feat_id)
 
         # remove the layerfield: It wont be necessary anymore
         remove_layerfields(self.whole_sidewalks, [orig_id_fieldname])
