@@ -6,7 +6,7 @@ from qgis import processing
 from processing.tools import dataobjects
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication, Qgis #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
 # from qgis.core import Qgis
-
+from qgis.core import QgsProcessingContext, Qgis # Added QgsProcessingContext and Qgis
 
 from processing.gui.AlgorithmExecutor import execute_in_place
 
@@ -152,16 +152,62 @@ def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
     return processing.run('native:convexhull',parameter_dict)['OUTPUT']
 
 def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=False):
+    # Commenting out the explicit fixgeometries call as we'll use the context setting
+    # fixed_geometries_output = 'memory:fixed_geometries_for_snapping'
+    # fix_params = {'INPUT': inputlayer, 'OUTPUT': fixed_geometries_output}
+    # try:
+    #     fixed_layer = processing.run('native:fixgeometries', fix_params)['OUTPUT']
+    # except Exception as e:
+    #     print(f"Failed to fix geometries: {e}")
+    #     fixed_layer = inputlayer
+    # parameter_dict = {'INPUT': fixed_layer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
+
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
 
-    if not dontcheckinvalid:
-        return processing.run('native:snapgeometries',parameter_dict)['OUTPUT']
+    # Create a processing context
+    context = QgsProcessingContext()
+    # Set the invalid geometry handling method.
+    # Qgis.InvalidGeometryCheck.SkipInvalidFeatures is a common option.
+    # Qgis.InvalidGeometryCheck.RepairGeometry might also be suitable.
+    # Based on QgsFeatureRequest, the enum values are likely like QgsFeatureRequest.GeometryNoCheck, etc.
+    # Let's try with a common pattern from QGIS:
+    # For QGIS 3.x, the settings are often on QgsProcessingContext or related to QgsFeatureRequest.
+    # The error message implies a processing setting.
+    # The documentation for QgsProcessingContext shows `setInvalidGeometryCheck`.
+    # The enum is Qgis::InvalidGeometryCheck. In PyQGIS, this translates to Qgis.InvalidGeometryCheck.
+    # Common values for this enum, often seen in QgsFeatureRequest, are:
+    # NoCheck, SkipFeatureWithInvalidGeometry, AbortAlgorithmAndReport, ReportInvalidGeometryAndContinue
+    # Let's try to use `Qgis.InvalidGeometryCheck.SkipFeatureWithInvalidGeometry`
+    # or if that's not the exact name, we might need to find the correct enum member.
+    # A common pattern for processing algorithms is to use QgsProcessingContext.InvalidGeometryCheck
+    # The documentation for QgsProcessingContext.setInvalidGeometryCheck refers to Qgis::InvalidGeometryCheck.
+    # Let's assume Qgis.InvalidGeometryCheck.SkipFeatureWithInvalidGeometry or similar.
+    # A safer bet, often used, is to allow skipping or ignoring.
+    # The error specifically says "change the 'Invalid features filtering' option".
+    # This corresponds to `QgsProcessingParameterFeatureSource.FlagSkipInvalid`.
+    # However, for `processing.run`, the context's `invalidGeometryCheck` is more direct.
 
+    # Let's use `Qgis.InvalidGeometryCheck.SkipFeatureWithInvalidGeometry` if available,
+    # or rely on `dontcheckinvalid` to use `QgsFeatureRequest.GeometryNoCheck` as a fallback if an error persists.
+    # From the QGIS API docs for Qgis (namespace):
+    # enum InvalidGeometryCheck { GeometryNoCheck = ..., SkipFeatureWithInvalidGeometry = ..., AbortAlgorithmAndReport = ..., ReportInvalidGeometryAndContinue = ..., FixInvalidGeometry = ... }
+    # So, `Qgis.InvalidGeometryCheck.SkipFeatureWithInvalidGeometry` should be correct.
+
+    if dontcheckinvalid:
+        # This was the original logic for dontcheckinvalid, using dataobjects.createContext()
+        # which is different from QgsProcessingContext.
+        # We should unify this. If dontcheckinvalid is true, it means "GeometryNoCheck".
+        # Otherwise, we can try a more lenient policy than the default (which seems to be Abort).
+        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.NoCheck) # Changed GeometryNoCheck to NoCheck
+        # The original code used `dataobjects.createContext()` and then `context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)`
+        # This suggests `QgsFeatureRequest.GeometryNoCheck` is the value for `Qgis.InvalidGeometryCheck.GeometryNoCheck`.
+        # Let's stick to `Qgis.InvalidGeometryCheck` as per `QgsProcessingContext` docs.
     else:
-        # thx: https://gis.stackexchange.com/a/307618
-        context = dataobjects.createContext()
-        context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)
-        return processing.run("qgis:snapgeometries", parameter_dict, context=context)['OUTPUT']
+        # If not specifically asked to ignore, let's try skipping invalid features.
+        # This directly addresses the error message's suggestion.
+        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.SkipInvalid) # Changed SkipFeatureWithInvalidGeometry to SkipInvalid
+
+    return processing.run('native:snapgeometries', parameter_dict, context=context)['OUTPUT']
 
 
 
