@@ -152,7 +152,18 @@ def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
     return processing.run('native:convexhull',parameter_dict)['OUTPUT']
 
 def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=False):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
+    # Fix geometries before snapping
+    fixed_geometries_output = 'memory:fixed_geometries_for_snapping'
+    fix_params = {'INPUT': inputlayer, 'OUTPUT': fixed_geometries_output}
+
+    try:
+        fixed_layer = processing.run('native:fixgeometries', fix_params)['OUTPUT']
+    except Exception as e:
+        print(f"Failed to fix geometries: {e}")
+        # Fallback to original layer if fixing fails, though this might lead to the original error
+        fixed_layer = inputlayer
+
+    parameter_dict = {'INPUT': fixed_layer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
 
     if not dontcheckinvalid:
         return processing.run('native:snapgeometries',parameter_dict)['OUTPUT']
