@@ -668,13 +668,26 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
 
 
 def remove_features_byattr(inputlayer,attrname,attrvalue):
+    ids_to_delete = []
+    # Make sure field name is valid before starting iteration
+    field_index = inputlayer.fields().lookupField(attrname)
+    if field_index == -1:
+        # Or raise an error, or message the user
+        print(f"Warning: Attribute '{attrname}' not found in layer '{inputlayer.name()}'. Skipping deletion.")
+        return
 
-    column_values = get_layercolumn_byname(inputlayer,attrname)
+    for feature in inputlayer.getFeatures():
+        # Using direct indexing as field existence is checked.
+        # For features where attribute might be NULL (QVariant.Invalid), direct comparison might be okay
+        # or might need specific handling if attrvalue could also be None/NULL.
+        # Assuming attrvalue is not None and we are comparing actual values.
+        current_value = feature.attribute(field_index) # feature[attrname] is also common
+        if current_value is not None and current_value == attrvalue:
+            ids_to_delete.append(feature.id())
 
-    with edit(inputlayer):
-        for i,feature in enumerate(inputlayer.getFeatures()):
-            if column_values[i] == attrvalue:
-                inputlayer.deleteFeature(feature.id())
+    if ids_to_delete: # Only start editing if there's something to delete
+        with edit(inputlayer):
+            inputlayer.deleteFeatures(ids_to_delete)
 
 
 def add_tms_layer(qms_string,layername):
@@ -692,10 +705,15 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
     if input_spatial_index:
         # thx, pt 2 https://gis.stackexchange.com/a/59185/49900
         nearest_ids = input_spatial_index.nearestNeighbor(inputgeom,nn_feat_num,max_dist)
-
         feat_request.setFilterFids(nearest_ids)
-
-
+    else:
+        # Warn if iterating a large layer without an index
+        try: # featureCount() might not be available for all layer types or before data loaded
+            if inputlayer.featureCount() > 100: # Arbitrary threshold for "large"
+                print(f"Warning: Calling distance_geom_another_layer on layer '{inputlayer.name()}' "
+                      f"with {inputlayer.featureCount()} features without a spatial index. This can be slow.")
+        except:
+            pass # Ignore if featureCount fails
 
     for feature in inputlayer.getFeatures(feat_request):
         ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
