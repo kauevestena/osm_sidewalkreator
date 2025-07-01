@@ -198,14 +198,14 @@ def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer=
         # which is different from QgsProcessingContext.
         # We should unify this. If dontcheckinvalid is true, it means "GeometryNoCheck".
         # Otherwise, we can try a more lenient policy than the default (which seems to be Abort).
-        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.GeometryNoCheck)
+        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.NoCheck) # Changed GeometryNoCheck to NoCheck
         # The original code used `dataobjects.createContext()` and then `context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)`
         # This suggests `QgsFeatureRequest.GeometryNoCheck` is the value for `Qgis.InvalidGeometryCheck.GeometryNoCheck`.
         # Let's stick to `Qgis.InvalidGeometryCheck` as per `QgsProcessingContext` docs.
     else:
         # If not specifically asked to ignore, let's try skipping invalid features.
         # This directly addresses the error message's suggestion.
-        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.SkipFeatureWithInvalidGeometry)
+        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.SkipInvalid) # Changed SkipFeatureWithInvalidGeometry to SkipInvalid
 
     return processing.run('native:snapgeometries', parameter_dict, context=context)['OUTPUT']
 
