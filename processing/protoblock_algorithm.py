@@ -30,7 +30,16 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return ProtoblockAlgorithm()
+        print("[SidewalKreator] Attempting to create instance of ProtoblockAlgorithm")
+        try:
+            instance = ProtoblockAlgorithm()
+            print("[SidewalKreator] Successfully created instance of ProtoblockAlgorithm")
+            return instance
+        except Exception as e:
+            print(f"[SidewalKreator] Error in ProtoblockAlgorithm createInstance or __init__: {e}")
+            import traceback
+            traceback.print_exc()
+            raise # Re-raise the exception to allow QGIS to handle it as before
 
     def name(self):
         return 'generateprotoblocksfromosm'
