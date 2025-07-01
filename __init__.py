@@ -33,7 +33,7 @@ def classFactory(iface):  # pylint: disable=invalid-name
     """
     from qgis.core import QgsApplication
     from .osm_sidewalkreator import sidewalkreator
-    from .protoblock_provider import ProtoblockProvider
+    from .processing.protoblock_provider import ProtoblockProvider
 
     # Initialize the main plugin
     plugin = sidewalkreator(iface)

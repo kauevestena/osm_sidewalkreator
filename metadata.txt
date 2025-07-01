@@ -5,8 +5,8 @@
 [general]
 name=OSM SidewalKreator
 qgisMinimumVersion=3.44
-description=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting to a .geojson to be imported on JOSM. It is mostly intended for accessibility Mapping. 
-version=1.3.1
+description=Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets, given a bounding polygon, outputting to a .geojson to be imported on JOSM. It is mostly intended for accessibility Mapping. Also includes a Processing provider to generate protoblocks.
+version=1.4.0
 author=Kaue de Moraes Vestena
 email=kauemv2@gmail.com
 
@@ -18,9 +18,9 @@ repository=https://github.com/kauevestena/osm_sidewalkreator
 
 # Recommended items:
 
-hasProcessingProvider=no
+hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-changelog=Removed Shapely Dependency! Codebase went through formatting. Tested on 3.44.
+changelog=Version 1.4.0: Added Processing provider with an algorithm to generate protoblocks from OSM data within an input polygon. Files reorganized. Marked as experimental.\nVersion 1.3.1: Removed Shapely Dependency! Codebase went through formatting. Tested on 3.44.
 
 # Tags are comma separated with spaces allowed
 tags=openstreetmap, osm, vector
