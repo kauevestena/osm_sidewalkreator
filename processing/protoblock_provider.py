@@ -3,8 +3,18 @@
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsProcessingProvider
-from .protoblock_algorithm import ProtoblockAlgorithm
 import os
+import traceback
+
+# Try to import the algorithm with detailed logging
+try:
+    print("[SidewalKreator Provider] Attempting to import ProtoblockAlgorithm...")
+    from .protoblock_algorithm import ProtoblockAlgorithm
+    print("[SidewalKreator Provider] Successfully imported ProtoblockAlgorithm.")
+except Exception as e:
+    print(f"[SidewalKreator Provider] CRITICAL: Failed to import ProtoblockAlgorithm: {e}")
+    traceback.print_exc()
+    ProtoblockAlgorithm = None # Ensure it's None if import fails
 
 class ProtoblockProvider(QgsProcessingProvider):
 
@@ -15,7 +25,18 @@ class ProtoblockProvider(QgsProcessingProvider):
         return QCoreApplication.translate('Processing', string)
 
     def loadAlgorithms(self):
-        self.addAlgorithm(ProtoblockAlgorithm())
+        print("[SidewalKreator Provider] In loadAlgorithms...")
+        if ProtoblockAlgorithm is not None:
+            try:
+                print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...")
+                algo_instance = ProtoblockAlgorithm()
+                self.addAlgorithm(algo_instance)
+                print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.")
+            except Exception as e:
+                print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}")
+                traceback.print_exc()
+        else:
+            print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.")
         # Add other algorithms here if any
 
     def id(self):
