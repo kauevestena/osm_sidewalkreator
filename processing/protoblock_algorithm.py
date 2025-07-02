@@ -29,14 +29,15 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
-    def createInstance(self):
-        print("[SidewalKreator] Attempting to create instance of ProtoblockAlgorithm")
+    @classmethod
+    def createInstance(cls):
+        print("[SidewalKreator] Attempting to create instance of ProtoblockAlgorithm (classmethod)")
         try:
-            instance = ProtoblockAlgorithm()
-            print("[SidewalKreator] Successfully created instance of ProtoblockAlgorithm")
+            instance = cls()
+            print("[SidewalKreator] Successfully created instance of ProtoblockAlgorithm (classmethod)")
             return instance
         except Exception as e:
-            print(f"[SidewalKreator] Error in ProtoblockAlgorithm createInstance or __init__: {e}")
+            print(f"[SidewalKreator] Error in ProtoblockAlgorithm createInstance or __init__ (classmethod): {e}")
             import traceback
             traceback.print_exc()
             raise # Re-raise the exception to allow QGIS to handle it as before
