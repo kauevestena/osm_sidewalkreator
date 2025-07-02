@@ -31,28 +31,9 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    from qgis.core import QgsApplication
+    # Import the main plugin class
     from .osm_sidewalkreator import sidewalkreator
-    from .processing.protoblock_provider import ProtoblockProvider
 
-    # Initialize the main plugin
-    plugin = sidewalkreator(iface)
-
-    # Register the Processing provider
-    # It's good practice to check if processing is available,
-    # though for a plugin targeting modern QGIS, it usually is.
-    try:
-        from processing.core.Processing import Processing
-        Processing.initialize() # Ensure Processing framework is initialized
-        provider = ProtoblockProvider()
-        QgsApplication.processingRegistry().addProvider(provider)
-    except ImportError:
-        # Handle case where processing might not be available (e.g., very old QGIS or specific setup)
-        iface.messageBar().pushMessage("Warning", "Processing framework not available. SidewalKreator Processing tools will not be loaded.", level=1, duration=5) # Qgis.Warning is 1
-    except Exception as e:
-        # Catch any other exception during provider registration
-        import sys
-        iface.messageBar().pushMessage("Error", f"Could not register SidewalKreator Processing provider: {e}\n{sys.exc_info()}", level=2, duration=10) # Qgis.Critical is 2
-
-
-    return plugin
+    # Return an instance of the main plugin class.
+    # Provider registration is now handled within sidewalkreator.initGui()
+    return sidewalkreator(iface)

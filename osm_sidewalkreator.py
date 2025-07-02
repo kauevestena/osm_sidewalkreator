@@ -197,6 +197,7 @@ class sidewalkreator:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+        self.processing_provider = None # Initialize processing provider attribute
 
         ###############################################
         ####    My code on __init__
@@ -313,11 +314,50 @@ class sidewalkreator:
         # will be set False in run()
         self.first_start = True
 
+        # Register Processing Provider
+        # Moved from root __init__.py's classFactory to here
+        try:
+            from .processing.protoblock_provider import ProtoblockProvider
+            from processing.core.Processing import Processing
+
+            print("[SidewalKreator Main] Attempting to initialize Processing framework and register provider in initGui.")
+            Processing.initialize() # Ensure Processing framework is initialized
+            self.processing_provider = ProtoblockProvider()
+            QgsApplication.processingRegistry().addProvider(self.processing_provider)
+            print("[SidewalKreator Main] Successfully registered ProtoblockProvider in initGui.")
+        except ImportError:
+            self.iface.messageBar().pushMessage(
+                "Warning",
+                "Processing framework (or ProtoblockProvider) not available. SidewalKreator Processing tools will not be loaded.",
+                level=Qgis.Warning, duration=5)
+            print("[SidewalKreator Main] ImportError during provider registration in initGui.")
+        except Exception as e:
+            import sys
+            self.iface.messageBar().pushMessage(
+                "Error",
+                f"Could not register SidewalKreator Processing provider in initGui: {e}\n{sys.exc_info()}",
+                level=Qgis.Critical, duration=10)
+            print(f"[SidewalKreator Main] Exception during provider registration in initGui: {e}")
+            traceback.print_exc()
+
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        # Remove actions and toolbar icons
         for action in self.actions:
             self.iface.removePluginMenu(self.tr("&OSM SidewalKreator"), action)
             self.iface.removeToolBarIcon(action)
+
+        # Unregister Processing Provider
+        if self.processing_provider:
+            try:
+                QgsApplication.processingRegistry().removeProvider(self.processing_provider)
+                print("[SidewalKreator Main] Successfully unregistered ProtoblockProvider in unload.")
+            except Exception as e:
+                print(f"[SidewalKreator Main] Error unregistering ProtoblockProvider in unload: {e}")
+                traceback.print_exc()
+        self.processing_provider = None
+
 
     def run(self):
         """Run method that performs all the real work"""
