@@ -23,12 +23,22 @@ class ProtoblockProvider(QgsProcessingProvider):
         print("[SidewalKreator Provider] ProtoblockProvider __init__ called.")
 
     def tr(self, string):
-        # This tr method is fine, but we'll avoid using it in name/longName for this test
         return QCoreApplication.translate('Processing', string)
 
     def loadAlgorithms(self):
-        print("[SidewalKreator Provider] In loadAlgorithms CALLED. (No algorithms added for this test)")
-        # No algorithms added for this test
+        print("[SidewalKreator Provider] In loadAlgorithms CALLED.")
+        if ProtoblockAlgorithm is not None:
+            try:
+                print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...")
+                algo_instance = ProtoblockAlgorithm()
+                self.addAlgorithm(algo_instance)
+                print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.")
+            except Exception as e:
+                print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}")
+                traceback.print_exc()
+        else:
+            print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.")
+        # Add other algorithms here if any
 
     def id(self):
         provider_id = 'sidewalkreator_algorithms_provider'
@@ -36,18 +46,34 @@ class ProtoblockProvider(QgsProcessingProvider):
         return provider_id
 
     def name(self):
-        provider_name = "SidewalKreator Algorithms Test" # Hardcoded, no tr()
+        # Display name for the provider, using tr() as is standard
+        provider_name = self.tr('SidewalKreator Algorithms')
         print(f"[SidewalKreator Provider] name() CALLED, returning: {provider_name}")
         return provider_name
 
     def longName(self):
-        long_provider_name = "SidewalKreator Algorithms Test Long Name" # Hardcoded, no tr()
+        # More descriptive name (optional)
+        long_provider_name = self.name() # Uses the translated name
         print(f"[SidewalKreator Provider] longName() CALLED, returning: {long_provider_name}")
         return long_provider_name
 
     def icon(self):
-        print("[SidewalKreator Provider] icon() CALLED, returning empty QIcon()")
-        return QIcon() # Simplest valid return
+        print("[SidewalKreator Provider] icon() CALLED.")
+        # Path to an icon for the provider (optional)
+        # Return QIcon() for no icon or path to .svg/.png
+        # Assuming icon.png is in the root of the plugin, like the main plugin icon
+        try:
+            plugin_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) # Get parent directory (root of plugin)
+            icon_path = os.path.join(plugin_dir, 'icon.png')
+            if os.path.exists(icon_path):
+                print(f"[SidewalKreator Provider] Icon path found: {icon_path}")
+                return QIcon(icon_path)
+            else:
+                print(f"[SidewalKreator Provider] Icon path NOT found: {icon_path}, returning empty QIcon().")
+                return QIcon()
+        except Exception as e:
+            print(f"[SidewalKreator Provider] Error in icon() method: {e}, returning empty QIcon().")
+            return QIcon()
 
     def helpId(self):
         # Optional: return a QUrl or string to a help resource
