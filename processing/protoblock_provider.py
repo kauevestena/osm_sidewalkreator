@@ -26,17 +26,18 @@ class ProtoblockProvider(QgsProcessingProvider):
 
     def loadAlgorithms(self):
         print("[SidewalKreator Provider] In loadAlgorithms...")
-        if ProtoblockAlgorithm is not None:
-            try:
-                print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...")
-                algo_instance = ProtoblockAlgorithm()
-                self.addAlgorithm(algo_instance)
-                print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.")
-            except Exception as e:
-                print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}")
-                traceback.print_exc()
-        else:
-            print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.")
+        print("[SidewalKreator Provider] Temporarily NOT adding any algorithms for debugging.")
+        # if ProtoblockAlgorithm is not None:
+        #     try:
+        #         print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...")
+        #         algo_instance = ProtoblockAlgorithm()
+        #         self.addAlgorithm(algo_instance)
+        #         print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.")
+        #     except Exception as e:
+        #         print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}")
+        #         traceback.print_exc()
+        # else:
+        #     print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.")
         # Add other algorithms here if any
 
     def id(self):
