@@ -69,6 +69,8 @@ from .resources import *
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
 
+import traceback # For improved error logging
+
 
 # for third-party libraries installation
 import subprocess
