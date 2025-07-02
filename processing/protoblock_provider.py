@@ -20,36 +20,32 @@ class ProtoblockProvider(QgsProcessingProvider):
 
     def __init__(self):
         super().__init__()
+        print("[SidewalKreator Provider] ProtoblockProvider __init__ called.")
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
     def loadAlgorithms(self):
-        print("[SidewalKreator Provider] In loadAlgorithms...")
-        print("[SidewalKreator Provider] Temporarily NOT adding any algorithms for debugging.")
-        # if ProtoblockAlgorithm is not None:
-        #     try:
-        #         print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...")
-        #         algo_instance = ProtoblockAlgorithm()
-        #         self.addAlgorithm(algo_instance)
-        #         print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.")
-        #     except Exception as e:
-        #         print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}")
-        #         traceback.print_exc()
-        # else:
-        #     print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.")
-        # Add other algorithms here if any
+        print("[SidewalKreator Provider] In loadAlgorithms CALLED.")
+        # No algorithms added for this test
 
     def id(self):
         # Unique ID for the provider
-        return 'osm_sidewalkreator_protoblock_provider'
+        # Using a simpler ID, ensuring it's unique.
+        provider_id = 'sidewalkreator_algorithms_provider'
+        print(f"[SidewalKreator Provider] id() called, returning: {provider_id}")
+        return provider_id
 
     def name(self):
         # Display name for the provider
-        return self.tr('OSM SidewalKreator Tools')
+        provider_name = self.tr('SidewalKreator Algorithms')
+        print(f"[SidewalKreator Provider] name() called, returning: {provider_name}")
+        return provider_name
 
     def longName(self):
         # More descriptive name (optional)
+        long_provider_name = self.name()
+        print(f"[SidewalKreator Provider] longName() called, returning: {long_provider_name}")
         return self.name()
 
     def icon(self):
