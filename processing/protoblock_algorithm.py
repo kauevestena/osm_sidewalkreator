@@ -91,7 +91,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         # Materialize the layer to access its properties like name and source
         # Note: materialize can be slow for complex sources, but necessary here for info.
         # It also might load all features into memory depending on the source.
-        actual_input_layer = input_polygon_feature_source.materialize()
+        actual_input_layer = input_polygon_feature_source.materialize(QgsFeatureRequest())
         if actual_input_layer is None:
             raise QgsProcessingException(self.tr("Failed to materialize input polygon layer."))
 
