@@ -12,10 +12,10 @@ from qgis.core import (QgsProcessingParameterNumber, QgsCoordinateReferenceSyste
 from qgis.PyQt.QtCore import QVariant
 
 # Import necessary functions from other plugin modules
-# from ..osm_fetch import osm_query_string_by_bbox, get_osm_data  # TEMP COMMENTED OUT
-# from ..generic_functions import (reproject_layer_localTM, cliplayer_v2, # TEMP COMMENTED OUT
-                                # remove_unconnected_lines_v2, polygonize_lines) # TEMP COMMENTED OUT
-# from ..parameters import default_widths, highway_tag, CRS_LATLON_4326 # TEMP COMMENTED OUT
+from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
+from ..generic_functions import (reproject_layer_localTM, cliplayer_v2,
+                                remove_unconnected_lines_v2, polygonize_lines) # Using polygonize_lines wrapper for now
+from ..parameters import default_widths, highway_tag, CRS_LATLON_4326
 
 class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     """
@@ -82,31 +82,34 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        feedback.pushInfo("Algorithm started (simplified version - preparing sink).")
+        feedback.pushInfo("Step 1: Algorithm started, imports un-commented, retrieving parameters.")
+
+        input_polygon_layer = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
+        if input_polygon_layer is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
+        feedback.pushInfo(f"Input polygon layer: {input_polygon_layer.name()} | Source: {input_polygon_layer.source()}")
+
+        timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
+        feedback.pushInfo(f"Timeout: {timeout} seconds")
 
         # Define fields for the output layer (can be empty if no attributes)
         fields = QgsFields()
         # Example: fields.append(QgsField("id", QVariant.Int))
 
         # Prepare the output sink
-        # The CRS should ideally match what the actual output will be,
-        # or be taken from input/project. For this test, EPSG:4326 is fine.
-        # The geometry type must match the sink type defined in initAlgorithm.
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
             fields,
-            QgsWkbTypes.Polygon, # Assuming OUTPUT_PROTOBLOCKS is for Polygons
-            QgsCoordinateReferenceSystem("EPSG:4326")
+            QgsWkbTypes.Polygon,
+            QgsCoordinateReferenceSystem("EPSG:4326") # Dummy CRS for now
         )
 
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        # At this point, no features are added to the sink, so it will be an empty layer.
-
-        feedback.pushInfo("Algorithm finished (simplified version - sink prepared, no features added).")
+        feedback.pushInfo("Step 1: Finished. Sink prepared for empty output. Imports and params retrieved.")
         return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
