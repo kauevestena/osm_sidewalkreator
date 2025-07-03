@@ -82,35 +82,32 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        # Temporarily simplified to test loading
-        feedback.pushInfo("Algorithm started (simplified version).")
+        feedback.pushInfo("Algorithm started (simplified version - preparing sink).")
 
-        # Minimal sink creation for testing purposes
-        # This part might still fail if parameters are not correctly defined or sink cannot be prepared
-        # For now, let's assume initAlgorithm defines OUTPUT_PROTOBLOCKS correctly.
-        try:
-            (sink, dest_id) = self.parameterAsSink(
-                parameters,
-                self.OUTPUT_PROTOBLOCKS,
-                context,
-                QgsFields(), # Empty fields
-                QgsWkbTypes.Polygon, # Assuming Polygon output
-                QgsCoordinateReferenceSystem("EPSG:4326") # Dummy CRS
-            )
-            if sink is None:
-                 feedback.pushInfo("Sink is None in simplified version.")
-                 # raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS)) # Don't raise yet
-            else:
-                feedback.pushInfo("Sink created in simplified version.")
+        # Define fields for the output layer (can be empty if no attributes)
+        fields = QgsFields()
+        # Example: fields.append(QgsField("id", QVariant.Int))
 
-        except Exception as e:
-            feedback.pushInfo(f"Error preparing sink in simplified version: {e}")
+        # Prepare the output sink
+        # The CRS should ideally match what the actual output will be,
+        # or be taken from input/project. For this test, EPSG:4326 is fine.
+        # The geometry type must match the sink type defined in initAlgorithm.
+        (sink, dest_id) = self.parameterAsSink(
+            parameters,
+            self.OUTPUT_PROTOBLOCKS,
+            context,
+            fields,
+            QgsWkbTypes.Polygon, # Assuming OUTPUT_PROTOBLOCKS is for Polygons
+            QgsCoordinateReferenceSystem("EPSG:4326")
+        )
 
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        feedback.pushInfo("Algorithm finished (simplified version).")
-        # Must return a dictionary mapping output names to values
-        # For a feature sink, this is usually the destination ID
-        return {self.OUTPUT_PROTOBLOCKS: "dummy_dest_id_if_sink_failed_or_not_used"} # dest_id if sink was prepared
+        # At this point, no features are added to the sink, so it will be an empty layer.
+
+        feedback.pushInfo("Algorithm finished (simplified version - sink prepared, no features added).")
+        return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
         # Clean up any persistent temporary layers if necessary
