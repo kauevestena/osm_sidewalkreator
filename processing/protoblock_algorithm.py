@@ -100,6 +100,45 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
         feedback.pushInfo(f"Timeout: {timeout} seconds")
 
+        feedback.pushInfo("Step 2: Calculating BBOX and generating OSM query string...")
+
+        # Ensure input_poly_for_bbox is in EPSG:4326
+        source_crs = actual_input_layer.sourceCrs()
+        crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
+
+        input_poly_for_bbox = actual_input_layer # Assume it's the one to use by default
+        if source_crs != crs_4326:
+            feedback.pushInfo(f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation.")
+            reproject_params = {
+                'INPUT': actual_input_layer,
+                'TARGET_CRS': crs_4326,
+                'OUTPUT': 'memory:input_reprojected_for_bbox'
+            }
+            # Use a sub-feedback for child algorithm
+            sub_feedback_reproject = QgsProcessingMultiStepFeedback(1, feedback)
+            sub_feedback_reproject.setCurrentStep(0)
+            reproject_result = processing.run("native:reprojectlayer", reproject_params, context=context, feedback=sub_feedback_reproject, is_child_algorithm=True)
+            if sub_feedback_reproject.isCanceled(): return {}
+
+            input_poly_for_bbox = QgsVectorLayer(reproject_result['OUTPUT'], "input_reprojected_for_bbox_layer", "memory")
+            if not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
+                raise QgsProcessingException(self.tr("Failed to reproject or input polygon layer is empty after reprojection."))
+        else:
+            feedback.pushInfo("Input layer is already in EPSG:4326.")
+
+        # Calculate BBOX from the (potentially reprojected) layer
+        extent_4326 = input_poly_for_bbox.extent()
+        min_lgt, min_lat = extent_4326.xMinimum(), extent_4326.yMinimum()
+        max_lgt, max_lat = extent_4326.xMaximum(), extent_4326.yMaximum()
+        feedback.pushInfo(f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
+
+        # Generate OSM Query String
+        query_str = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt,
+                                             interest_key=highway_tag, way=True, node=False, relation=False)
+        feedback.pushInfo(f"Generated OSM Query (first 100 chars): {query_str[:100]}...")
+
+        # --- End of Step 2 additions ---
+
         # Define fields for the output layer (can be empty if no attributes)
         fields = QgsFields()
         # Example: fields.append(QgsField("id", QVariant.Int))
