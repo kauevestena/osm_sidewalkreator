@@ -10,6 +10,7 @@ from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
 from qgis.core import (QgsProcessingParameterNumber, QgsCoordinateReferenceSystem,
                        QgsProject, QgsFeatureRequest, QgsFields, QgsField, QgsFeature, edit)
 from qgis.PyQt.QtCore import QVariant
+import math # For math.isfinite
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
@@ -95,7 +96,10 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         if actual_input_layer is None:
             raise QgsProcessingException(self.tr("Failed to materialize input polygon layer."))
 
-        feedback.pushInfo(f"Input polygon layer: {actual_input_layer.name()} | Source: {actual_input_layer.source()}")
+        if not actual_input_layer.isValid() or actual_input_layer.featureCount() == 0:
+            raise QgsProcessingException(self.tr("Materialized input polygon layer is invalid or empty. Cannot proceed."))
+
+        feedback.pushInfo(f"Input polygon layer: {actual_input_layer.name()} | Source: {actual_input_layer.source()} with {actual_input_layer.featureCount()} features.")
 
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
         feedback.pushInfo(f"Timeout: {timeout} seconds")
@@ -106,28 +110,30 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
 
-        input_poly_for_bbox = actual_input_layer # Assume it's the one to use by default
-        if source_crs != crs_4326:
+        input_poly_for_bbox = actual_input_layer
+        if source_crs.authid() != crs_4326.authid(): # Compare authids for robustness
             feedback.pushInfo(f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation.")
             reproject_params = {
                 'INPUT': actual_input_layer,
                 'TARGET_CRS': crs_4326,
                 'OUTPUT': 'memory:input_reprojected_for_bbox'
             }
-            # Use a sub-feedback for child algorithm
-            sub_feedback_reproject = QgsProcessingMultiStepFeedback(1, feedback)
+            sub_feedback_reproject = QgsProcessingMultiStepFeedback(1, feedback) # Child feedback
             sub_feedback_reproject.setCurrentStep(0)
             reproject_result = processing.run("native:reprojectlayer", reproject_params, context=context, feedback=sub_feedback_reproject, is_child_algorithm=True)
             if sub_feedback_reproject.isCanceled(): return {}
 
             input_poly_for_bbox = QgsVectorLayer(reproject_result['OUTPUT'], "input_reprojected_for_bbox_layer", "memory")
             if not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
-                raise QgsProcessingException(self.tr("Failed to reproject or input polygon layer is empty after reprojection."))
+                raise QgsProcessingException(self.tr("Failed to reproject, or reprojected input layer is empty."))
         else:
             feedback.pushInfo("Input layer is already in EPSG:4326.")
 
         # Calculate BBOX from the (potentially reprojected) layer
         extent_4326 = input_poly_for_bbox.extent()
+        if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
+            raise QgsProcessingException(self.tr(f"Cannot determine a valid bounding box. Extent: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty."))
+
         min_lgt, min_lat = extent_4326.xMinimum(), extent_4326.yMinimum()
         max_lgt, max_lat = extent_4326.xMaximum(), extent_4326.yMaximum()
         feedback.pushInfo(f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
@@ -144,14 +150,15 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                                        return_as_string=True)
 
         if osm_geojson_str is None:
-            # get_osm_data might return None if the request fails or if parsing fails critically
-            # It might be better for get_osm_data to raise an exception for clearer error propagation.
-            # For now, we'll treat None as a failure.
-            raise QgsProcessingException(self.tr("Failed to download or parse OSM data. The returned GeoJSON string was None."))
+            raise QgsProcessingException(self.tr("Failed to download or parse OSM data (returned None)."))
 
         osm_data_layer_4326 = QgsVectorLayer(osm_geojson_str, "osm_streets_dl_4326_algo", "ogr")
         if not osm_data_layer_4326.isValid():
-            raise QgsProcessingException(self.tr("Downloaded OSM data did not form a valid vector layer."))
+            # Attempt to get more details if the string was non-empty but layer is invalid
+            details = ""
+            if osm_geojson_str: # Check if string is not empty
+                details = f" GeoJSON string started with: {osm_geojson_str[:200]}"
+            raise QgsProcessingException(self.tr(f"Downloaded OSM data did not form a valid vector layer.{details}"))
 
         feedback.pushInfo(f"OSM data fetched successfully. Layer '{osm_data_layer_4326.name()}' created with {osm_data_layer_4326.featureCount()} features (in EPSG:4326).")
         # --- End of Step 3 additions ---
