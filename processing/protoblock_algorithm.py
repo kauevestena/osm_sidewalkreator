@@ -84,10 +84,18 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, feedback):
         feedback.pushInfo("Step 1: Algorithm started, imports un-commented, retrieving parameters.")
 
-        input_polygon_layer = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
-        if input_polygon_layer is None:
+        input_polygon_feature_source = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
+        if input_polygon_feature_source is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
-        feedback.pushInfo(f"Input polygon layer: {input_polygon_layer.name()} | Source: {input_polygon_layer.source()}")
+
+        # Materialize the layer to access its properties like name and source
+        # Note: materialize can be slow for complex sources, but necessary here for info.
+        # It also might load all features into memory depending on the source.
+        actual_input_layer = input_polygon_feature_source.materialize(context)
+        if actual_input_layer is None:
+            raise QgsProcessingException(self.tr("Failed to materialize input polygon layer."))
+
+        feedback.pushInfo(f"Input polygon layer: {actual_input_layer.name()} | Source: {actual_input_layer.source()}")
 
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
         feedback.pushInfo(f"Timeout: {timeout} seconds")
