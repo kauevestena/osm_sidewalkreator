@@ -137,7 +137,24 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                                              interest_key=highway_tag, way=True, node=False, relation=False)
         feedback.pushInfo(f"Generated OSM Query (first 100 chars): {query_str[:100]}...")
 
-        # --- End of Step 2 additions ---
+        # --- Step 3: Fetch OSM Data ---
+        feedback.pushInfo("Step 3: Fetching OSM data...")
+        osm_geojson_str = get_osm_data(query_str, "osm_streets_data_algo",
+                                       geomtype="LineString", timeout=timeout,
+                                       return_as_string=True)
+
+        if osm_geojson_str is None:
+            # get_osm_data might return None if the request fails or if parsing fails critically
+            # It might be better for get_osm_data to raise an exception for clearer error propagation.
+            # For now, we'll treat None as a failure.
+            raise QgsProcessingException(self.tr("Failed to download or parse OSM data. The returned GeoJSON string was None."))
+
+        osm_data_layer_4326 = QgsVectorLayer(osm_geojson_str, "osm_streets_dl_4326_algo", "ogr")
+        if not osm_data_layer_4326.isValid():
+            raise QgsProcessingException(self.tr("Downloaded OSM data did not form a valid vector layer."))
+
+        feedback.pushInfo(f"OSM data fetched successfully. Layer '{osm_data_layer_4326.name()}' created with {osm_data_layer_4326.featureCount()} features (in EPSG:4326).")
+        # --- End of Step 3 additions ---
 
         # Define fields for the output layer (can be empty if no attributes)
         fields = QgsFields()
