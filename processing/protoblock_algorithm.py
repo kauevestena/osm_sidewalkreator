@@ -161,26 +161,61 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr(f"Downloaded OSM data did not form a valid vector layer.{details}"))
 
         feedback.pushInfo(f"OSM data fetched successfully. Layer '{osm_data_layer_4326.name()}' created with {osm_data_layer_4326.featureCount()} features (in EPSG:4326).")
-        # --- End of Step 3 additions ---
+
+        # --- Step 4: Clip and Reproject Fetched OSM Data ---
+        feedback.pushInfo("Step 4: Clipping and reprojecting fetched OSM data...")
+
+        # The layer used for BBOX extent was input_poly_for_bbox (which is actual_input_layer reprojected to 4326 if needed)
+        # We should use this same layer for clipping.
+        clipped_osm_data_4326_path = 'memory:clipped_osm_data_4326_algo'
+        clipped_osm_layer_4326 = cliplayer_v2(osm_data_layer_4326, input_poly_for_bbox, clipped_osm_data_4326_path)
+
+        if not clipped_osm_layer_4326.isValid():
+            # This might happen if cliplayer_v2 returns None or an invalid layer on error
+            raise QgsProcessingException(self.tr("Clipping of OSM data failed."))
+
+        feedback.pushInfo(f"OSM data clipped successfully. Features after clipping: {clipped_osm_layer_4326.featureCount()}")
+
+        if clipped_osm_layer_4326.featureCount() == 0:
+            feedback.pushWarning(self.tr("No OSM ways found within the precise input polygon after clipping. Output will be empty."))
+            # Prepare an empty sink and return if no features
+            (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS, context, QgsFields(), QgsWkbTypes.Polygon, crs_4326) # Use crs_4326 or local_tm_crs if preferred for empty output
+            return {self.OUTPUT_PROTOBLOCKS: dest_id}
+
+        # Reproject Clipped Data to Local TM
+        # extent_4326 was calculated earlier from input_poly_for_bbox
+        clipped_reproj_layer, local_tm_crs = reproject_layer_localTM(
+            clipped_osm_layer_4326,
+            outputpath=None,
+            layername="clipped_osm_local_tm_algo",
+            lgt_0=extent_4326.center().x() # Use the center of the original input polygon's extent in EPSG:4326
+        )
+        if not clipped_reproj_layer.isValid():
+            raise QgsProcessingException(self.tr("Failed to reproject clipped OSM data to local TM."))
+
+        feedback.pushInfo(f"Clipped OSM data reprojected to local TM ({local_tm_crs.authid()}). Features: {clipped_reproj_layer.featureCount()}")
+        # --- End of Step 4 additions ---
 
         # Define fields for the output layer (can be empty if no attributes)
         fields = QgsFields()
         # Example: fields.append(QgsField("id", QVariant.Int))
 
         # Prepare the output sink
+        # For now, still outputting an empty layer with a dummy CRS.
+        # Eventually, this sink will take fields and CRS from the final protoblocks layer.
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
             fields,
             QgsWkbTypes.Polygon,
-            QgsCoordinateReferenceSystem("EPSG:4326") # Dummy CRS for now
+            QgsCoordinateReferenceSystem("EPSG:4326") # Dummy CRS for now, will be local_tm_crs
         )
 
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        feedback.pushInfo("Step 1: Finished. Sink prepared for empty output. Imports and params retrieved.")
+        feedback.pushInfo("Step 1: Finished. Sink prepared for empty output. Imports and params retrieved.") # This log message needs updating later
         return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
