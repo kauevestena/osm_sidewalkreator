@@ -194,7 +194,67 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to reproject clipped OSM data to local TM."))
 
         feedback.pushInfo(f"Clipped OSM data reprojected to local TM ({local_tm_crs.authid()}). Features: {clipped_reproj_layer.featureCount()}")
-        # --- End of Step 4 additions ---
+
+        # --- Step 5: Clean Street Network ---
+        feedback.pushInfo("Step 5: Cleaning street network (filtering by highway type/width)...")
+
+        filtered_streets_layer = QgsVectorLayer(
+            f"LineString?crs={local_tm_crs.authid()}",
+            "filtered_streets_local_tm_algo",
+            "memory"
+        )
+        filtered_streets_dp = filtered_streets_layer.dataProvider()
+        # Ensure clipped_reproj_layer has fields before trying to add them
+        if clipped_reproj_layer.fields().count() > 0:
+            filtered_streets_dp.addAttributes(clipped_reproj_layer.fields())
+        else: # Add at least one dummy field if there are no fields, e.g. if source was simplified
+            filtered_streets_dp.addAttributes([QgsField("dummy_id", QVariant.Int)])
+
+        filtered_streets_layer.updateFields() # Important after adding attributes
+
+        features_to_add_to_filtered = []
+        highway_field_idx = clipped_reproj_layer.fields().lookupField(highway_tag)
+
+        if highway_field_idx == -1:
+            # If no highway_tag, we might want to copy all lines or raise an error.
+            # For protoblocks, highway_tag is essential.
+            raise QgsProcessingException(self.tr(f"Highway tag '{highway_tag}' not found in attributes of reprojected OSM data. Cannot filter streets."))
+
+        for f_in in clipped_reproj_layer.getFeatures():
+            if feedback.isCanceled(): return {}
+
+            highway_type_attr = f_in.attribute(highway_field_idx)
+            # Ensure highway_type_attr is treated as a string for .lower() and dictionary lookup
+            highway_type_str = str(highway_type_attr).lower() if highway_type_attr is not None else ""
+
+            width = default_widths.get(highway_type_str, 0.0)
+
+            if width >= 0.5: # Corresponds to "width < 0.5" for deletion in original plugin logic
+                new_feat = QgsFeature(filtered_streets_layer.fields())
+                new_feat.setGeometry(f_in.geometry())
+                new_feat.setAttributes(f_in.attributes())
+                features_to_add_to_filtered.append(new_feat)
+
+        if features_to_add_to_filtered:
+            filtered_streets_dp.addFeatures(features_to_add_to_filtered)
+
+        feedback.pushInfo(f"Streets filtered by highway type/width. Kept {filtered_streets_layer.featureCount()} features.")
+
+        if filtered_streets_layer.featureCount() == 0:
+            feedback.pushWarning(self.tr("No streets remaining after filtering by highway type/width. Output will be empty."))
+            (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS, context, QgsFields(), QgsWkbTypes.Polygon, local_tm_crs)
+            return {self.OUTPUT_PROTOBLOCKS: dest_id}
+
+        # Remove unconnected lines
+        try:
+            feedback.pushInfo(self.tr("Attempting to remove unconnected lines..."))
+            # remove_unconnected_lines_v2 modifies the layer in-place
+            remove_unconnected_lines_v2(filtered_streets_layer)
+            feedback.pushInfo(f"After removing unconnected lines, {filtered_streets_layer.featureCount()} features remain.")
+        except Exception as e:
+            feedback.pushWarning(self.tr(f"Could not remove unconnected lines due to an error: {e}. Proceeding with current street network."))
+            # Optionally, log traceback.print_exc() here for more detail if needed during debugging
+        # --- End of Step 5 additions ---
 
         # Define fields for the output layer (can be empty if no attributes)
         fields = QgsFields()
