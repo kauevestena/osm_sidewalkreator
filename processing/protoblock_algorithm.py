@@ -233,24 +233,39 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             keepfields=False)
 
         if not protoblocks_layer or not protoblocks_layer.isValid():
-            raise QgsProcessingException(self.tr("Polygonization failed."))
-        feedback.pushInfo(self.tr(f"Polygonization created {protoblocks_layer.featureCount()} protoblocks."))
+            raise QgsProcessingException(self.tr("Polygonization failed or returned an invalid layer."))
 
-        if protoblocks_layer.featureCount() == 0:
-            feedback.pushWarning(self.tr("No protoblocks after polygonization. Output will be empty."))
+        # Ensure protoblocks_layer has the correct CRS (local_tm_crs)
+        # The polygonize_lines wrapper should handle this, but an explicit set here is safer.
+        if not protoblocks_layer.crs().isValid() or protoblocks_layer.crs().authid() != local_tm_crs.authid():
+            feedback.pushInfo(f"Warning: Protoblocks layer CRS ({protoblocks_layer.crs().authid()}) differs from expected local TM CRS ({local_tm_crs.authid()}). Forcing correct CRS.")
+            protoblocks_layer.setCrs(local_tm_crs)
 
+        feedback.pushInfo(self.tr(f"Polygonization created {protoblocks_layer.featureCount()} protoblocks. Output CRS will be: {protoblocks_layer.crs().description()}"))
+
+        # Prepare the final output sink
         (sink, dest_id) = self.parameterAsSink(
-            parameters, self.OUTPUT_PROTOBLOCKS, context,
-            protoblocks_layer.fields(), QgsWkbTypes.Polygon, local_tm_crs)
+            parameters,
+            self.OUTPUT_PROTOBLOCKS,
+            context,
+            protoblocks_layer.fields(),
+            QgsWkbTypes.Polygon,
+            protoblocks_layer.crs() # Use the CRS from the protoblocks_layer itself
+        )
+
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        if protoblocks_layer.featureCount() > 0:
+        if protoblocks_layer.featureCount() == 0:
+            feedback.pushWarning(self.tr("No protoblocks after polygonization (feature count is 0). Output will be an empty layer with correct CRS."))
+            # No features to add, but sink is correctly prepared.
+        else:
+            # Add features to the sink
             total_out_feats = protoblocks_layer.featureCount()
             for i, feat in enumerate(protoblocks_layer.getFeatures()):
                 if feedback.isCanceled(): break
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
-                feedback.setProgress(int(80 + (i + 1) * 20.0 / total_out_feats)) # Progress for final stage
+                feedback.setProgress(int(80 + (i + 1) * 20.0 / total_out_feats))
 
         feedback.pushInfo(self.tr("Protoblock generation complete. Output written."))
         return {self.OUTPUT_PROTOBLOCKS: dest_id}
