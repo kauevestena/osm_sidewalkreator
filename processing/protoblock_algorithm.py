@@ -241,7 +241,30 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(f"Warning: Protoblocks layer CRS ({protoblocks_layer.crs().authid()}) differs from expected local TM CRS ({local_tm_crs.authid()}). Forcing correct CRS.")
             protoblocks_layer.setCrs(local_tm_crs)
 
-        feedback.pushInfo(self.tr(f"Polygonization created {protoblocks_layer.featureCount()} protoblocks. Output CRS will be: {protoblocks_layer.crs().description()}"))
+        feedback.pushInfo(self.tr(f"Polygonization created {protoblocks_layer.featureCount()} protoblocks. Output CRS will be: {protoblocks_layer.crs().description()} ({protoblocks_layer.crs().authid()})"))
+
+        # --- Geometry Inspection Loop ---
+        if protoblocks_layer.featureCount() > 0:
+            feedback.pushInfo(self.tr("Inspecting first few protoblock geometries..."))
+            count = 0
+            for feat in protoblocks_layer.getFeatures():
+                if count >= 5: # Inspect up to 5 features
+                    break
+
+                geom_info = f"  Feature {feat.id()}: "
+                if not feat.hasGeometry():
+                    geom_info += "Has NO geometry."
+                else:
+                    geom = feat.geometry()
+                    geom_info += f"hasGeometry=True, isNull={geom.isNull()}, isEmpty={geom.isEmpty()}, wkbType={QgsWkbTypes.displayString(geom.wkbType())}"
+                    if not geom.isNull() and not geom.isEmpty():
+                        try:
+                            geom_info += f", area={geom.area()}"
+                        except Exception as e_area:
+                            geom_info += f", area_calc_error='{e_area}'"
+                feedback.pushInfo(geom_info)
+                count += 1
+        # --- End Geometry Inspection Loop ---
 
         # Prepare the final output sink
         (sink, dest_id) = self.parameterAsSink(
