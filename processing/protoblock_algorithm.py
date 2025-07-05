@@ -273,7 +273,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             context,
             protoblocks_layer.fields(),
             QgsWkbTypes.Polygon,
-            protoblocks_layer.crs() # Use the CRS from the protoblocks_layer itself
+            local_tm_crs # Use the definitive local_tm_crs object
         )
 
         if sink is None:
