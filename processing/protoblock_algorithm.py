@@ -254,28 +254,57 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         except Exception as e:
             feedback.pushWarning(self.tr(f"Could not remove unconnected lines due to an error: {e}. Proceeding with current street network."))
             # Optionally, log traceback.print_exc() here for more detail if needed during debugging
-        # --- End of Step 5 additions ---
 
-        # Define fields for the output layer (can be empty if no attributes)
-        fields = QgsFields()
-        # Example: fields.append(QgsField("id", QVariant.Int))
+        # --- Step 6: Polygonize Cleaned Streets and Output Protoblocks ---
+        feedback.pushInfo("Step 6: Polygonizing cleaned street network...")
 
-        # Prepare the output sink
-        # For now, still outputting an empty layer with a dummy CRS.
-        # Eventually, this sink will take fields and CRS from the final protoblocks layer.
+        # Ensure polygonize_lines from generic_functions.py returns a QgsVectorLayer
+        # and handles memory layer output correctly.
+        # It internally calls 'native:polygonize'.
+        protoblocks_layer = polygonize_lines(
+            filtered_streets_layer,
+            outputlayer='memory:protoblocks_temp_algo',
+            keepfields=False # Protoblocks generally don't need attributes from lines
+        )
+
+        if not protoblocks_layer or not protoblocks_layer.isValid():
+            raise QgsProcessingException(self.tr("Polygonization failed or returned an invalid layer."))
+
+        feedback.pushInfo(f"Polygonization successful. Generated {protoblocks_layer.featureCount()} protoblock features.")
+
+        if protoblocks_layer.featureCount() == 0:
+            feedback.pushWarning(self.tr("Polygonization resulted in no protoblock features. Output will be empty."))
+            # Fallthrough to create an empty sink with correct type and CRS
+
+        # Prepare the final output sink with the correct CRS and fields
+        # The CRS of protoblocks_layer should be local_tm_crs
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
-            fields,
-            QgsWkbTypes.Polygon,
-            QgsCoordinateReferenceSystem("EPSG:4326") # Dummy CRS for now, will be local_tm_crs
+            protoblocks_layer.fields(), # Fields from the newly created protoblocks_layer
+            QgsWkbTypes.Polygon,    # Expected geometry type
+            local_tm_crs            # CRS of the generated protoblocks
         )
 
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        feedback.pushInfo("Step 1: Finished. Sink prepared for empty output. Imports and params retrieved.") # This log message needs updating later
+        # Add features to the sink if any were generated
+        if protoblocks_layer.featureCount() > 0:
+            total_out_feats = protoblocks_layer.featureCount()
+            for i, feat in enumerate(protoblocks_layer.getFeatures()):
+                if feedback.isCanceled(): break
+                sink.addFeature(feat, QgsFeatureSink.FastInsert)
+                # Update progress based on adding features to sink, assuming this is the last major step
+                # If polygonization was step 90, this can be 90-100
+                # Let's say cleaning was 80, polygonize 90, this is 90-100
+                # We need a more consistent progress update strategy across steps.
+                # For now, just a general progress for this part.
+                feedback.setProgress(int(80 + (i + 1) * 20.0 / total_out_feats) )
+
+
+        feedback.pushInfo("Step 6: Protoblock generation complete. Output written.")
         return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
