@@ -344,7 +344,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             # but that's not easily available here without 'context' which is tricky.
             # For now, assume if it's not a QgsVectorLayer, it's an error for 'memory:' output.
             if isinstance(reprojected_output_value, str):
-                 output_layer_epsg4326 = QgsVectorLayer(reprojected_output_value, "protoblocks_epsg4326_loaded", "ogr")
+                 output_layer_epsg4326 = QgsVectorLayer(reprojected_output_value, "protoblocks_epsg4326_loaded", "memory") # Changed "ogr" to "memory"
             else:
                 raise QgsProcessingException(self.tr(f"Unexpected output type from final reprojection: {type(reprojected_output_value)}"))
         else:
@@ -357,9 +357,12 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to obtain a valid layer after final reprojection to EPSG:4326."))
 
         # Ensure CRS is correctly EPSG:4326 after reprojection
-        if output_layer_epsg4326.crs() != crs_epsg4326:
-            feedback.pushWarning(self.tr(f"CRS of final layer is {output_layer_epsg4326.crs().authid()} instead of EPSG:4326. Attempting to set it."))
-            output_layer_epsg4326.setCrs(crs_epsg4326) # Should have been set by native:reprojectlayer
+        # native:reprojectlayer should handle setting the CRS correctly on its output.
+        # If it's not EPSG:4326 at this point, something is more fundamentally wrong with the reprojection.
+        if output_layer_epsg4326.crs().authid() != crs_epsg4326.authid():
+            feedback.pushWarning(self.tr(f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}. This is unexpected after native:reprojectlayer."))
+            # Forcing it might be an option, but native:reprojectlayer should do this.
+            # output_layer_epsg4326.setCrs(crs_epsg4326)
 
         feedback.pushInfo(self.tr(f"Final protoblocks reprojected to EPSG:4326. Features: {output_layer_epsg4326.featureCount()}, CRS: {output_layer_epsg4326.crs().authid()}"))
         # --- End Final Reprojection ---
