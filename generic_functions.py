@@ -4,9 +4,13 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from processing.tools import dataobjects
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication, Qgis #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
+from qgis.core import (QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit,
+                       QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer,
+                       QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector,
+                       QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY,
+                       QgsProperty, QgsApplication, Qgis, QgsProcessing) # Added QgsProcessing
 # from qgis.core import Qgis
-from qgis.core import QgsProcessingContext, Qgis # Added QgsProcessingContext and Qgis
+from qgis.core import QgsProcessingContext # Qgis was already imported
 
 from processing.gui.AlgorithmExecutor import execute_in_place
 
