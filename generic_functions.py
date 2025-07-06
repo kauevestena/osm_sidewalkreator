@@ -162,45 +162,23 @@ def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
     #         result_layer.setCrs(inputlines.crs()) # Ensure CRS is set from input
     # return result_layer # Old direct return
 
-    # New approach: output to temporary file, then load it.
-    # This can be more robust for CRS handling with some native algorithms.
-    parameter_dict_temp_file = {
+    # Ensure that the outputlayer string results in a QgsVectorLayer object being returned by processing.run
+    # For memory layers, the 'OUTPUT' value in the returned dict IS the QgsVectorLayer instance.
+    parameter_dict = {
         'INPUT': inputlines,
-        'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT, # Output to a temporary file
+        'OUTPUT': outputlayer, # e.g., 'memory:my_polygonized_layer'
         'KEEP_FIELDS': keepfields
     }
+    result_layer = processing.run('native:polygonize', parameter_dict)['OUTPUT']
 
-    try:
-        result_info = processing.run('native:polygonize', parameter_dict_temp_file) # No context/feedback passed here from generic_function, algorithm should pass its own
-        temp_file_path = result_info.get('OUTPUT')
-
-        if not temp_file_path:
-            print("Polygonize (to temp file) did not return an output path.")
-            return None
-
-        # Define a unique layer name for loading to avoid clashes
-        temp_layer_name = f"polygonized_temp_{os.path.basename(temp_file_path).split('.')[0]}"
-
-        loaded_layer = QgsVectorLayer(temp_file_path, temp_layer_name, "ogr")
-
-        if not loaded_layer.isValid():
-            print(f"Failed to load polygonized temporary file: {temp_file_path}")
-            return None
-
-        # Crucially, set the CRS from the input layer
-        if inputlines.crs().isValid():
-            loaded_layer.setCrs(inputlines.crs())
-        else:
-            print(f"Warning: Input layer for polygonize_lines had an invalid CRS. Output may also be problematic.")
-            # Attempt to set a default or raise error? For now, it will inherit whatever ogr loaded.
-
-        return loaded_layer
-
-    except Exception as e:
-        print(f"Error in polygonize_lines (temp file approach): {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+    # It's good practice to ensure the CRS is what we expect,
+    # though native:polygonize should set it based on input.
+    if isinstance(result_layer, QgsVectorLayer) and inputlines.crs().isValid():
+        if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
+            # This print might be too noisy if it happens often but setCrs works
+            # print(f"Warning: CRS mismatch or invalid CRS after polygonize. Input CRS: {inputlines.crs().authid()}, Output CRS: {result_layer.crs().authid()}. Forcing input CRS.")
+            result_layer.setCrs(inputlines.crs()) # Ensure CRS is set from input
+    return result_layer
 
 
 def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):

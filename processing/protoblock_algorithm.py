@@ -241,51 +241,90 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(f"Warning: Protoblocks layer CRS ({protoblocks_layer.crs().authid()}) differs from expected local TM CRS ({local_tm_crs.authid()}). Forcing correct CRS.")
             protoblocks_layer.setCrs(local_tm_crs)
 
-        feedback.pushInfo(self.tr(f"Polygonization created {protoblocks_layer.featureCount()} protoblocks. Output CRS will be: {protoblocks_layer.crs().description()} ({protoblocks_layer.crs().authid()})"))
+        if not protoblocks_layer or not protoblocks_layer.isValid(): # protoblocks_layer is from polygonize_lines
+            raise QgsProcessingException(self.tr("Polygonization failed or returned an invalid layer."))
 
-        # --- Geometry Inspection Loop ---
+        feedback.pushInfo(self.tr(f"Initial polygonization created {protoblocks_layer.featureCount()} features. Initial CRS: {protoblocks_layer.crs().authid()} - {protoblocks_layer.crs().description()}"))
+
+        # --- Re-clone to a new layer with explicitly defined CRS ---
+        feedback.pushInfo(self.tr(f"Re-cloning features to a new layer with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"))
+
+        # Define the URI for the new memory layer with the correct CRS
+        # Note: local_tm_crs.authid() will be empty for a custom CRS. Using WKT or Proj string might be more robust if available.
+        # However, QgsVectorLayer constructor takes a QgsCoordinateReferenceSystem object directly.
+        clean_protoblocks_layer_uri = f"Polygon?crs={local_tm_crs.toWkt()}"
+        # Using WKT ensures the full CRS definition is passed for the new layer.
+        # Alternatively, if QGIS handles custom CRS objects well by their internal ID in memory sources:
+        # clean_protoblocks_layer_uri = f"Polygon?crs=USER:{local_tm_crs.userFriendlyIdentifier().replace(' ','_')}" # Needs testing if this works reliably for non-saved custom CRSs
+        # For now, WKT is safest if a direct CRS object isn't accepted in URI for memory layers.
+        # Actually, QgsVectorLayer can take QgsCoordinateReferenceSystem object directly in constructor, but not via URI string alone easily for custom CRSs.
+        # The best way to create a memory layer with a specific custom CRS is:
+        clean_protoblocks_layer = QgsVectorLayer("Polygon", "protoblocks_clean_algo", "memory")
+        clean_protoblocks_layer.setCrs(local_tm_crs) # Set the CRS object directly
+
+        # Define fields (should be none if keepfields=False in polygonize_lines)
+        # If polygonize_lines's keepfields=False was effective, protoblocks_layer.fields() would be empty or minimal.
+        # Forcing no fields for protoblocks:
+        # clean_protoblocks_dp = clean_protoblocks_layer.dataProvider()
+        # clean_protoblocks_dp.addAttributes([]) # No attributes
+        # clean_protoblocks_layer.updateFields() # Not strictly needed if no fields added
+
         if protoblocks_layer.featureCount() > 0:
-            feedback.pushInfo(self.tr("Inspecting first few protoblock geometries..."))
-            count = 0
-            for feat in protoblocks_layer.getFeatures():
-                if count >= 5: # Inspect up to 5 features
-                    break
+            temp_feats_for_clean_layer = []
+            for feat_original in protoblocks_layer.getFeatures():
+                if feedback.isCanceled(): return {}
+                new_feat_clean = QgsFeature(clean_protoblocks_layer.fields()) # Fields for the clean layer
+                new_feat_clean.setGeometry(feat_original.geometry()) # Geometries are numerically in local_tm_crs
+                # No attributes to copy if keepfields=False was effective
+                temp_feats_for_clean_layer.append(new_feat_clean)
 
+            clean_protoblocks_layer.dataProvider().addFeatures(temp_feats_for_clean_layer)
+
+        feedback.pushInfo(self.tr(f"Re-cloned to clean_protoblocks_layer: {clean_protoblocks_layer.featureCount()} features. Clean layer CRS: {clean_protoblocks_layer.crs().authid()} - {clean_protoblocks_layer.crs().description()}"))
+
+        # Use this clean_protoblocks_layer for geometry inspection and for the sink
+        protoblocks_layer_for_sink = clean_protoblocks_layer
+        # --- End Re-clone ---
+
+        # --- Geometry Inspection Loop (on clean_protoblocks_layer) ---
+        if protoblocks_layer_for_sink.featureCount() > 0:
+            feedback.pushInfo(self.tr("Inspecting first few (re-cloned) protoblock geometries..."))
+            # ... (geometry inspection loop as before, but using protoblocks_layer_for_sink) ...
+            count = 0
+            for feat in protoblocks_layer_for_sink.getFeatures():
+                if count >= 5: break
                 geom_info = f"  Feature {feat.id()}: "
-                if not feat.hasGeometry():
-                    geom_info += "Has NO geometry."
+                if not feat.hasGeometry(): geom_info += "Has NO geometry."
                 else:
                     geom = feat.geometry()
                     geom_info += f"hasGeometry=True, isNull={geom.isNull()}, isEmpty={geom.isEmpty()}, wkbType={QgsWkbTypes.displayString(geom.wkbType())}"
                     if not geom.isNull() and not geom.isEmpty():
-                        try:
-                            geom_info += f", area={geom.area()}"
-                        except Exception as e_area:
-                            geom_info += f", area_calc_error='{e_area}'"
+                        try: geom_info += f", area={geom.area()}"
+                        except Exception as e_area: geom_info += f", area_calc_error='{e_area}'"
                 feedback.pushInfo(geom_info)
                 count += 1
         # --- End Geometry Inspection Loop ---
 
+        if protoblocks_layer_for_sink.featureCount() == 0:
+            feedback.pushWarning(self.tr("No protoblocks after polygonization and re-cloning. Output will be an empty layer."))
+
         # Prepare the final output sink
+        feedback.pushInfo(self.tr(f"Preparing final sink with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"))
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
-            protoblocks_layer.fields(),
+            protoblocks_layer_for_sink.fields(),
             QgsWkbTypes.Polygon,
-            local_tm_crs # Use the definitive local_tm_crs object
+            local_tm_crs
         )
 
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        if protoblocks_layer.featureCount() == 0:
-            feedback.pushWarning(self.tr("No protoblocks after polygonization (feature count is 0). Output will be an empty layer with correct CRS."))
-            # No features to add, but sink is correctly prepared.
-        else:
-            # Add features to the sink
-            total_out_feats = protoblocks_layer.featureCount()
-            for i, feat in enumerate(protoblocks_layer.getFeatures()):
+        if protoblocks_layer_for_sink.featureCount() > 0:
+            total_out_feats = protoblocks_layer_for_sink.featureCount()
+            for i, feat in enumerate(protoblocks_layer_for_sink.getFeatures()):
                 if feedback.isCanceled(): break
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
                 feedback.setProgress(int(80 + (i + 1) * 20.0 / total_out_feats))
