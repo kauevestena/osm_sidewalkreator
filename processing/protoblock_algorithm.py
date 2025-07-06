@@ -309,27 +309,56 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             feedback.pushWarning(self.tr("No protoblocks after polygonization and re-cloning. Output will be an empty layer."))
 
         # Prepare the final output sink
-        feedback.pushInfo(self.tr(f"Preparing final sink with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"))
+        feedback.pushInfo(self.tr(f"Preparing final sink with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}")) # This log refers to the CRS before final reprojection
+
+        # --- Final Reprojection to EPSG:4326 ---
+        feedback.pushInfo(self.tr("Reprojecting final protoblocks to EPSG:4326..."))
+        crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
+
+        reproject_params_final = {
+            'INPUT': protoblocks_layer_for_sink, # This is clean_protoblocks_layer in local_tm_crs
+            'TARGET_CRS': crs_epsg4326,
+            'OUTPUT': 'memory:protoblocks_final_epsg4326_algo'
+        }
+        sub_feedback_reproj_final = QgsProcessingMultiStepFeedback(1, feedback)
+        sub_feedback_reproj_final.setCurrentStep(0)
+        reproject_final_result = processing.run("native:reprojectlayer",
+                                                reproject_params_final,
+                                                context=context,
+                                                feedback=sub_feedback_reproj_final,
+                                                is_child_algorithm=True)
+        if sub_feedback_reproj_final.isCanceled(): return {}
+
+        output_layer_epsg4326 = QgsVectorLayer(reproject_final_result['OUTPUT'],
+                                               "protoblocks_epsg4326",
+                                               "memory")
+        if not output_layer_epsg4326.isValid():
+            raise QgsProcessingException(self.tr("Failed to reproject final protoblocks to EPSG:4326."))
+
+        feedback.pushInfo(self.tr(f"Final protoblocks reprojected to EPSG:4326. Features: {output_layer_epsg4326.featureCount()}, CRS: {output_layer_epsg4326.crs().authid()}"))
+        # --- End Final Reprojection ---
+
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
-            protoblocks_layer_for_sink.fields(),
+            output_layer_epsg4326.fields(), # Use fields from the final EPSG:4326 layer
             QgsWkbTypes.Polygon,
-            local_tm_crs
+            crs_epsg4326 # Sink CRS is now EPSG:4326
         )
 
         if sink is None:
             raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
 
-        if protoblocks_layer_for_sink.featureCount() > 0:
-            total_out_feats = protoblocks_layer_for_sink.featureCount()
-            for i, feat in enumerate(protoblocks_layer_for_sink.getFeatures()):
+        if output_layer_epsg4326.featureCount() > 0:
+            total_out_feats = output_layer_epsg4326.featureCount()
+            for i, feat in enumerate(output_layer_epsg4326.getFeatures()): # Iterate final layer
                 if feedback.isCanceled(): break
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
-                feedback.setProgress(int(80 + (i + 1) * 20.0 / total_out_feats))
+                # Progress can be more fine-grained, this is just for the final write
+                feedback.setProgress(int(90 + (i + 1) * 10.0 / total_out_feats)) # Assume this is final 10%
 
-        feedback.pushInfo(self.tr("Protoblock generation complete. Output written."))
+        feedback.pushInfo(self.tr("Protoblock generation complete. Output (EPSG:4326) written."))
         return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
