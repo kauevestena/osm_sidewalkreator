@@ -329,11 +329,37 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                                                 is_child_algorithm=True)
         if sub_feedback_reproj_final.isCanceled(): return {}
 
-        output_layer_epsg4326 = QgsVectorLayer(reproject_final_result['OUTPUT'],
-                                               "protoblocks_epsg4326",
-                                               "memory")
+        # Get the output from native:reprojectlayer
+        # It should be a QgsVectorLayer object if 'OUTPUT' was 'memory:...'
+        # and the algorithm is well-behaved with memory outputs.
+        reprojected_output_value = reproject_final_result.get('OUTPUT')
+
+        if not isinstance(reprojected_output_value, QgsVectorLayer):
+            # If it's a string (path or ID), try to load it
+            # This case might occur if TEMPORARY_OUTPUT was used instead of 'memory:' string,
+            # or if the alg behaves differently. For 'memory:...' it's often the object itself.
+            feedback.pushInfo(self.tr(f"Reprojection output was not a QgsVectorLayer, but: {type(reprojected_output_value)}. Attempting to load if it's a path/ID: {reprojected_output_value}"))
+            # We expect 'memory:protoblocks_final_epsg4326_algo' to yield a QgsVectorLayer directly.
+            # If it's a string ID like 'memory_xxxx', QgsProcessingUtils.mapLayerFromString would be needed,
+            # but that's not easily available here without 'context' which is tricky.
+            # For now, assume if it's not a QgsVectorLayer, it's an error for 'memory:' output.
+            if isinstance(reprojected_output_value, str):
+                 output_layer_epsg4326 = QgsVectorLayer(reprojected_output_value, "protoblocks_epsg4326_loaded", "ogr")
+            else:
+                raise QgsProcessingException(self.tr(f"Unexpected output type from final reprojection: {type(reprojected_output_value)}"))
+        else:
+            output_layer_epsg4326 = reprojected_output_value
+            # If it's a QgsVectorLayer, it might not have a user-friendly name yet if it was just created.
+            # We can set one if desired, but it's a memory layer.
+            # output_layer_epsg4326.setName("protoblocks_epsg4326") # Optional
+
         if not output_layer_epsg4326.isValid():
-            raise QgsProcessingException(self.tr("Failed to reproject final protoblocks to EPSG:4326."))
+            raise QgsProcessingException(self.tr("Failed to obtain a valid layer after final reprojection to EPSG:4326."))
+
+        # Ensure CRS is correctly EPSG:4326 after reprojection
+        if output_layer_epsg4326.crs() != crs_epsg4326:
+            feedback.pushWarning(self.tr(f"CRS of final layer is {output_layer_epsg4326.crs().authid()} instead of EPSG:4326. Attempting to set it."))
+            output_layer_epsg4326.setCrs(crs_epsg4326) # Should have been set by native:reprojectlayer
 
         feedback.pushInfo(self.tr(f"Final protoblocks reprojected to EPSG:4326. Features: {output_layer_epsg4326.featureCount()}, CRS: {output_layer_epsg4326.crs().authid()}"))
         # --- End Final Reprojection ---
