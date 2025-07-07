@@ -6,45 +6,49 @@ from qgis.core import QgsProcessingProvider
 import os
 import traceback
 
-# Try to import the algorithm with detailed logging
+# Try to import the algorithms with detailed logging
+ProtoblockAlgorithm = None
+ProtoblockBboxAlgorithm = None
+
 try:
-    # print("[SidewalKreator Provider] Attempting to import ProtoblockAlgorithm...") # Removed
     from .protoblock_algorithm import ProtoblockAlgorithm
-    # print("[SidewalKreator Provider] Successfully imported ProtoblockAlgorithm.") # Removed
 except Exception as e:
-    # print(f"[SidewalKreator Provider] CRITICAL: Failed to import ProtoblockAlgorithm: {e}") # Removed
-    # Consider logging to QGIS message bar for critical import failures even in non-debug state
     iface.messageBar().pushMessage("Error", f"Failed to import ProtoblockAlgorithm: {e}", level=Qgis.Critical)
-    traceback.print_exc() # Keep traceback for critical errors
-    ProtoblockAlgorithm = None # Ensure it's None if import fails
+    traceback.print_exc()
+
+try:
+    from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
+except Exception as e:
+    iface.messageBar().pushMessage("Error", f"Failed to import ProtoblockBboxAlgorithm: {e}", level=Qgis.Critical)
+    traceback.print_exc()
+
 
 class ProtoblockProvider(QgsProcessingProvider):
 
     def __init__(self):
         super().__init__()
-        # print("[SidewalKreator Provider] ProtoblockProvider __init__ called.") # Removed
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
     def loadAlgorithms(self):
-        # print("[SidewalKreator Provider] In loadAlgorithms CALLED.") # Removed
         if ProtoblockAlgorithm is not None:
             try:
-                # print("[SidewalKreator Provider] Attempting to instantiate and add ProtoblockAlgorithm...") # Removed
-                algo_instance = ProtoblockAlgorithm()
-                self.addAlgorithm(algo_instance)
-                # print("[SidewalKreator Provider] Successfully added ProtoblockAlgorithm.") # Removed
+                self.addAlgorithm(ProtoblockAlgorithm())
             except Exception as e:
-                # print(f"[SidewalKreator Provider] CRITICAL: Failed to instantiate or add ProtoblockAlgorithm: {e}") # Removed
-                # Log critical error to QGIS message bar
                 iface.messageBar().pushMessage("Error", f"Failed to load ProtoblockAlgorithm: {e}", level=Qgis.Critical)
-                traceback.print_exc() # Keep traceback for critical errors
+                traceback.print_exc()
         else:
-            # print("[SidewalKreator Provider] ProtoblockAlgorithm class is None, cannot add algorithm.") # Removed
-            iface.messageBar().pushMessage("Warning", "ProtoblockAlgorithm class not available to provider.", level=Qgis.Warning)
+            iface.messageBar().pushMessage("Warning", "ProtoblockAlgorithm (from polygon) class not available to provider.", level=Qgis.Warning)
 
-        # Add other algorithms here if any
+        if ProtoblockBboxAlgorithm is not None:
+            try:
+                self.addAlgorithm(ProtoblockBboxAlgorithm())
+            except Exception as e:
+                iface.messageBar().pushMessage("Error", f"Failed to load ProtoblockBboxAlgorithm: {e}", level=Qgis.Critical)
+                traceback.print_exc()
+        else:
+            iface.messageBar().pushMessage("Warning", "ProtoblockBboxAlgorithm (from BBOX) class not available to provider.", level=Qgis.Warning)
 
     def id(self):
         provider_id = 'sidewalkreator_algorithms_provider'
