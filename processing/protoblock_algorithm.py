@@ -6,7 +6,7 @@ from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingContext, QgsFeatureSink,
                        QgsProcessingParameterEnum, QgsProcessingMultiStepFeedback,
-                       QgsVectorLayer)
+                       QgsVectorLayer, QgsProcessingUtils) # Added QgsProcessingUtils
 from qgis.core import (QgsProcessingParameterNumber, QgsCoordinateReferenceSystem,
                        QgsProject, QgsFeatureRequest, QgsFields, QgsField, QgsFeature, edit)
 from qgis.PyQt.QtCore import QVariant
@@ -344,16 +344,20 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             # but that's not easily available here without 'context' which is tricky.
             # For now, assume if it's not a QgsVectorLayer, it's an error for 'memory:' output.
             if isinstance(reprojected_output_value, str):
-                 output_layer_epsg4326 = QgsVectorLayer(reprojected_output_value, "protoblocks_epsg4326_loaded", "memory") # Changed "ogr" to "memory"
+                # Use QgsProcessingUtils.mapLayerFromString to get the layer object
+                output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(reprojected_output_value, context)
+                if output_layer_epsg4326:
+                    # Optionally set a more friendly name for this in-memory instance if needed
+                    output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
             else:
-                raise QgsProcessingException(self.tr(f"Unexpected output type from final reprojection: {type(reprojected_output_value)}"))
-        else:
+                # This case should ideally not be hit if native:reprojectlayer with 'memory:' output
+                # consistently returns a string ID. If it returns the object, the 'else' below handles it.
+                raise QgsProcessingException(self.tr(f"Unexpected output type from final reprojection: {type(reprojected_output_value)} when expecting a string ID."))
+        else: # it is already a QgsVectorLayer object
             output_layer_epsg4326 = reprojected_output_value
-            # If it's a QgsVectorLayer, it might not have a user-friendly name yet if it was just created.
-            # We can set one if desired, but it's a memory layer.
             # output_layer_epsg4326.setName("protoblocks_epsg4326") # Optional
 
-        if not output_layer_epsg4326.isValid():
+        if not output_layer_epsg4326 or not output_layer_epsg4326.isValid(): # Check if None or invalid
             raise QgsProcessingException(self.tr("Failed to obtain a valid layer after final reprojection to EPSG:4326."))
 
         # Ensure CRS is correctly EPSG:4326 after reprojection
