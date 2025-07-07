@@ -105,9 +105,9 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         if extent_crs != crs_epsg4326:
             feedback.pushInfo(self.tr(f"Transforming input extent from {extent_crs.authid()} to EPSG:4326..."))
             transform = QgsCoordinateTransform(extent_crs, crs_epsg4326, context.transformContext())
-            extent_4326 = transform.transform(extent_param_value)
-            if not extent_4326.isValid():
-                raise QgsProcessingException(self.tr("Failed to transform extent to EPSG:4326."))
+            extent_4326 = transform.transform(extent_param_value) # extent_4326 is a QgsRectangle
+            if extent_4326.isEmpty(): # Use isEmpty() for QgsRectangle
+                raise QgsProcessingException(self.tr("Failed to transform extent to EPSG:4326 or transformed extent is empty."))
         else:
             extent_4326 = extent_param_value
 
