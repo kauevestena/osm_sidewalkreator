@@ -9,7 +9,7 @@ from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
                        QgsVectorLayer, QgsProcessingUtils,
                        QgsCoordinateReferenceSystem, QgsFields,
                        QgsFeature, QgsRectangle, QgsWkbTypes,
-                       QgsProcessingException, QgsField)
+                       QgsProcessingException, QgsField, QgsCoordinateTransform) # Added QgsCoordinateTransform
 import math
 
 # Import necessary functions from other plugin modules
