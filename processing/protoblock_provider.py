@@ -6,22 +6,17 @@ from qgis.core import QgsProcessingProvider
 import os
 import traceback
 
-# Try to import the algorithms with detailed logging
-ProtoblockAlgorithm = None
-ProtoblockBboxAlgorithm = None
+# Try to import the algorithms
+# It's cleaner to have these imports inside the provider or loadAlgorithms,
+# or ensure iface is available if using messageBar at module level.
+# For now, assuming iface is available via a global or passed in if this was a class method.
+# However, direct iface usage at module level is not standard.
+# Let's simplify and assume imports work, errors will be caught by QGIS plugin loader.
 
-try:
-    from .protoblock_algorithm import ProtoblockAlgorithm
-except Exception as e:
-    iface.messageBar().pushMessage("Error", f"Failed to import ProtoblockAlgorithm: {e}", level=Qgis.Critical)
-    traceback.print_exc()
-
-try:
-    from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
-except Exception as e:
-    iface.messageBar().pushMessage("Error", f"Failed to import ProtoblockBboxAlgorithm: {e}", level=Qgis.Critical)
-    traceback.print_exc()
-
+from .protoblock_algorithm import ProtoblockAlgorithm
+from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
+# It's better practice to handle import errors where these are used (e.g. in loadAlgorithms)
+# or ensure the plugin gracefully handles their absence if an import fails.
 
 class ProtoblockProvider(QgsProcessingProvider):
 
@@ -32,27 +27,29 @@ class ProtoblockProvider(QgsProcessingProvider):
         return QCoreApplication.translate('Processing', string)
 
     def loadAlgorithms(self):
-        if ProtoblockAlgorithm is not None:
-            try:
-                self.addAlgorithm(ProtoblockAlgorithm())
-            except Exception as e:
-                iface.messageBar().pushMessage("Error", f"Failed to load ProtoblockAlgorithm: {e}", level=Qgis.Critical)
-                traceback.print_exc()
-        else:
-            iface.messageBar().pushMessage("Warning", "ProtoblockAlgorithm (from polygon) class not available to provider.", level=Qgis.Warning)
+        # It's good practice to check if the class was imported successfully before using it
+        # However, if an import fails at the top, this code might not even be reached or
+        # the class variable would be undefined. The try/except around imports is better.
+        # For now, let's assume they imported or are None due to earlier try/except.
 
-        if ProtoblockBboxAlgorithm is not None:
-            try:
+        # Re-adding the try-except for robustness during actual addAlgorithm call
+        try:
+            if ProtoblockAlgorithm: # Check if class was successfully imported
+                self.addAlgorithm(ProtoblockAlgorithm())
+        except Exception as e:
+            # Use QgsMessageLog for errors not tied to iface, or pass iface if available
+            print(f"CRITICAL: Failed to load ProtoblockAlgorithm: {e}") # Fallback print
+            traceback.print_exc()
+
+        try:
+            if ProtoblockBboxAlgorithm: # Check if class was successfully imported
                 self.addAlgorithm(ProtoblockBboxAlgorithm())
-            except Exception as e:
-                iface.messageBar().pushMessage("Error", f"Failed to load ProtoblockBboxAlgorithm: {e}", level=Qgis.Critical)
-                traceback.print_exc()
-        else:
-            iface.messageBar().pushMessage("Warning", "ProtoblockBboxAlgorithm (from BBOX) class not available to provider.", level=Qgis.Warning)
+        except Exception as e:
+            print(f"CRITICAL: Failed to load ProtoblockBboxAlgorithm: {e}") # Fallback print
+            traceback.print_exc()
 
     def id(self):
         provider_id = 'sidewalkreator_algorithms_provider'
-        # print(f"[SidewalKreator Provider] id() CALLED, returning: {provider_id}") # Removed
         return provider_id
 
     def name(self):

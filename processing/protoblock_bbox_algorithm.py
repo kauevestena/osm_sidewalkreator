@@ -23,10 +23,7 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
     Generates protoblocks by fetching OSM street data within a given
     bounding box, processing it, and then polygonizing the street network.
     """
-    MIN_LON = 'MIN_LON'
-    MIN_LAT = 'MIN_LAT'
-    MAX_LON = 'MAX_LON'
-    MAX_LAT = 'MAX_LAT'
+    EXTENT = 'EXTENT' # Changed from individual BBOX parameters
     TIMEOUT = 'TIMEOUT'
     OUTPUT_PROTOBLOCKS = 'OUTPUT_PROTOBLOCKS'
 
@@ -45,37 +42,38 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self):
         return self.tr("Fetches OSM street data for a specified bounding box, processes it, and generates protoblock polygons. Output is in EPSG:4326.")
 
+from qgis.core import QgsProcessingParameterExtent # Import for extent parameter
+
+class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
+    """
+    Generates protoblocks by fetching OSM street data within a given
+    bounding box, processing it, and then polygonizing the street network.
+    """
+    EXTENT = 'EXTENT' # Changed from individual BBOX parameters
+    TIMEOUT = 'TIMEOUT'
+    OUTPUT_PROTOBLOCKS = 'OUTPUT_PROTOBLOCKS'
+
+    def tr(self, string):
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return ProtoblockBboxAlgorithm()
+
+    def name(self):
+        return 'generateprotoblocksfrombbox'
+
+    def displayName(self):
+        return self.tr('Generate Protoblocks from OSM Data in Bounding Box')
+
+    def shortHelpString(self):
+        return self.tr("Fetches OSM street data for a specified extent (bounding box), processes it, and generates protoblock polygons. Output is in EPSG:4326.")
+
     def initAlgorithm(self, config=None):
         self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MIN_LON,
-                self.tr('Minimum Longitude (XMin, EPSG:4326)'),
-                QgsProcessingParameterNumber.Double,
-                defaultValue=-180.0, minValue=-180.0, maxValue=180.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MIN_LAT,
-                self.tr('Minimum Latitude (YMin, EPSG:4326)'),
-                QgsProcessingParameterNumber.Double,
-                defaultValue=-90.0, minValue=-90.0, maxValue=90.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MAX_LON,
-                self.tr('Maximum Longitude (XMax, EPSG:4326)'),
-                QgsProcessingParameterNumber.Double,
-                defaultValue=180.0, minValue=-180.0, maxValue=180.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MAX_LAT,
-                self.tr('Maximum Latitude (YMax, EPSG:4326)'),
-                QgsProcessingParameterNumber.Double,
-                defaultValue=90.0, minValue=-90.0, maxValue=90.0
+            QgsProcessingParameterExtent(
+                self.EXTENT,
+                self.tr('Extent for OSM Data Download'),
+                # Optional: defaultValue=None, optional=False by default
             )
         )
         self.addParameter(
@@ -94,22 +92,40 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        feedback.pushInfo(self.tr("Algorithm started: Generate Protoblocks from OSM Data in BBOX"))
+        feedback.pushInfo(self.tr("Algorithm started: Generate Protoblocks from OSM Data in Bounding Box"))
 
-        min_lon = self.parameterAsDouble(parameters, self.MIN_LON, context)
-        min_lat = self.parameterAsDouble(parameters, self.MIN_LAT, context)
-        max_lon = self.parameterAsDouble(parameters, self.MAX_LON, context)
-        max_lat = self.parameterAsDouble(parameters, self.MAX_LAT, context)
+        extent_param_value = self.parameterAsExtent(parameters, self.EXTENT, context)
+        extent_crs = self.parameterAsExtentCrs(parameters, self.EXTENT, context)
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
 
-        if not (min_lon < max_lon and min_lat < max_lat):
-            raise QgsProcessingException(self.tr("Invalid BBOX coordinates: Min coordinates must be less than Max coordinates."))
+        feedback.pushInfo(self.tr(f"Input extent: {extent_param_value.toString()} (CRS: {extent_crs.authid()})"))
 
-        feedback.pushInfo(self.tr(f"Input BBOX (EPSG:4326): MinLon={min_lon}, MinLat={min_lat}, MaxLon={max_lon}, MaxLat={max_lat}"))
+        # Transform extent to EPSG:4326 if necessary
+        crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
+        if extent_crs != crs_epsg4326:
+            feedback.pushInfo(self.tr(f"Transforming input extent from {extent_crs.authid()} to EPSG:4326..."))
+            transform = QgsCoordinateTransform(extent_crs, crs_epsg4326, context.transformContext())
+            extent_4326 = transform.transform(extent_param_value)
+            if not extent_4326.isValid():
+                raise QgsProcessingException(self.tr("Failed to transform extent to EPSG:4326."))
+        else:
+            extent_4326 = extent_param_value
+
+        min_lon = extent_4326.xMinimum()
+        min_lat = extent_4326.yMinimum()
+        max_lon = extent_4326.xMaximum()
+        max_lat = extent_4326.yMaximum()
+
+        if not (min_lon < max_lon and min_lat < max_lat): # Basic check, QgsRectangle.isValid() is better
+             if not extent_4326.isValid() or extent_4326.isEmpty(): # More robust check
+                raise QgsProcessingException(self.tr("Provided extent is invalid or empty after transformation."))
+
+        feedback.pushInfo(self.tr(f"Query BBOX (EPSG:4326): MinLon={min_lon}, MinLat={min_lat}, MaxLon={max_lon}, MaxLat={max_lat}"))
 
         # --- OSM Data Fetching (based on BBOX) ---
         feedback.pushInfo(self.tr("Fetching OSM street data for BBOX..."))
-        query_str = osm_query_string_by_bbox(min_lat, min_lon, max_lat, max_lon, # Note order for osm_query_string_by_bbox
+        # osm_query_string_by_bbox expects (min_lat, min_lon, max_lat, max_lon)
+        query_str = osm_query_string_by_bbox(min_lat, min_lon, max_lat, max_lon,
                                              interest_key=highway_tag, way=True, node=False, relation=False)
 
         osm_geojson_str = get_osm_data(query_str, "osm_streets_bbox_algo",
