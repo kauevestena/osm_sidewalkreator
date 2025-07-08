@@ -12,7 +12,7 @@ from qgis.core import (
 # Assuming parameters.py has the defaults we need
 from ..parameters import (
     default_curve_radius, min_d_to_building, d_to_add_to_each_side, minimal_buffer,
-    perc_draw_kerbs, perc_tol_crossings, d_to_add_interp_d
+    perc_draw_kerbs, perc_tol_crossings, d_to_add_interp_d, CRS_LATLON_4326 # Added CRS_LATLON_4326
     # default_widths will be used internally for now
 )
 
@@ -288,11 +288,11 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Placeholder: Retrieving parameters..."))
 
         # Retrieve all parameters (example for a few)
-        input_polygon_src = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
+        input_polygon_src_param_value = parameters[self.INPUT_POLYGON] # Get the raw parameter value (string)
         timeout_val = self.parameterAsInt(parameters, self.TIMEOUT, context)
         curve_radius_val = self.parameterAsDouble(parameters, self.CURVE_RADIUS, context)
 
-        feedback.pushInfo(f"Input Polygon Source: {input_polygon_src.sourceName if input_polygon_src else 'None'}")
+        feedback.pushInfo(f"Input Polygon Parameter Value: {input_polygon_src_param_value}")
         feedback.pushInfo(f"Timeout: {timeout_val}")
         feedback.pushInfo(f"Curve Radius: {curve_radius_val}")
         # ... log other retrieved parameters for testing ...
