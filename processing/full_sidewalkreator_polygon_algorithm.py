@@ -317,20 +317,32 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         if kerbs_sink is None: raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_KERBS))
 
         # Protoblocks (Debug) - check if output is requested
-        protoblocks_dest_id = None
-        if self.parameterAsBoolean(parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, True): # Check if output is desired (True if not optional or if checked)
-             # This check is a bit off for optional sinks.
-             # Better to check if parameters[self.OUTPUT_PROTOBLOCKS_DEBUG] is not None or empty if it's a string
-             # For now, assume if it's defined, we try to create sink
-            try:
-                (protoblocks_sink, protoblocks_dest_id) = self.parameterAsSink(
-                    parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, QgsFields(),
-                    QgsWkbTypes.Polygon, QgsCoordinateReferenceSystem("EPSG:32632") # Placeholder CRS, should be local_tm_crs eventually
-                )
-                # if protoblocks_sink is None: feedback.pushWarning("Could not create debug protoblocks sink") # Don't raise, it's optional
-            except: # Catch error if optional sink is not specified by user
-                feedback.pushInfo("Debug protoblocks output not specified.")
+        protoblocks_sink, protoblocks_dest_id = None, None
 
+        # Check if the user actually provided a path for the optional sink
+        # The parameter value for a FeatureSink is the output path or 'TEMPORARY_OUTPUT' etc.
+        # If it's optional and not filled by user, it might be None or an empty string.
+        debug_protoblocks_output_spec = parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG)
+
+        if debug_protoblocks_output_spec: # If user specified something (not None, not empty string)
+            try:
+                # Attempt to get the sink. If this fails (e.g., invalid path), it will raise.
+                # If it succeeds, sink will be valid.
+                # For an optional output, if no value is provided by the user in the UI,
+                # parameterAsSink might return None or raise if called on an empty parameter.
+                # It's safer to check parameter value first.
+                protoblocks_sink, protoblocks_dest_id = self.parameterAsSink(
+                    parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, QgsFields(),
+                    QgsWkbTypes.Polygon, QgsCoordinateReferenceSystem(CRS_LATLON_4326) # Placeholder CRS
+                )
+                if protoblocks_sink is None: # Should not happen if parameters[key] was non-empty and valid path
+                    feedback.pushInfo(self.tr("Debug protoblocks output was specified, but sink creation failed (returned None)."))
+                    protoblocks_dest_id = None
+            except Exception as e:
+                feedback.pushInfo(self.tr(f"Could not prepare debug protoblocks sink: {e}. It will not be generated."))
+                protoblocks_dest_id = None
+        else:
+            feedback.pushInfo(self.tr("Debug protoblocks output was not specified by the user."))
 
         feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Placeholder: Finished."))
 
@@ -339,7 +351,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             self.OUTPUT_CROSSINGS: crossings_dest_id,
             self.OUTPUT_KERBS: kerbs_dest_id
         }
-        if protoblocks_dest_id:
+        if protoblocks_dest_id: # Only add to results if successfully prepared
             results[self.OUTPUT_PROTOBLOCKS_DEBUG] = protoblocks_dest_id
         return results
 
