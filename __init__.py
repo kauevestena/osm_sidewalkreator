@@ -31,6 +31,9 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #
+    # Import the main plugin class
     from .osm_sidewalkreator import sidewalkreator
+
+    # Return an instance of the main plugin class.
+    # Provider registration is now handled within sidewalkreator.initGui()
     return sidewalkreator(iface)

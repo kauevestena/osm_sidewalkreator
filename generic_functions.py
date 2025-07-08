@@ -4,9 +4,13 @@ from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
 from processing.tools import dataobjects
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit, QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer, QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector, QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY, QgsProperty, QgsApplication, Qgis #, QgsRendererCategory, QgsSymbol, QgsLineSymbol, QgsCategorizedSymbolRenderer
+from qgis.core import (QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit,
+                       QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer,
+                       QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector,
+                       QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY,
+                       QgsProperty, QgsApplication, Qgis, QgsProcessing) # Added QgsProcessing
 # from qgis.core import Qgis
-from qgis.core import QgsProcessingContext, Qgis # Added QgsProcessingContext and Qgis
+from qgis.core import QgsProcessingContext # Qgis was already imported
 
 from processing.gui.AlgorithmExecutor import execute_in_place
 
@@ -141,9 +145,40 @@ def merge_touching_lines(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
 
 
 def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
-    parameter_dict = {'INPUT': inputlines, 'OUTPUT': outputlayer}
+    # Ensure that the outputlayer string results in a QgsVectorLayer object being returned by processing.run
+    # For memory layers, the 'OUTPUT' value in the returned dict IS the QgsVectorLayer instance.
+    parameter_dict = {
+        'INPUT': inputlines,
+        'OUTPUT': outputlayer, # e.g., 'memory:my_polygonized_layer'
+        'KEEP_FIELDS': keepfields
+    }
+    result_layer = processing.run('native:polygonize', parameter_dict)['OUTPUT']
 
-    return processing.run('native:polygonize',parameter_dict)['OUTPUT']
+    # It's good practice to ensure the CRS is what we expect,
+    # though native:polygonize should set it based on input.
+    # if isinstance(result_layer, QgsVectorLayer) and inputlines.crs().isValid():
+    #     if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
+    #         print(f"Warning: CRS mismatch or invalid CRS after polygonize. Input CRS: {inputlines.crs().authid()}, Output CRS: {result_layer.crs().authid()}. Forcing input CRS.")
+    #         result_layer.setCrs(inputlines.crs()) # Ensure CRS is set from input
+    # return result_layer # Old direct return
+
+    # Ensure that the outputlayer string results in a QgsVectorLayer object being returned by processing.run
+    # For memory layers, the 'OUTPUT' value in the returned dict IS the QgsVectorLayer instance.
+    parameter_dict = {
+        'INPUT': inputlines,
+        'OUTPUT': outputlayer, # e.g., 'memory:my_polygonized_layer'
+        'KEEP_FIELDS': keepfields
+    }
+    result_layer = processing.run('native:polygonize', parameter_dict)['OUTPUT']
+
+    # It's good practice to ensure the CRS is what we expect,
+    # though native:polygonize should set it based on input.
+    if isinstance(result_layer, QgsVectorLayer) and inputlines.crs().isValid():
+        if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
+            # This print might be too noisy if it happens often but setCrs works
+            # print(f"Warning: CRS mismatch or invalid CRS after polygonize. Input CRS: {inputlines.crs().authid()}, Output CRS: {result_layer.crs().authid()}. Forcing input CRS.")
+            result_layer.setCrs(inputlines.crs()) # Ensure CRS is set from input
+    return result_layer
 
 
 def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
@@ -221,7 +256,7 @@ def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],
     """
     Generic spatial relationship extractor
 
-    Predicates are: 
+    Predicates are:
 
     YOU MUST PASS A LIST, you can use more than one predicate
 
@@ -243,7 +278,7 @@ def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],
 
 def collected_geoms_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
     '''
-    interface to 
+    interface to
     https://docs.qgis.org/3.22/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgiscollect
     '''
     parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
@@ -364,7 +399,7 @@ def create_perimeter_field(inputlayer,perimeter_fieldname):
 
         # elif inputlayer.geometryType() == 2:
         #     for feature in inputlayer.getFeatures():
-        #         perim_val = 
+        #         perim_val =
         #         inputlayer.changeAttributeValue(feature.id(),perimeter_idx,perim_val)
 
         # for points or not-spatial will leave all NULL
@@ -515,7 +550,7 @@ def get_column_names(inputlayer):
 
 def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
     '''
-        create a new field for the layer, and also return the index of the new field 
+        create a new field for the layer, and also return the index of the new field
     '''
 
     with edit(inputlayer):
@@ -1021,12 +1056,12 @@ def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
 
 def check_sidewalk_intersection(intersectiongeom,referencepoint):
     if not intersectiongeom.isEmpty():
-        
+
         if not intersectiongeom.isMultipart():
             return True,intersectiongeom
         else:
             # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearest to "referencepoint"
-            
+
             # print(intersectiongeom.asWkt())
             # print(intersectiongeom.wkbType())
 
@@ -1165,7 +1200,7 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
 
 def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident',total_length_instead=False):
-	
+
     """
 	Creates incidence field layers A and B based on the given input layer and incident layer.
 
@@ -1185,7 +1220,7 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
 	:rtype: int
 	"""
 
-    
+
 
     if total_length_instead:
         field_id = create_new_layerfield(inputlayer,fieldname,QVariant.Double)
@@ -1200,7 +1235,7 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
         for feature in inputlayer.getFeatures():
 
             contained_list = []
-            sum = 0 
+            sum = 0
 
 
             intersecting_ids = index.intersects(feature.geometry().boundingBox())
@@ -1402,7 +1437,7 @@ def remove_unconnected_lines_v2(inputlayer):
                 intersect_ids.remove(feat_id)
 
             if not intersect_ids:
-                # in the case of empty list one can just delete it 
+                # in the case of empty list one can just delete it
                 inputlayer.deleteFeature(feat_id)
             else:
                 not_intersecting = True
@@ -1455,4 +1490,3 @@ def remove_unconnected_lines_v2(inputlayer):
 #     layer.triggerRepaint()
 
 #     return colors
-
