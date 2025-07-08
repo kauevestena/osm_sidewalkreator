@@ -269,17 +269,28 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         input_poly_for_bbox = actual_input_layer
+
+        feedback.pushInfo(self.tr(f"Input polygon CRS for BBOX: {source_crs.description()} (Auth ID: {source_crs.authid()})"))
+
         if source_crs.authid() != crs_4326.authid():
-            # ... (reprojection logic for input_poly_for_bbox to EPSG:4326) ...
-            feedback.pushInfo(f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation.")
+            feedback.pushInfo(self.tr(f"Attempting to reproject input polygon from {source_crs.authid()} to EPSG:4326 for BBOX calculation..."))
             reproject_params_bbox = { 'INPUT': actual_input_layer, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:input_reprojected_for_bbox'}
             sub_feedback_bbox = QgsProcessingMultiStepFeedback(1, feedback)
             sub_feedback_bbox.setCurrentStep(0)
+
             reproject_result_bbox = processing.run("native:reprojectlayer", reproject_params_bbox, context=context, feedback=sub_feedback_bbox, is_child_algorithm=True)
+            feedback.pushInfo(self.tr(f"Input polygon reprojection attempt finished. Result: {reproject_result_bbox}"))
+
             if sub_feedback_bbox.isCanceled(): return {}
-            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(reproject_result_bbox['OUTPUT'], context)
+
+            output_value_bbox = reproject_result_bbox.get('OUTPUT')
+            if not output_value_bbox:
+                raise QgsProcessingException(self.tr("Input polygon reprojection failed to produce an output value."))
+
+            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(output_value_bbox, context)
             if not input_poly_for_bbox or not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
-                raise QgsProcessingException(self.tr("Failed to reproject input for BBOX or result is empty."))
+                raise QgsProcessingException(self.tr("Failed to reproject input for BBOX, result is invalid or empty."))
+            feedback.pushInfo(self.tr(f"Input polygon successfully reprojected to EPSG:4326. New layer: {input_poly_for_bbox.name()}"))
 
         extent_4326 = input_poly_for_bbox.extent()
         if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
