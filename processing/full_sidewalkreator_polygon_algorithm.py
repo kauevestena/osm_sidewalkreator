@@ -98,25 +98,22 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.FETCH_BUILDINGS_DATA, self.tr('Fetch OSM Buildings Data'),
-                defaultValue=True,
-                helpText=self.tr("Needed for building overlap checks and can be used for POI-based sidewalk splitting with Voronoi.")
+                self.FETCH_BUILDINGS_DATA, self.tr('Fetch OSM Buildings Data (for overlap checks & POI splitting)'), # Description updated
+                defaultValue=True
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.FETCH_ADDRESS_DATA, self.tr('Fetch OSM Address Data (addr:housenumber)'),
-                defaultValue=True,
-                helpText=self.tr("Can be used for POI-based sidewalk splitting with Voronoi.")
+                self.FETCH_ADDRESS_DATA, self.tr('Fetch OSM Address Data (addr:housenumber, for POI splitting)'), # Description updated
+                defaultValue=True
             )
         )
 
         # === Protoblock/Street Cleaning Stage ===
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.DEAD_END_ITERATIONS, self.tr('Iterations to Remove Dead-End Streets'),
-                QgsProcessingParameterNumber.Integer, defaultValue=1, minValue=0, maxValue=10,
-                helpText=self.tr("Applied during protoblock generation to clean the street network.")
+                self.DEAD_END_ITERATIONS, self.tr('Iterations to Remove Dead-End Streets (for protoblocks)'), # Description updated
+                QgsProcessingParameterNumber.Integer, defaultValue=1, minValue=0, maxValue=10
             )
         )
 
@@ -141,16 +138,14 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SIDEWALK_MIN_DIST_TO_BUILDING, self.tr('Min. Distance from Sidewalk to Buildings (meters)'),
-                QgsProcessingParameterNumber.Double, defaultValue=min_d_to_building, minValue=0.0, maxValue=10.0,
-                helpText=self.tr("Effective only if 'Adjust Sidewalk Width if Overlaps Buildings' is checked and building data is fetched.")
+                self.SIDEWALK_MIN_DIST_TO_BUILDING, self.tr('Min. Distance Sidewalk to Buildings (m, if overlap checked)'), # Desc. updated
+                QgsProcessingParameterNumber.Double, defaultValue=min_d_to_building, minValue=0.0, maxValue=10.0
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SIDEWALK_MIN_WIDTH_IF_NEAR_BUILDING, self.tr('Min. Generated Sidewalk Width if Near Buildings (meters, total width)'),
-                QgsProcessingParameterNumber.Double, defaultValue=minimal_buffer * 2, minValue=0.1, maxValue=10.0,
-                helpText=self.tr("Effective only if 'Adjust Sidewalk Width if Overlaps Buildings' is checked and building data is fetched.")
+                self.SIDEWALK_MIN_WIDTH_IF_NEAR_BUILDING, self.tr('Min. Sidewalk Width Near Buildings (m, if overlap checked)'), # Desc. updated
+                QgsProcessingParameterNumber.Double, defaultValue=minimal_buffer * 2, minValue=0.1, maxValue=10.0
             )
         )
 
@@ -195,30 +190,26 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         # === Sidewalk Splitting Stage ===
         self.addParameter(
             QgsProcessingParameterEnum(
-                self.SPLITTING_METHOD, self.tr('Sidewalk Splitting Method'),
+                self.SPLITTING_METHOD, self.tr('Sidewalk Splitting Method (after protoblock corners)'), # Desc. updated
                 options=self.SPLITTING_METHOD_OPTIONS_ENUM, defaultValue=0, # None
-                helpText=self.tr("Splitting occurs after initial generation by protoblock corners.")
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SPLIT_VORONOI_MIN_POIS, self.tr('Splitting (Voronoi): Min. POIs per Cell'),
-                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1,
-                helpText=self.tr("Effective only if Splitting Method is 'Voronoi' and POI data (buildings/addresses) is fetched.")
+                self.SPLIT_VORONOI_MIN_POIS, self.tr('Splitting (Voronoi): Min. POIs per Cell (if method is Voronoi)'), # Desc. updated
+                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SPLIT_MAX_LENGTH_VALUE, self.tr('Splitting (Max Length): Value (meters)'),
-                QgsProcessingParameterNumber.Double, defaultValue=50.0, minValue=1.0,
-                helpText=self.tr("Effective only if Splitting Method is 'By Maximum Length'.")
+                self.SPLIT_MAX_LENGTH_VALUE, self.tr('Splitting (Max Length): Value (m, if method is MaxLength)'), # Desc. updated
+                QgsProcessingParameterNumber.Double, defaultValue=50.0, minValue=1.0
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.SPLIT_SEGMENT_NUMBER_VALUE, self.tr('Splitting (By Number): Number of Segments'),
-                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1,
-                helpText=self.tr("Effective only if Splitting Method is 'By Fixed Number of Segments'.")
+                self.SPLIT_SEGMENT_NUMBER_VALUE, self.tr('Splitting (By Number): Number of Segments (if method is ByNumber)'), # Desc. updated
+                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1
             )
         )
 
