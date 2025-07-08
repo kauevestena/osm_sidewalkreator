@@ -7,7 +7,7 @@ from qgis.core import (
     QgsProcessingParameterEnum,
     QgsCoordinateReferenceSystem, QgsFields, QgsFeature, QgsWkbTypes,
     QgsProcessingException, QgsField, QgsProcessingMultiStepFeedback,
-    QgsVectorLayer, QgsProcessingUtils, QgsRectangle, QgsProject # Added QgsProject for layer loading if needed by generic_functions
+    QgsVectorLayer, QgsProcessingUtils, QgsRectangle, QgsProject, QgsFeatureRequest # Added QgsFeatureRequest
 )
 import math
 
