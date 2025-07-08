@@ -15,6 +15,7 @@ import traceback
 
 from .protoblock_algorithm import ProtoblockAlgorithm
 from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
+from .full_sidewalkreator_polygon_algorithm import FullSidewalkreatorPolygonAlgorithm # Added import
 # It's better practice to handle import errors where these are used (e.g. in loadAlgorithms)
 # or ensure the plugin gracefully handles their absence if an import fails.
 
@@ -46,6 +47,13 @@ class ProtoblockProvider(QgsProcessingProvider):
                 self.addAlgorithm(ProtoblockBboxAlgorithm())
         except Exception as e:
             print(f"CRITICAL: Failed to load ProtoblockBboxAlgorithm: {e}") # Fallback print
+            traceback.print_exc()
+
+        try:
+            if FullSidewalkreatorPolygonAlgorithm: # Check if class was successfully imported
+                self.addAlgorithm(FullSidewalkreatorPolygonAlgorithm())
+        except Exception as e:
+            print(f"CRITICAL: Failed to load FullSidewalkreatorPolygonAlgorithm: {e}") # Fallback print
             traceback.print_exc()
 
     def id(self):
