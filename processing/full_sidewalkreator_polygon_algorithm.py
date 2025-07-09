@@ -295,8 +295,10 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             # For now, let it proceed to the if/else based on potentially incomplete info, or raise
             raise QgsProcessingException(self.tr(f"Critical error during CRS authid check: {e_crs_check}"))
 
+        feedback.pushInfo(self.tr("DEBUG: Right before 'if is_different_crs:' check."))
 
         if is_different_crs:
+            feedback.pushInfo(self.tr("DEBUG: Inside 'if is_different_crs:' block (should not happen for EPSG:4326 input)."))
             feedback.pushInfo(self.tr(f"CRS is different. Attempting to reproject input polygon from {source_auth_id} to EPSG:4326 for BBOX calculation..."))
             reproject_params_bbox = { 'INPUT': actual_input_layer, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:input_reprojected_for_bbox'}
             sub_feedback_bbox = QgsProcessingMultiStepFeedback(1, feedback)
@@ -315,7 +317,12 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             if not input_poly_for_bbox or not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
                 raise QgsProcessingException(self.tr("Failed to reproject input for BBOX, result is invalid or empty."))
             feedback.pushInfo(self.tr(f"Input polygon successfully reprojected to EPSG:4326. New layer: {input_poly_for_bbox.name()}"))
+        else:
+            feedback.pushInfo(self.tr("DEBUG: Inside 'else' block (CRS is already EPSG:4326)."))
+            feedback.pushInfo(self.tr("Input layer is already in EPSG:4326."))
+            # input_poly_for_bbox is already actual_input_layer, set before the if/else
 
+        feedback.pushInfo(self.tr("DEBUG: After if/else for CRS check."))
         extent_4326 = input_poly_for_bbox.extent()
         if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
             raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}"))
