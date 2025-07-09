@@ -323,9 +323,17 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             # input_poly_for_bbox is already actual_input_layer, set before the if/else
 
         feedback.pushInfo(self.tr("DEBUG: After if/else for CRS check."))
-        extent_4326 = input_poly_for_bbox.extent()
+
+        feedback.pushInfo(self.tr(f"DEBUG: About to call .extent() on input_poly_for_bbox. Name: {input_poly_for_bbox.name()}, isValid: {input_poly_for_bbox.isValid()}, featureCount: {input_poly_for_bbox.featureCount()}, CRS: {input_poly_for_bbox.crs().authid()}"))
+        try:
+            extent_4326 = input_poly_for_bbox.extent()
+            feedback.pushInfo(self.tr(f"DEBUG: .extent() call completed. Extent: {extent_4326.toString()}"))
+        except Exception as e_extent:
+            feedback.pushInfo(self.tr(f"EXCEPTION during .extent() call: {e_extent}"))
+            raise QgsProcessingException(self.tr(f"Error getting extent from input polygon layer: {e_extent}"))
+
         if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
-            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}"))
+            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty.")) # Added layer name to error
         min_lgt, min_lat, max_lgt, max_lat = extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()
 
         query_str_roads = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True)
