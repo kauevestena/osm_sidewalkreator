@@ -326,15 +326,53 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo(self.tr(f"DEBUG: About to call .extent() on input_poly_for_bbox. Name: {input_poly_for_bbox.name()}, isValid: {input_poly_for_bbox.isValid()}, featureCount: {input_poly_for_bbox.featureCount()}, CRS: {input_poly_for_bbox.crs().authid()}"))
         try:
-            extent_4326 = input_poly_for_bbox.extent()
+            extent_4326 = input_poly_for_bbox.extent() # This was logged as completed
             feedback.pushInfo(self.tr(f"DEBUG: .extent() call completed. Extent: {extent_4326.toString()}"))
         except Exception as e_extent:
             feedback.pushInfo(self.tr(f"EXCEPTION during .extent() call: {e_extent}"))
             raise QgsProcessingException(self.tr(f"Error getting extent from input polygon layer: {e_extent}"))
 
-        if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
-            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty.")) # Added layer name to error
-        min_lgt, min_lat, max_lgt, max_lat = extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()
+        # Granular logging for extent checks
+        feedback.pushInfo(self.tr("DEBUG: Checking extent_4326.isNull()..."))
+        is_null = extent_4326.isNull()
+        feedback.pushInfo(self.tr(f"DEBUG: extent_4326.isNull() is {is_null}"))
+
+        coords_to_check = []
+        xmin, ymin, xmax, ymax = None, None, None, None # Initialize
+
+        feedback.pushInfo(self.tr("DEBUG: Getting xMinimum..."))
+        xmin = extent_4326.xMinimum()
+        coords_to_check.append(xmin)
+        feedback.pushInfo(self.tr(f"DEBUG: xMinimum is {xmin}"))
+
+        feedback.pushInfo(self.tr("DEBUG: Getting yMinimum..."))
+        ymin = extent_4326.yMinimum()
+        coords_to_check.append(ymin)
+        feedback.pushInfo(self.tr(f"DEBUG: yMinimum is {ymin}"))
+
+        feedback.pushInfo(self.tr("DEBUG: Getting xMaximum..."))
+        xmax = extent_4326.xMaximum()
+        coords_to_check.append(xmax)
+        feedback.pushInfo(self.tr(f"DEBUG: xMaximum is {xmax}"))
+
+        feedback.pushInfo(self.tr("DEBUG: Getting yMaximum..."))
+        ymax = extent_4326.yMaximum()
+        coords_to_check.append(ymax)
+        feedback.pushInfo(self.tr(f"DEBUG: yMaximum is {ymax}"))
+
+        feedback.pushInfo(self.tr("DEBUG: Checking finiteness of coordinates..."))
+        if not all(c is not None for c in [xmin, ymin, xmax, ymax]): # Check if any coordinate retrieval failed (unlikely for QgsRectangle)
+             raise QgsProcessingException(self.tr(f"One or more extent coordinates are None after retrieval. Extent: {extent_4326.toString()}"))
+
+        are_all_finite = all(map(math.isfinite, coords_to_check))
+        feedback.pushInfo(self.tr(f"DEBUG: Coordinates are all finite: {are_all_finite}"))
+
+        if is_null or not are_all_finite:
+            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty."))
+
+        min_lgt, min_lat = xmin, ymin
+        max_lgt, max_lat = xmax, ymax
+        # feedback.pushInfo(f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}") # This will be logged by the next step in effect
 
         query_str_roads = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True)
         osm_roads_geojson_str = get_osm_data(query_str_roads, "osm_roads_full_algo", "LineString", timeout, True)
