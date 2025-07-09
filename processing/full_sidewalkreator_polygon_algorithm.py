@@ -270,10 +270,34 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         input_poly_for_bbox = actual_input_layer
 
-        feedback.pushInfo(self.tr(f"Input polygon CRS for BBOX: {source_crs.description()} (Auth ID: {source_crs.authid()})"))
+        feedback.pushInfo(self.tr(f"Input polygon CRS for BBOX: {source_crs.description()} (Auth ID: {source_crs.authid()})")) # This was the last line logged
 
-        if source_crs.authid() != crs_4326.authid():
-            feedback.pushInfo(self.tr(f"Attempting to reproject input polygon from {source_crs.authid()} to EPSG:4326 for BBOX calculation..."))
+        source_auth_id = "UNKNOWN_SOURCE_AUTH_ID"
+        target_auth_id = "UNKNOWN_TARGET_AUTH_ID"
+        is_different_crs = None
+
+        try:
+            feedback.pushInfo("Attempting to get source_crs.authid()...")
+            source_auth_id = source_crs.authid()
+            feedback.pushInfo(f"source_crs.authid() retrieved: {source_auth_id}")
+
+            feedback.pushInfo("Attempting to get crs_4326.authid()...")
+            target_auth_id = crs_4326.authid()
+            feedback.pushInfo(f"crs_4326.authid() retrieved: {target_auth_id}")
+
+            feedback.pushInfo("Attempting comparison source_auth_id != target_auth_id...")
+            is_different_crs = (source_auth_id != target_auth_id)
+            feedback.pushInfo(f"Comparison result (is_different_crs): {is_different_crs}")
+
+        except Exception as e_crs_check:
+            feedback.pushInfo(f"EXCEPTION during CRS authid check/comparison: {e_crs_check}")
+            # Depending on the exception, we might want to raise or handle differently
+            # For now, let it proceed to the if/else based on potentially incomplete info, or raise
+            raise QgsProcessingException(self.tr(f"Critical error during CRS authid check: {e_crs_check}"))
+
+
+        if is_different_crs:
+            feedback.pushInfo(self.tr(f"CRS is different. Attempting to reproject input polygon from {source_auth_id} to EPSG:4326 for BBOX calculation..."))
             reproject_params_bbox = { 'INPUT': actual_input_layer, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:input_reprojected_for_bbox'}
             sub_feedback_bbox = QgsProcessingMultiStepFeedback(1, feedback)
             sub_feedback_bbox.setCurrentStep(0)
