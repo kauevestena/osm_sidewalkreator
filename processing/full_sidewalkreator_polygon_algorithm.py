@@ -326,53 +326,76 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo(self.tr(f"DEBUG: About to call .extent() on input_poly_for_bbox. Name: {input_poly_for_bbox.name()}, isValid: {input_poly_for_bbox.isValid()}, featureCount: {input_poly_for_bbox.featureCount()}, CRS: {input_poly_for_bbox.crs().authid()}"))
         try:
-            extent_4326 = input_poly_for_bbox.extent() # This was logged as completed
-            feedback.pushInfo(self.tr(f"DEBUG: .extent() call completed. Extent: {extent_4326.toString()}"))
+            extent_4326 = input_poly_for_bbox.extent()
+            feedback.pushInfo(self.tr(f"DEBUG: .extent() call completed. Extent: {extent_4326.toString()}")) # This was the last line seen in the previous successful log
         except Exception as e_extent:
             feedback.pushInfo(self.tr(f"EXCEPTION during .extent() call: {e_extent}"))
             raise QgsProcessingException(self.tr(f"Error getting extent from input polygon layer: {e_extent}"))
 
-        # Granular logging for extent checks
-        feedback.pushInfo(self.tr("DEBUG: Checking extent_4326.isNull()..."))
-        is_null = extent_4326.isNull()
-        feedback.pushInfo(self.tr(f"DEBUG: extent_4326.isNull() is {is_null}"))
+        # Granular logging for extent checks - THIS IS THE SECTION TO RE-APPLY CAREFULLY
+        feedback.pushInfo(self.tr("DEBUG: Detailed extent checks starting..."))
 
-        coords_to_check = []
-        xmin, ymin, xmax, ymax = None, None, None, None # Initialize
+        is_null_check = "N/A"
+        try:
+            feedback.pushInfo(self.tr("DEBUG: Checking extent_4326.isNull()..."))
+            is_null_check = extent_4326.isNull()
+            feedback.pushInfo(self.tr(f"DEBUG: extent_4326.isNull() is {is_null_check}"))
+        except Exception as e_isNull:
+            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.isNull(): {e_isNull}"))
+            raise QgsProcessingException(self.tr(f"Error checking if extent is null: {e_isNull}"))
 
-        feedback.pushInfo(self.tr("DEBUG: Getting xMinimum..."))
-        xmin = extent_4326.xMinimum()
-        coords_to_check.append(xmin)
-        feedback.pushInfo(self.tr(f"DEBUG: xMinimum is {xmin}"))
+        coords_for_finite_check = []
+        xmin_val, ymin_val, xmax_val, ymax_val = None, None, None, None
 
-        feedback.pushInfo(self.tr("DEBUG: Getting yMinimum..."))
-        ymin = extent_4326.yMinimum()
-        coords_to_check.append(ymin)
-        feedback.pushInfo(self.tr(f"DEBUG: yMinimum is {ymin}"))
+        try:
+            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.xMinimum()..."))
+            xmin_val = extent_4326.xMinimum()
+            coords_for_finite_check.append(xmin_val)
+            feedback.pushInfo(self.tr(f"DEBUG: xMinimum is {xmin_val}"))
+        except Exception as e_xmin:
+            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.xMinimum(): {e_xmin}"))
+            # Continue to try and get other coords for logging, but this is likely the hang point if it errors
 
-        feedback.pushInfo(self.tr("DEBUG: Getting xMaximum..."))
-        xmax = extent_4326.xMaximum()
-        coords_to_check.append(xmax)
-        feedback.pushInfo(self.tr(f"DEBUG: xMaximum is {xmax}"))
+        try:
+            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.yMinimum()..."))
+            ymin_val = extent_4326.yMinimum()
+            coords_for_finite_check.append(ymin_val)
+            feedback.pushInfo(self.tr(f"DEBUG: yMinimum is {ymin_val}"))
+        except Exception as e_ymin:
+            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.yMinimum(): {e_ymin}"))
 
-        feedback.pushInfo(self.tr("DEBUG: Getting yMaximum..."))
-        ymax = extent_4326.yMaximum()
-        coords_to_check.append(ymax)
-        feedback.pushInfo(self.tr(f"DEBUG: yMaximum is {ymax}"))
+        try:
+            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.xMaximum()..."))
+            xmax_val = extent_4326.xMaximum()
+            coords_for_finite_check.append(xmax_val)
+            feedback.pushInfo(self.tr(f"DEBUG: xMaximum is {xmax_val}"))
+        except Exception as e_xmax:
+            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.xMaximum(): {e_xmax}"))
 
-        feedback.pushInfo(self.tr("DEBUG: Checking finiteness of coordinates..."))
-        if not all(c is not None for c in [xmin, ymin, xmax, ymax]): # Check if any coordinate retrieval failed (unlikely for QgsRectangle)
-             raise QgsProcessingException(self.tr(f"One or more extent coordinates are None after retrieval. Extent: {extent_4326.toString()}"))
+        try:
+            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.yMaximum()..."))
+            ymax_val = extent_4326.yMaximum()
+            coords_for_finite_check.append(ymax_val)
+            feedback.pushInfo(self.tr(f"DEBUG: yMaximum is {ymax_val}"))
+        except Exception as e_ymax:
+            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.yMaximum(): {e_ymax}"))
 
-        are_all_finite = all(map(math.isfinite, coords_to_check))
-        feedback.pushInfo(self.tr(f"DEBUG: Coordinates are all finite: {are_all_finite}"))
+        # Check if all coordinates were successfully retrieved before mapping
+        if not all(c is not None for c in [xmin_val, ymin_val, xmax_val, ymax_val]):
+             # If any coordinate is None here, it means an exception occurred above but we didn't re-raise immediately.
+             # This check ensures we don't proceed with None values to math.isfinite.
+             raise QgsProcessingException(self.tr(f"One or more extent coordinates could not be retrieved. Check previous EXCEPTION logs. Extent string: {extent_4326.toString()}"))
 
-        if is_null or not are_all_finite:
-            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty."))
+        feedback.pushInfo(self.tr("DEBUG: Checking finiteness of all retrieved coordinates..."))
+        are_all_finite_check = all(map(math.isfinite, coords_for_finite_check))
+        feedback.pushInfo(self.tr(f"DEBUG: Coordinates are all finite: {are_all_finite_check}"))
 
-        min_lgt, min_lat = xmin, ymin
-        max_lgt, max_lat = xmax, ymax
-        # feedback.pushInfo(f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}") # This will be logged by the next step in effect
+        if is_null_check or not are_all_finite_check:
+            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. isNull: {is_null_check}, allFinite: {are_all_finite_check}. Ensure input layer '{input_poly_for_bbox.name()}' has valid geometries."))
+
+        min_lgt, min_lat = xmin_val, ymin_val
+        max_lgt, max_lat = xmax_val, ymax_val
+        feedback.pushInfo(f"Calculated BBOX (EPSG:4326) for query: MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
 
         query_str_roads = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True)
         osm_roads_geojson_str = get_osm_data(query_str_roads, "osm_roads_full_algo", "LineString", timeout, True)
