@@ -398,6 +398,8 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(f"Calculated BBOX (EPSG:4326) for query: MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
 
         query_str_roads = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True)
+        feedback.pushInfo(f"DEBUG: Full Overpass Query being sent:\n{query_str_roads}") # Log the full query
+
         osm_roads_geojson_str = get_osm_data(query_str_roads, "osm_roads_full_algo", "LineString", timeout, True)
         if osm_roads_geojson_str is None: raise QgsProcessingException(self.tr("Failed to fetch OSM road data."))
         osm_roads_layer_4326 = QgsVectorLayer(osm_roads_geojson_str, "osm_roads_dl_4326_full", "ogr")
