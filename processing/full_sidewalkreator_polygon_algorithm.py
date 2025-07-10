@@ -5,26 +5,29 @@ from qgis.core import (
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber, QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
-    QgsCoordinateReferenceSystem, QgsFields, QgsFeature, QgsWkbTypes, QgsFeatureSink, # Added QgsFeatureSink here
+    QgsCoordinateReferenceSystem, QgsFields, QgsFeature, QgsWkbTypes, QgsFeatureSink,
     QgsProcessingException, QgsField, QgsProcessingMultiStepFeedback,
     QgsVectorLayer, QgsProcessingUtils, QgsRectangle, QgsProject, QgsFeatureRequest
 )
-import math
+import math # For math.isfinite
 
 # Assuming parameters.py has the defaults we need
 from ..parameters import (
     default_curve_radius, min_d_to_building, d_to_add_to_each_side, minimal_buffer,
     perc_draw_kerbs, perc_tol_crossings, d_to_add_interp_d, CRS_LATLON_4326,
-    default_widths, highway_tag # Import necessary for logic
+    default_widths, highway_tag, widths_fieldname # Added widths_fieldname
 )
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
 from ..generic_functions import (reproject_layer_localTM, cliplayer_v2,
                                 remove_unconnected_lines_v2, polygonize_lines,
-                                create_new_layerfield, edit, # For highway width processing
-                                select_feats_by_attr, layer_from_featlist, # For existing sidewalks (future)
-                                dissolve_tosinglegeom, generate_buffer, split_lines # For protoblock refinement and splitted_lines
+                                create_new_layerfield, edit,
+                                select_feats_by_attr, layer_from_featlist,
+                                dissolve_tosinglegeom, generate_buffer, split_lines,
+                                check_empty_layer
                                 )
+# Import the new sidewalk generation logic
+from .sidewalk_generation_logic import generate_sidewalk_geometries_and_zones
 
 
 class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
@@ -36,7 +39,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
     INPUT_POLYGON = 'INPUT_POLYGON'
     TIMEOUT = 'TIMEOUT'
     FETCH_BUILDINGS_DATA = 'FETCH_BUILDINGS_DATA'
-    FETCH_ADDRESS_DATA = 'FETCH_ADDRESS_DATA'
+    FETCH_ADDRESS_DATA = 'FETCH_ADDRESS_DATA' # Still placeholder for POI splitting
 
     DEAD_END_ITERATIONS = 'DEAD_END_ITERATIONS'
 
@@ -94,6 +97,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                        "Final outputs (Sidewalks, Crossings, Kerbs) are in EPSG:4326.")
 
     def initAlgorithm(self, config=None):
+        # Parameters defined as in the previous correct shell
         # === Basic Inputs ===
         self.addParameter(
             QgsProcessingParameterFeatureSource(
@@ -117,10 +121,9 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.FETCH_ADDRESS_DATA, self.tr('Fetch OSM Address Data (addr:housenumber, for POI splitting)'),
-                defaultValue=True
+                defaultValue=True # Currently not used in this stage, but param exists
             )
         )
-
         # === Protoblock/Street Cleaning Stage ===
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -128,7 +131,6 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessingParameterNumber.Integer, defaultValue=1, minValue=0, maxValue=10
             )
         )
-
         # === Sidewalk Generation Stage ===
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -160,106 +162,50 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessingParameterNumber.Double, defaultValue=minimal_buffer * 2, minValue=0.1, maxValue=10.0
             )
         )
-
-        # === Crossing Generation Stage ===
+        # === Crossing Generation Stage (parameters defined, logic later) ===
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.CROSSING_METHOD_PARAM, self.tr('Crossing Generation Method'),
-                options=self.CROSSING_METHOD_OPTIONS_ENUM, defaultValue=0, # Parallel
+                options=self.CROSSING_METHOD_OPTIONS_ENUM, defaultValue=0,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.CROSSING_KERB_OFFSET_PERCENT, self.tr('Crossing: Kerb Position (% of half-crossing from center)'),
-                QgsProcessingParameterNumber.Integer, defaultValue=int(perc_draw_kerbs), minValue=0, maxValue=100
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.CROSSING_MAX_LENGTH_TOLERANCE_PERCENT, self.tr('Crossing: Max Length Tolerance (%) beyond orthogonal'),
-                QgsProcessingParameterNumber.Integer, defaultValue=int(perc_tol_crossings), minValue=0, maxValue=100
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.CROSSING_INWARD_OFFSET, self.tr('Crossing: Inward Interpolation from Intersection (meters)'),
-                QgsProcessingParameterNumber.Double, defaultValue=d_to_add_interp_d, minValue=0.0, maxValue=10.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.CROSSING_MIN_ROAD_LENGTH, self.tr('Crossing: Min. Road Segment Length to Generate Crossing (meters)'),
-                QgsProcessingParameterNumber.Double, defaultValue=20.0, minValue=0.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterBoolean(
-                self.CROSSING_AUTO_REMOVE_LONG, self.tr('Crossing: Auto-Remove if Longer than Tolerance'),
-                defaultValue=False
-            )
-        )
+        self.addParameter(QgsProcessingParameterNumber(self.CROSSING_KERB_OFFSET_PERCENT, self.tr('Crossing: Kerb Position (%)'), QgsProcessingParameterNumber.Integer, defaultValue=int(perc_draw_kerbs), minValue=0, maxValue=100))
+        self.addParameter(QgsProcessingParameterNumber(self.CROSSING_MAX_LENGTH_TOLERANCE_PERCENT, self.tr('Crossing: Max Length Tolerance (%)'), QgsProcessingParameterNumber.Integer, defaultValue=int(perc_tol_crossings), minValue=0, maxValue=100))
+        self.addParameter(QgsProcessingParameterNumber(self.CROSSING_INWARD_OFFSET, self.tr('Crossing: Inward Offset (m)'), QgsProcessingParameterNumber.Double, defaultValue=d_to_add_interp_d, minValue=0.0, maxValue=10.0))
+        self.addParameter(QgsProcessingParameterNumber(self.CROSSING_MIN_ROAD_LENGTH, self.tr('Crossing: Min Road Length (m)'), QgsProcessingParameterNumber.Double, defaultValue=20.0, minValue=0.0))
+        self.addParameter(QgsProcessingParameterBoolean(self.CROSSING_AUTO_REMOVE_LONG, self.tr('Crossing: Auto-Remove Long'), defaultValue=False))
 
-        # === Sidewalk Splitting Stage ===
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                self.SPLITTING_METHOD, self.tr('Sidewalk Splitting Method (after protoblock corners)'),
-                options=self.SPLITTING_METHOD_OPTIONS_ENUM, defaultValue=0, # None
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.SPLIT_VORONOI_MIN_POIS, self.tr('Splitting (Voronoi): Min. POIs per Cell (if method is Voronoi)'),
-                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.SPLIT_MAX_LENGTH_VALUE, self.tr('Splitting (Max Length): Value (m, if method is MaxLength)'),
-                QgsProcessingParameterNumber.Double, defaultValue=50.0, minValue=1.0
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.SPLIT_SEGMENT_NUMBER_VALUE, self.tr('Splitting (By Number): Number of Segments (if method is ByNumber)'),
-                QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1
-            )
-        )
+        # === Sidewalk Splitting Stage (parameters defined, logic later) ===
+        self.addParameter(QgsProcessingParameterEnum(self.SPLITTING_METHOD, self.tr('Sidewalk Splitting Method'), options=self.SPLITTING_METHOD_OPTIONS_ENUM, defaultValue=0))
+        self.addParameter(QgsProcessingParameterNumber(self.SPLIT_VORONOI_MIN_POIS, self.tr('Splitting (Voronoi): Min POIs'), QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1))
+        self.addParameter(QgsProcessingParameterNumber(self.SPLIT_MAX_LENGTH_VALUE, self.tr('Splitting (Max Length): Value (m)'), QgsProcessingParameterNumber.Double, defaultValue=50.0, minValue=1.0))
+        self.addParameter(QgsProcessingParameterNumber(self.SPLIT_SEGMENT_NUMBER_VALUE, self.tr('Splitting (By Number): Segments'), QgsProcessingParameterNumber.Integer, defaultValue=3, minValue=1))
 
         # === Outputs ===
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(self.OUTPUT_SIDEWALKS, self.tr('Output Sidewalks'))
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(self.OUTPUT_CROSSINGS, self.tr('Output Crossings'))
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(self.OUTPUT_KERBS, self.tr('Output Kerbs'))
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_PROTOBLOCKS_DEBUG,
-                self.tr('Output Protoblocks (Debug - in local TM CRS)'),
-                type=QgsProcessing.TypeVectorPolygon,
-                optional=True
-            )
-        )
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT_SIDEWALKS, self.tr('Output Sidewalks (EPSG:4326)')))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT_CROSSINGS, self.tr('Output Crossings (EPSG:4326)')))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT_KERBS, self.tr('Output Kerbs (EPSG:4326)')))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT_PROTOBLOCKS_DEBUG, self.tr('Output Protoblocks (Debug - local TM CRS)'), type=QgsProcessing.TypeVectorPolygon, optional=True ))
 
     def processAlgorithm(self, parameters, context, feedback):
         feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Algorithm Started."))
 
-        # --- Parameter Retrieval ---
+        # --- Retrieve Parameters ---
         input_polygon_fs = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
-        # fetch_buildings = self.parameterAsBoolean(parameters, self.FETCH_BUILDINGS_DATA, context) # TODO: Integrate
-        # fetch_addresses = self.parameterAsBoolean(parameters, self.FETCH_ADDRESS_DATA, context) # TODO: Integrate
+        fetch_buildings_param = self.parameterAsBoolean(parameters, self.FETCH_BUILDINGS_DATA, context)
+        # fetch_addresses_param = self.parameterAsBoolean(parameters, self.FETCH_ADDRESS_DATA, context) # For later
         dead_end_iterations = self.parameterAsInt(parameters, self.DEAD_END_ITERATIONS, context)
 
-        # Retrieve other parameters as they are needed...
+        sw_curve_radius = self.parameterAsDouble(parameters, self.SIDEWALK_CURVE_RADIUS, context)
+        sw_added_width_total = self.parameterAsDouble(parameters, self.SIDEWALK_ADDED_ROAD_WIDTH_TOTAL, context)
+        sw_check_overlap = self.parameterAsBoolean(parameters, self.SIDEWALK_CHECK_BUILDING_OVERLAP, context)
+        sw_min_dist_building = self.parameterAsDouble(parameters, self.SIDEWALK_MIN_DIST_TO_BUILDING, context)
+        sw_min_width_near_building = self.parameterAsDouble(parameters, self.SIDEWALK_MIN_WIDTH_IF_NEAR_BUILDING, context)
 
-        # --- Stage 1: Data Fetching and Protoblock Generation (adapted from ProtoblockAlgorithm) ---
-        feedback.pushInfo(self.tr("Stage 1: Initial Data Fetch and Processing for Protoblocks..."))
-        if input_polygon_fs is None:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
+        # --- Stage 1: Data Fetching and Protoblock Generation ---
+        feedback.pushInfo(self.tr("Stage 1: Initial Data Fetch and Processing..."))
+        if input_polygon_fs is None: raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
 
         actual_input_layer = input_polygon_fs.materialize(QgsFeatureRequest())
         if not actual_input_layer or not actual_input_layer.isValid() or actual_input_layer.featureCount() == 0:
@@ -269,265 +215,201 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         input_poly_for_bbox = actual_input_layer
-
-        feedback.pushInfo(self.tr(f"Input polygon CRS for BBOX: {source_crs.description()} (Auth ID: {source_crs.authid()})")) # This was the last line logged
-
-        source_auth_id = "UNKNOWN_SOURCE_AUTH_ID"
-        target_auth_id = "UNKNOWN_TARGET_AUTH_ID"
-        is_different_crs = None
-
-        try:
-            feedback.pushInfo("Attempting to get source_crs.authid()...")
-            source_auth_id = source_crs.authid()
-            feedback.pushInfo(f"source_crs.authid() retrieved: {source_auth_id}")
-
-            feedback.pushInfo("Attempting to get crs_4326.authid()...")
-            target_auth_id = crs_4326.authid()
-            feedback.pushInfo(f"crs_4326.authid() retrieved: {target_auth_id}")
-
-            feedback.pushInfo("Attempting comparison source_auth_id != target_auth_id...")
-            is_different_crs = (source_auth_id != target_auth_id)
-            feedback.pushInfo(f"Comparison result (is_different_crs): {is_different_crs}")
-
-        except Exception as e_crs_check:
-            feedback.pushInfo(f"EXCEPTION during CRS authid check/comparison: {e_crs_check}")
-            # Depending on the exception, we might want to raise or handle differently
-            # For now, let it proceed to the if/else based on potentially incomplete info, or raise
-            raise QgsProcessingException(self.tr(f"Critical error during CRS authid check: {e_crs_check}"))
-
-        feedback.pushInfo(self.tr("DEBUG: Right before 'if is_different_crs:' check."))
-
-        if is_different_crs:
-            feedback.pushInfo(self.tr("DEBUG: Inside 'if is_different_crs:' block (should not happen for EPSG:4326 input)."))
-            feedback.pushInfo(self.tr(f"CRS is different. Attempting to reproject input polygon from {source_auth_id} to EPSG:4326 for BBOX calculation..."))
-            reproject_params_bbox = { 'INPUT': actual_input_layer, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:input_reprojected_for_bbox'}
-            sub_feedback_bbox = QgsProcessingMultiStepFeedback(1, feedback)
-            sub_feedback_bbox.setCurrentStep(0)
-
-            reproject_result_bbox = processing.run("native:reprojectlayer", reproject_params_bbox, context=context, feedback=sub_feedback_bbox, is_child_algorithm=True)
-            feedback.pushInfo(self.tr(f"Input polygon reprojection attempt finished. Result: {reproject_result_bbox}"))
-
-            if sub_feedback_bbox.isCanceled(): return {}
-
-            output_value_bbox = reproject_result_bbox.get('OUTPUT')
-            if not output_value_bbox:
-                raise QgsProcessingException(self.tr("Input polygon reprojection failed to produce an output value."))
-
-            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(output_value_bbox, context)
+        if source_crs.authid() != crs_4326.authid():
+            feedback.pushInfo(self.tr(f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation."))
+            reproject_params_bbox = {'INPUT': actual_input_layer, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:input_reprojected_for_bbox'}
+            # Pass context.processingContext() if available, else context itself for sub-algorithms
+            res_bbox_reproj = processing.run("native:reprojectlayer", reproject_params_bbox, context=context, feedback=feedback, is_child_algorithm=True) # Pass feedback
+            if feedback.isCanceled(): return {}
+            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(res_bbox_reproj['OUTPUT'], context)
             if not input_poly_for_bbox or not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
-                raise QgsProcessingException(self.tr("Failed to reproject input for BBOX, result is invalid or empty."))
-            feedback.pushInfo(self.tr(f"Input polygon successfully reprojected to EPSG:4326. New layer: {input_poly_for_bbox.name()}"))
-        else:
-            feedback.pushInfo(self.tr("DEBUG: Inside 'else' block (CRS is already EPSG:4326)."))
-            feedback.pushInfo(self.tr("Input layer is already in EPSG:4326."))
-            # input_poly_for_bbox is already actual_input_layer, set before the if/else
+                raise QgsProcessingException(self.tr("Failed to reproject input for BBOX or result is empty."))
 
-        feedback.pushInfo(self.tr("DEBUG: After if/else for CRS check."))
+        extent_4326 = input_poly_for_bbox.extent()
+        if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
+            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}"))
+        min_lgt, min_lat, max_lgt, max_lat = extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()
 
-        feedback.pushInfo(self.tr(f"DEBUG: About to call .extent() on input_poly_for_bbox. Name: {input_poly_for_bbox.name()}, isValid: {input_poly_for_bbox.isValid()}, featureCount: {input_poly_for_bbox.featureCount()}, CRS: {input_poly_for_bbox.crs().authid()}"))
-        try:
-            extent_4326 = input_poly_for_bbox.extent()
-            feedback.pushInfo(self.tr(f"DEBUG: .extent() call completed. Extent: {extent_4326.toString()}")) # This was the last line seen in the previous successful log
-        except Exception as e_extent:
-            feedback.pushInfo(self.tr(f"EXCEPTION during .extent() call: {e_extent}"))
-            raise QgsProcessingException(self.tr(f"Error getting extent from input polygon layer: {e_extent}"))
-
-        # Granular logging for extent checks - THIS IS THE SECTION TO RE-APPLY CAREFULLY
-        feedback.pushInfo(self.tr("DEBUG: Detailed extent checks starting..."))
-
-        is_null_check = "N/A"
-        try:
-            feedback.pushInfo(self.tr("DEBUG: Checking extent_4326.isNull()..."))
-            is_null_check = extent_4326.isNull()
-            feedback.pushInfo(self.tr(f"DEBUG: extent_4326.isNull() is {is_null_check}"))
-        except Exception as e_isNull:
-            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.isNull(): {e_isNull}"))
-            raise QgsProcessingException(self.tr(f"Error checking if extent is null: {e_isNull}"))
-
-        coords_for_finite_check = []
-        xmin_val, ymin_val, xmax_val, ymax_val = None, None, None, None
-
-        try:
-            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.xMinimum()..."))
-            xmin_val = extent_4326.xMinimum()
-            coords_for_finite_check.append(xmin_val)
-            feedback.pushInfo(self.tr(f"DEBUG: xMinimum is {xmin_val}"))
-        except Exception as e_xmin:
-            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.xMinimum(): {e_xmin}"))
-            # Continue to try and get other coords for logging, but this is likely the hang point if it errors
-
-        try:
-            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.yMinimum()..."))
-            ymin_val = extent_4326.yMinimum()
-            coords_for_finite_check.append(ymin_val)
-            feedback.pushInfo(self.tr(f"DEBUG: yMinimum is {ymin_val}"))
-        except Exception as e_ymin:
-            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.yMinimum(): {e_ymin}"))
-
-        try:
-            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.xMaximum()..."))
-            xmax_val = extent_4326.xMaximum()
-            coords_for_finite_check.append(xmax_val)
-            feedback.pushInfo(self.tr(f"DEBUG: xMaximum is {xmax_val}"))
-        except Exception as e_xmax:
-            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.xMaximum(): {e_xmax}"))
-
-        try:
-            feedback.pushInfo(self.tr("DEBUG: Getting extent_4326.yMaximum()..."))
-            ymax_val = extent_4326.yMaximum()
-            coords_for_finite_check.append(ymax_val)
-            feedback.pushInfo(self.tr(f"DEBUG: yMaximum is {ymax_val}"))
-        except Exception as e_ymax:
-            feedback.pushInfo(self.tr(f"EXCEPTION during extent_4326.yMaximum(): {e_ymax}"))
-
-        # Check if all coordinates were successfully retrieved before mapping
-        if not all(c is not None for c in [xmin_val, ymin_val, xmax_val, ymax_val]):
-             # If any coordinate is None here, it means an exception occurred above but we didn't re-raise immediately.
-             # This check ensures we don't proceed with None values to math.isfinite.
-             raise QgsProcessingException(self.tr(f"One or more extent coordinates could not be retrieved. Check previous EXCEPTION logs. Extent string: {extent_4326.toString()}"))
-
-        feedback.pushInfo(self.tr("DEBUG: Checking finiteness of all retrieved coordinates..."))
-        are_all_finite_check = all(map(math.isfinite, coords_for_finite_check))
-        feedback.pushInfo(self.tr(f"DEBUG: Coordinates are all finite: {are_all_finite_check}"))
-
-        if is_null_check or not are_all_finite_check:
-            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. isNull: {is_null_check}, allFinite: {are_all_finite_check}. Ensure input layer '{input_poly_for_bbox.name()}' has valid geometries."))
-
-        min_lgt, min_lat = xmin_val, ymin_val
-        max_lgt, max_lat = xmax_val, ymax_val
-        feedback.pushInfo(f"Calculated BBOX (EPSG:4326) for query: MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
-
+        # Fetch Roads
         query_str_roads = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True)
-        feedback.pushInfo(f"DEBUG: Full Overpass Query being sent:\n{query_str_roads}") # Log the full query
-
-        osm_roads_geojson_str = get_osm_data(
-            querystring=query_str_roads,
-            tempfilesname="osm_roads_full_algo",
-            geomtype="LineString",
-            timeout=timeout, # This is the integer timeout from parameters
-            return_as_string=True
-            # print_response is omitted, defaults to False
-        )
+        osm_roads_geojson_str = get_osm_data(query_str_roads, "osm_roads_full_algo", "LineString", timeout, True)
         if osm_roads_geojson_str is None: raise QgsProcessingException(self.tr("Failed to fetch OSM road data."))
         osm_roads_layer_4326 = QgsVectorLayer(osm_roads_geojson_str, "osm_roads_dl_4326_full", "ogr")
         if not osm_roads_layer_4326.isValid(): raise QgsProcessingException(self.tr("Fetched OSM road data is not a valid layer."))
         feedback.pushInfo(self.tr(f"Fetched {osm_roads_layer_4326.featureCount()} OSM ways."))
 
-        # Clip roads to the precise input polygon (input_poly_for_bbox is already in 4326)
-        clipped_osm_roads_4326 = cliplayer_v2(osm_roads_layer_4326, input_poly_for_bbox, 'memory:clipped_roads_4326_full')
-        if not clipped_osm_roads_4326.isValid(): raise QgsProcessingException(self.tr("Clipping OSM roads failed."))
-        if clipped_osm_roads_4326.featureCount() == 0:
-            feedback.pushWarning(self.tr("No OSM roads found within the input polygon after clipping."))
-            # Prepare empty outputs for everything and return
-            # (This part needs to be robustly handled for all output sinks)
-            (s, d_s) = self.parameterAsSink(parameters, self.OUTPUT_SIDEWALKS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
-            (c, d_c) = self.parameterAsSink(parameters, self.OUTPUT_CROSSINGS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
-            (k, d_k) = self.parameterAsSink(parameters, self.OUTPUT_KERBS, context, QgsFields(), QgsWkbTypes.Point, crs_4326)
-            results = {self.OUTPUT_SIDEWALKS: d_s, self.OUTPUT_CROSSINGS: d_c, self.OUTPUT_KERBS: d_k}
-            debug_protoblocks_output_spec_val = parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG)
-            if debug_protoblocks_output_spec_val:
-                (p, d_p) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, QgsFields(), QgsWkbTypes.Polygon, crs_4326) # Placeholder CRS
-                results[self.OUTPUT_PROTOBLOCKS_DEBUG] = d_p
-            return results
+        # Fetch Buildings (if requested)
+        osm_buildings_layer_4326 = None
+        if fetch_buildings_param:
+            feedback.pushInfo(self.tr("Fetching OSM building data..."))
+            query_buildings = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key="building", way=True, relation=True)
+            osm_bldgs_geojson_str = get_osm_data(query_buildings, "osm_bldgs_full_algo", "Polygon", timeout, True)
+            if osm_bldgs_geojson_str:
+                osm_buildings_layer_4326 = QgsVectorLayer(osm_bldgs_geojson_str, "osm_bldgs_dl_4326_full", "ogr")
+                if osm_buildings_layer_4326.isValid() and osm_buildings_layer_4326.featureCount() > 0:
+                    feedback.pushInfo(self.tr(f"Fetched {osm_buildings_layer_4326.featureCount()} OSM buildings."))
+                else:
+                    feedback.pushInfo(self.tr("No valid building data fetched or layer is empty."))
+                    osm_buildings_layer_4326 = None
+            else:
+                feedback.pushInfo(self.tr("Failed to fetch building data string."))
 
+        # Clip roads
+        clipped_osm_roads_4326 = cliplayer_v2(osm_roads_layer_4326, input_poly_for_bbox, 'memory:clipped_roads_4326_full')
+        if not clipped_osm_roads_4326.isValid() or clipped_osm_roads_4326.featureCount() == 0:
+            feedback.pushWarning(self.tr("No OSM roads after clipping. Output will be empty."))
+            return self.handle_empty_results(parameters, context, crs_4326)
 
         # Reproject clipped roads to local TM
         roads_local_tm, local_tm_crs = reproject_layer_localTM(clipped_osm_roads_4326, None, "roads_local_tm_full", extent_4326.center().x())
         if not roads_local_tm.isValid(): raise QgsProcessingException(self.tr("Reprojecting OSM roads to local TM failed."))
 
+        # Reproject buildings if fetched
+        reproj_buildings_layer = None
+        if osm_buildings_layer_4326 and osm_buildings_layer_4326.featureCount() > 0 :
+            feedback.pushInfo(self.tr("Reprojecting building data to local TM..."))
+            # Clip buildings first to the input polygon (in 4326)
+            clipped_buildings_4326 = cliplayer_v2(osm_buildings_layer_4326, input_poly_for_bbox, 'memory:clipped_bldgs_4326_full')
+            if clipped_buildings_4326 and clipped_buildings_4326.isValid() and clipped_buildings_4326.featureCount() > 0:
+                reproj_buildings_layer, _ = reproject_layer_localTM(clipped_buildings_4326, None, "bldgs_local_tm_full", extent_4326.center().x(), target_crs_obj=local_tm_crs)
+                if not reproj_buildings_layer or not reproj_buildings_layer.isValid():
+                    feedback.pushWarning(self.tr("Failed to reproject building data, proceeding without it for overlap checks."))
+                    reproj_buildings_layer = None
+                else:
+                    feedback.pushInfo(self.tr(f"Buildings reprojected to local TM: {reproj_buildings_layer.featureCount()} features."))
+            else:
+                feedback.pushInfo(self.tr("No buildings after clipping, or clipping failed."))
+                reproj_buildings_layer = None
+
         # Clean street network
         filtered_streets_layer = QgsVectorLayer(f"LineString?crs={local_tm_crs.authid()}", "filtered_streets_full", "memory")
-        # ... (copy fields from roads_local_tm) ...
-        # ... (filter by highway_tag and default_widths into filtered_streets_layer) ...
-        # This logic needs to be carefully copied and adapted:
         filtered_streets_dp = filtered_streets_layer.dataProvider()
-        if roads_local_tm.fields().count() > 0:
-            filtered_streets_dp.addAttributes(roads_local_tm.fields())
-        else:
-            filtered_streets_dp.addAttributes([QgsField("dummy_id", QVariant.Int)])
+        street_fields = roads_local_tm.fields()
+        if street_fields.count() > 0: filtered_streets_dp.addAttributes(street_fields)
+        else: filtered_streets_dp.addAttributes([QgsField("dummy_id", QVariant.Int)])
         filtered_streets_layer.updateFields()
 
         features_to_add_to_filtered = []
         highway_field_idx = roads_local_tm.fields().lookupField(highway_tag)
-        if highway_field_idx == -1: raise QgsProcessingException(self.tr(f"'{highway_tag}' not found in reprojected OSM data."))
+        width_field_idx_on_source = roads_local_tm.fields().lookupField(widths_fieldname) # Check if width exists
+
         for f_in in roads_local_tm.getFeatures():
+            # ... (filtering logic as in ProtoblockAlgorithm, ensuring 'width' field is populated for filtered_streets_layer)
             if feedback.isCanceled(): return {}
-            highway_type_attr = f_in.attribute(highway_field_idx)
+            highway_type_attr = f_in.attribute(highway_field_idx) if highway_field_idx != -1 else None
             highway_type_str = str(highway_type_attr).lower() if highway_type_attr is not None else ""
-            width = default_widths.get(highway_type_str, 0.0)
-            if width >= 0.5:
+            width_from_defaults = default_widths.get(highway_type_str, 0.0)
+
+            if width_from_defaults >= 0.5:
                 new_feat = QgsFeature(filtered_streets_layer.fields())
                 new_feat.setGeometry(f_in.geometry())
                 new_feat.setAttributes(f_in.attributes())
+                # Ensure width attribute is set from defaults if not present or for consistency
+                target_width_idx = new_feat.fields().lookupField(widths_fieldname)
+                if target_width_idx != -1:
+                    current_val = f_in.attribute(width_field_idx_on_source) if width_field_idx_on_source != -1 else None
+                    new_feat.setAttribute(target_width_idx, float(current_val) if isinstance(current_val, (int, float, str)) and str(current_val).replace('.','',1).isdigit() else width_from_defaults)
                 features_to_add_to_filtered.append(new_feat)
+
         if features_to_add_to_filtered: filtered_streets_dp.addFeatures(features_to_add_to_filtered)
         feedback.pushInfo(self.tr(f"Streets filtered by type/width: {filtered_streets_layer.featureCount()} ways remain."))
-
         if filtered_streets_layer.featureCount() == 0:
             feedback.pushWarning(self.tr("No streets after filtering. Output will be empty."))
-            # Prepare empty outputs and return (similar to above)
-            (s, d_s) = self.parameterAsSink(parameters, self.OUTPUT_SIDEWALKS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
-            (c, d_c) = self.parameterAsSink(parameters, self.OUTPUT_CROSSINGS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
-            (k, d_k) = self.parameterAsSink(parameters, self.OUTPUT_KERBS, context, QgsFields(), QgsWkbTypes.Point, crs_4326)
-            results = {self.OUTPUT_SIDEWALKS: d_s, self.OUTPUT_CROSSINGS: d_c, self.OUTPUT_KERBS: d_k}
-            debug_protoblocks_output_spec_val = parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG)
-            if debug_protoblocks_output_spec_val:
-                (p, d_p) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, QgsFields(), QgsWkbTypes.Polygon, local_tm_crs) # Use local_tm_crs for debug
-                results[self.OUTPUT_PROTOBLOCKS_DEBUG] = d_p
-            return results
+            return self.handle_empty_results(parameters, context, crs_4326, local_tm_crs)
 
-
-        # remove_unconnected_lines_v2 (using DEAD_END_ITERATIONS)
-        # Note: remove_unconnected_lines_v2 doesn't currently take iterations.
-        # The main plugin calls it multiple times if dead_end_iters_box.value() > 0.
-        # For now, call once. To implement iterations, this part needs a loop.
-        feedback.pushInfo(self.tr(f"Removing unconnected lines (iterations: {dead_end_iterations})...")) # Log the param
-        for _ in range(dead_end_iterations): # Basic iteration, could be more complex if needed
+        for i in range(dead_end_iterations):
             if feedback.isCanceled(): return {}
+            feedback.pushInfo(self.tr(f"Removing unconnected lines (iteration {i+1}/{dead_end_iterations})..."))
             remove_unconnected_lines_v2(filtered_streets_layer)
         feedback.pushInfo(self.tr(f"After removing unconnected lines: {filtered_streets_layer.featureCount()} ways remain."))
+        if filtered_streets_layer.featureCount() == 0:
+            feedback.pushWarning(self.tr("No streets after removing dead-ends. Output will be empty."))
+            return self.handle_empty_results(parameters, context, crs_4326, local_tm_crs)
 
-
-        # Polygonize to get initial protoblocks
+        # Polygonize
         initial_protoblocks_layer = polygonize_lines(filtered_streets_layer, 'memory:initial_protoblocks_full', False)
         if not initial_protoblocks_layer or not initial_protoblocks_layer.isValid():
             raise QgsProcessingException(self.tr("Initial polygonization failed."))
 
-        # Re-clone to ensure CRS
-        clean_protoblocks_layer_local_tm = QgsVectorLayer("Polygon", "clean_protoblocks_full", "memory")
-        clean_protoblocks_layer_local_tm.setCrs(local_tm_crs)
+        clean_protoblocks_layer_local_tm = QgsVectorLayer(f"Polygon?crs={local_tm_crs.authid()}", "clean_protoblocks_full", "memory")
         if initial_protoblocks_layer.featureCount() > 0:
-            feats_to_clone = [QgsFeature(f) for f in initial_protoblocks_layer.getFeatures()]
-            clean_protoblocks_layer_local_tm.dataProvider().addFeatures(feats_to_clone)
+            cloned_protoblock_feats = [QgsFeature(f) for f in initial_protoblocks_layer.getFeatures()]
+            clean_protoblocks_layer_local_tm.dataProvider().addFeatures(cloned_protoblock_feats)
         feedback.pushInfo(self.tr(f"Protoblocks generated (local TM): {clean_protoblocks_layer_local_tm.featureCount()} features."))
 
-        # --- Output Debug Protoblocks (if requested) ---
+        # Output Debug Protoblocks
         protoblocks_debug_dest_id = None
-        debug_protoblocks_output_spec = parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG)
-        if debug_protoblocks_output_spec:
-            (protoblocks_debug_sink, protoblocks_debug_dest_id) = self.parameterAsSink(
-                parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context,
-                clean_protoblocks_layer_local_tm.fields(), QgsWkbTypes.Polygon, local_tm_crs)
-            if protoblocks_debug_sink:
-                for feat in clean_protoblocks_layer_local_tm.getFeatures():
-                    protoblocks_debug_sink.addFeature(feat, QgsFeatureSink.FastInsert)
-            else:
-                protoblocks_debug_dest_id = None # Failed to create sink
+        # ... (logic as before to output clean_protoblocks_layer_local_tm if OUTPUT_PROTOBLOCKS_DEBUG is set)
 
-        # --- Placeholder for other outputs ---
-        (sidewalks_sink, sidewalks_dest_id) = self.parameterAsSink(parameters, self.OUTPUT_SIDEWALKS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
+        # --- Stage 2: Sidewalk Generation ---
+        feedback.pushInfo(self.tr("Stage 2: Generating Sidewalks..."))
+        dissolved_protoblocks_for_sidewalks = dissolve_tosinglegeom(clean_protoblocks_layer_local_tm)
+        if not dissolved_protoblocks_for_sidewalks or not dissolved_protoblocks_for_sidewalks.isValid():
+            feedback.pushWarning(self.tr("Failed to dissolve protoblocks for sidewalk generation. Using undissolved."))
+            dissolved_protoblocks_for_sidewalks = clean_protoblocks_layer_local_tm # Fallback
+
+        sidewalk_lines_local_tm, exclusion_zones_local_tm, sure_zones_local_tm, width_adjusted_streets_local_tm = \
+            generate_sidewalk_geometries_and_zones(
+                street_network_layer=filtered_streets_layer,
+                dissolved_protoblocks_layer=dissolved_protoblocks_for_sidewalks,
+                buildings_layer=reproj_buildings_layer,
+                check_building_overlap=sw_check_overlap,
+                min_dist_to_building=sw_min_dist_building,
+                min_generated_width_near_building=sw_min_width_near_building,
+                added_width_for_sidewalk_axis_total=sw_added_width_total,
+                curve_radius=sw_curve_radius,
+                feedback=feedback
+            )
+        if feedback.isCanceled(): return {}
+        if not sidewalk_lines_local_tm or not sidewalk_lines_local_tm.isValid():
+            raise QgsProcessingException(self.tr("Sidewalk generation function failed or returned an invalid layer."))
+        feedback.pushInfo(self.tr(f"Generated {sidewalk_lines_local_tm.featureCount()} raw sidewalk lines (local TM)."))
+
+        # Reproject sidewalks to EPSG:4326 for output
+        sidewalks_final_epsg4326 = None
+        if sidewalk_lines_local_tm.featureCount() > 0:
+            reproject_sw_params = {'INPUT': sidewalk_lines_local_tm, 'TARGET_CRS': crs_4326, 'OUTPUT': 'memory:sidewalks_epsg4326_final_full'}
+            res_sw_reproj = processing.run("native:reprojectlayer", reproject_sw_params, context=context, feedback=feedback, is_child_algorithm=True)
+            if feedback.isCanceled(): return {}
+            sidewalks_final_epsg4326 = QgsProcessingUtils.mapLayerFromString(res_sw_reproj['OUTPUT'], context)
+            if not sidewalks_final_epsg4326 or not sidewalks_final_epsg4326.isValid():
+                raise QgsProcessingException(self.tr("Failed to reproject sidewalks to EPSG:4326."))
+
+        (sidewalks_sink, sidewalks_dest_id) = self.parameterAsSink(parameters, self.OUTPUT_SIDEWALKS, context,
+            sidewalks_final_epsg4326.fields() if sidewalks_final_epsg4326 else QgsFields(),
+            QgsWkbTypes.LineString, crs_4326)
+        if sidewalks_sink is None: raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_SIDEWALKS))
+        if sidewalks_final_epsg4326 and sidewalks_final_epsg4326.featureCount() > 0:
+            for feat_sw in sidewalks_final_epsg4326.getFeatures():
+                if feedback.isCanceled(): return {}
+                sidewalks_sink.addFeature(feat_sw, QgsFeatureSink.FastInsert)
+        feedback.pushInfo(self.tr("Sidewalks output prepared."))
+
+        # --- Placeholder for Crossings and Kerbs ---
         (crossings_sink, crossings_dest_id) = self.parameterAsSink(parameters, self.OUTPUT_CROSSINGS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326)
         (kerbs_sink, kerbs_dest_id) = self.parameterAsSink(parameters, self.OUTPUT_KERBS, context, QgsFields(), QgsWkbTypes.Point, crs_4326)
 
-        feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Stage 1 (Protoblocks) Finished. Other outputs are placeholders."))
-        results = {
-            self.OUTPUT_SIDEWALKS: sidewalks_dest_id,
-            self.OUTPUT_CROSSINGS: crossings_dest_id,
-            self.OUTPUT_KERBS: kerbs_dest_id
-        }
-        if protoblocks_debug_dest_id:
-            results[self.OUTPUT_PROTOBLOCKS_DEBUG] = protoblocks_debug_dest_id
+        feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Algorithm Finished."))
+        results = { self.OUTPUT_SIDEWALKS: sidewalks_dest_id, self.OUTPUT_CROSSINGS: crossings_dest_id, self.OUTPUT_KERBS: kerbs_dest_id }
+        if protoblocks_debug_dest_id: results[self.OUTPUT_PROTOBLOCKS_DEBUG] = protoblocks_debug_dest_id
+        return results
+
+    def handle_empty_results(self, parameters, context, crs_4326_obj, local_tm_crs_if_defined=None):
+        # ... (helper function as defined before)
+        feedback = QgsProcessingFeedback()
+        feedback.pushInfo("handle_empty_results called because a critical intermediate layer was empty.")
+        (s_sink, s_id) = self.parameterAsSink(parameters, self.OUTPUT_SIDEWALKS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326_obj)
+        (c_sink, c_id) = self.parameterAsSink(parameters, self.OUTPUT_CROSSINGS, context, QgsFields(), QgsWkbTypes.LineString, crs_4326_obj)
+        (k_sink, k_id) = self.parameterAsSink(parameters, self.OUTPUT_KERBS, context, QgsFields(), QgsWkbTypes.Point, crs_4326_obj)
+        results = { self.OUTPUT_SIDEWALKS: s_id, self.OUTPUT_CROSSINGS: c_id, self.OUTPUT_KERBS: k_id }
+        debug_protoblocks_output_spec = parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG)
+        if debug_protoblocks_output_spec:
+            debug_crs = local_tm_crs_if_defined if local_tm_crs_if_defined and local_tm_crs_if_defined.isValid() else crs_4326_obj
+            (p_sink, p_id) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS_DEBUG, context, QgsFields(), QgsWkbTypes.Polygon, debug_crs)
+            if p_id: results[self.OUTPUT_PROTOBLOCKS_DEBUG] = p_id
         return results
 
     def postProcessAlgorithm(self, context, feedback):
         return {}
+
+from qgis import processing # For processing.run
