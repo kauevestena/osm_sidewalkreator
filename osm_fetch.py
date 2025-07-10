@@ -143,7 +143,7 @@ def get_osm_data(
     while True:
         # TODO: ensure sucess
         #   (the try statement is an improvement already)
-        print(f"[osm_fetch DEBUG] Value of 'timeout' before requests.get: {timeout}, type: {type(timeout)}") # DEBUG PRINT
+        # print(f"[osm_fetch DEBUG] Value of 'timeout' before requests.get: {timeout}, type: {type(timeout)}") # REMOVED DEBUG PRINT
         try:
             response = requests.get(
                 overpass_url, params={"data": querystring}, timeout=timeout
