@@ -5,9 +5,9 @@ from qgis.core import (
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterNumber, QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
-    QgsCoordinateReferenceSystem, QgsFields, QgsFeature, QgsWkbTypes,
+    QgsCoordinateReferenceSystem, QgsFields, QgsFeature, QgsWkbTypes, QgsFeatureSink, # Added QgsFeatureSink here
     QgsProcessingException, QgsField, QgsProcessingMultiStepFeedback,
-    QgsVectorLayer, QgsProcessingUtils, QgsRectangle, QgsProject, QgsFeatureRequest # Added QgsFeatureRequest
+    QgsVectorLayer, QgsProcessingUtils, QgsRectangle, QgsProject, QgsFeatureRequest
 )
 import math
 
