@@ -243,7 +243,13 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         if fetch_buildings_param:
             feedback.pushInfo(self.tr("Fetching OSM building data..."))
             query_buildings = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt, interest_key="building", way=True, relation=True)
-            osm_bldgs_geojson_str = get_osm_data(query_buildings, "osm_bldgs_full_algo", "Polygon", timeout, True)
+            osm_bldgs_geojson_str = get_osm_data(
+                querystring=query_buildings,
+                tempfilesname="osm_bldgs_full_algo",
+                geomtype="Polygon",
+                timeout=timeout,
+                return_as_string=True
+            )
             if osm_bldgs_geojson_str:
                 osm_buildings_layer_4326 = QgsVectorLayer(osm_bldgs_geojson_str, "osm_bldgs_dl_4326_full", "ogr")
                 if osm_buildings_layer_4326.isValid() and osm_buildings_layer_4326.featureCount() > 0:
