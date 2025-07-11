@@ -54,13 +54,13 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     # Removed group(self) and groupId(self) to place algorithm directly under provider
 
     def shortHelpString(self):
-        return self.tr("Generates protoblocks by fetching and processing OSM street data within the extent of an input polygon layer.")
+        return self.tr("Fetches OSM street data for an input polygon area, processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. Output is in EPSG:4326.")
 
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT_POLYGON,
-                self.tr('Input Area Polygon Layer'),
+                self.tr('Input Area Polygon Layer (EPSG:4326 recommended)'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -77,7 +77,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_PROTOBLOCKS,
-                self.tr('Output Protoblocks')
+                self.tr('Output Protoblocks (EPSG:4326)')
             )
         )
 

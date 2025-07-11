@@ -40,39 +40,13 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         return self.tr('Generate Protoblocks from OSM Data in Bounding Box')
 
     def shortHelpString(self):
-        return self.tr("Fetches OSM street data for a specified bounding box, processes it, and generates protoblock polygons. Output is in EPSG:4326.")
-
-from qgis.core import QgsProcessingParameterExtent # Import for extent parameter
-
-class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
-    """
-    Generates protoblocks by fetching OSM street data within a given
-    bounding box, processing it, and then polygonizing the street network.
-    """
-    EXTENT = 'EXTENT' # Changed from individual BBOX parameters
-    TIMEOUT = 'TIMEOUT'
-    OUTPUT_PROTOBLOCKS = 'OUTPUT_PROTOBLOCKS'
-
-    def tr(self, string):
-        return QCoreApplication.translate('Processing', string)
-
-    def createInstance(self):
-        return ProtoblockBboxAlgorithm()
-
-    def name(self):
-        return 'generateprotoblocksfrombbox'
-
-    def displayName(self):
-        return self.tr('Generate Protoblocks from OSM Data in Bounding Box')
-
-    def shortHelpString(self):
-        return self.tr("Fetches OSM street data for a specified extent (bounding box), processes it, and generates protoblock polygons. Output is in EPSG:4326.")
+        return self.tr("Fetches OSM street data for a given BBOX (extent), processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. The input extent should ideally be in EPSG:4326. Output is in EPSG:4326.")
 
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterExtent(
                 self.EXTENT,
-                self.tr('Extent for OSM Data Download'),
+                self.tr('Area of Interest (Bounding Box Extent)'),
                 # Optional: defaultValue=None, optional=False by default
             )
         )
