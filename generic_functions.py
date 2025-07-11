@@ -3,7 +3,7 @@
 from PyQt5.QtCore import QVariant
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
-from processing.tools import dataobjects
+# from processing.tools import dataobjects # Moved into function
 from qgis.core import (QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit,
                        QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer,
                        QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector,
@@ -12,7 +12,7 @@ from qgis.core import (QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject,
 # from qgis.core import Qgis
 from qgis.core import QgsProcessingContext # Qgis was already imported
 
-from processing.gui.AlgorithmExecutor import execute_in_place
+# from processing.gui.AlgorithmExecutor import execute_in_place # Not used in this file
 
 import os, json #, random
 from math import isclose,pi
@@ -267,6 +267,7 @@ def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],
     parameter_dict = {'INPUT': input_layer,'PREDICATE':predicate,'INTERSECT':compared_layer, 'OUTPUT': outputlayer}
 
     if dontcheckinvalid:
+        from processing.tools import dataobjects # Import here
         # thx: https://gis.stackexchange.com/a/307618
         context = dataobjects.createContext()
         context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)

@@ -9,7 +9,7 @@ from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
                        QgsVectorLayer, QgsProcessingUtils,
                        QgsCoordinateReferenceSystem, QgsFields,
                        QgsFeature, QgsRectangle, QgsWkbTypes,
-                       QgsProcessingException, QgsField, QgsCoordinateTransform) # Added QgsCoordinateTransform
+                       QgsProcessingException, QgsField, QgsCoordinateTransform, QgsProcessingParameterExtent) # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform
 import math
 
 # Import necessary functions from other plugin modules
@@ -44,7 +44,7 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(
-            QgsProcessingParameterExtent(
+            QgsProcessingParameterExtent( # Now correctly imported at the top
                 self.EXTENT,
                 self.tr('Area of Interest (Bounding Box Extent)'),
                 # Optional: defaultValue=None, optional=False by default
@@ -263,3 +263,4 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         return {}
 
 from qgis import processing # For processing.run
+# Removed redundant QgsProcessingParameterExtent import from here as it's now at the top
