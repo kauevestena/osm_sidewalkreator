@@ -28,7 +28,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 # Utility functions from the plugin
-from ..osm_fetch import get_osm_data, get_osm_data_from_custom_query # for fetching OSM data
+from ..osm_fetch import get_osm_data # for fetching OSM data
 from .. import parameters # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
