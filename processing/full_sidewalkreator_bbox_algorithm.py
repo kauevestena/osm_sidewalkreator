@@ -32,7 +32,7 @@ from ..osm_fetch import get_osm_data # for fetching OSM data
 from .. import parameters # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
-    polygonize_lines, reproject_layer_localTM, reproject_layer_EPSG4326,
+    polygonize_lines, reproject_layer_localTM, reproject_layer,
     create_local_tm_crs, get_input_polygon_details, log_plugin_message,
     cliplayer_v2, clean_street_network_data, create_memory_layer_from_features,
     CRS_LATLON_4326
@@ -349,8 +349,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
         if save_protoblocks_debug:
             feedback.pushInfo(self.tr("Reprojecting protoblocks to EPSG:4326 for debug output..."))
-            protoblocks_layer_4326_debug, _ = reproject_layer_EPSG4326(
-                protoblocks_layer_local_tm, context, "protoblocks_4326_debug_bbox", feedback=feedback
+            protoblocks_layer_4326_debug = reproject_layer(
+                protoblocks_layer_local_tm, destination_crs='EPSG:4326', output_mode="memory:protoblocks_4326_debug_bbox"
             )
             if protoblocks_layer_4326_debug:
                 (sink_protoblocks_debug, dest_id_protoblocks_debug) = self.parameterAsSink(
@@ -458,8 +458,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
             # --- 8. Reproject Sidewalks to EPSG:4326 and Save Output ---
             feedback.pushInfo(self.tr("Reprojecting final sidewalk lines to EPSG:4326..."))
-            sidewalks_layer_4326, _ = reproject_layer_EPSG4326(
-                sidewalk_lines_layer_local_tm, context, "sidewalks_final_4326_bbox", feedback=feedback
+            sidewalks_layer_4326 = reproject_layer(
+                sidewalk_lines_layer_local_tm, destination_crs='EPSG:4326', output_mode="memory:sidewalks_final_4326_bbox"
             )
             if sidewalks_layer_4326 and sidewalks_layer_4326.featureCount() > 0:
                 (sink_sidewalks, dest_id_sidewalks) = self.parameterAsSink(
