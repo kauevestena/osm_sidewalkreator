@@ -33,7 +33,7 @@ from .. import parameters # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
     polygonize_lines, reproject_layer_localTM, reproject_layer,
-    create_local_tm_crs, get_input_polygon_details, log_plugin_message,
+    get_input_polygon_details, log_plugin_message,
     cliplayer_v2, clean_street_network_data, create_memory_layer_from_features,
     CRS_LATLON_4326
 )
@@ -274,18 +274,16 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         extent_4326 = input_extent_rect
         centroid_lon = extent_4326.center().x()
 
-        local_tm_crs, utm_zone = create_local_tm_crs(longitude=centroid_lon, feedback=feedback)
+        # Reproject the memory input polygon layer to local TM for internal processing
+        # The reproject_layer_localTM function handles the creation of the CRS internally
+        feedback.pushInfo(self.tr("Reprojecting input extent polygon to local TM..."))
+        input_poly_local_tm_layer, local_tm_crs = reproject_layer_localTM(
+            input_polygon_layer_for_processing, None, "input_poly_local_tm", centroid_lon
+        )
         if not local_tm_crs.isValid():
             feedback.reportError(self.tr("Could not determine a valid local Transverse Mercator CRS."), True)
             return results
-        feedback.pushInfo(self.tr(f"Using local Transverse Mercator CRS: {local_tm_crs.authid()} - {local_tm_crs.description()} (Zone: {utm_zone})"))
-
-        # Reproject the memory input polygon layer to local TM for internal processing
-        feedback.pushInfo(self.tr("Reprojecting input extent polygon to local TM..."))
-        input_poly_local_tm_layer, transform_context_4326_to_localTM = reproject_layer_localTM(
-            input_polygon_layer_for_processing, context, "input_poly_local_tm",
-            centroid_lon, target_crs_auth_id=local_tm_crs.authid(), feedback=feedback
-        )
+        feedback.pushInfo(self.tr(f"Using local Transverse Mercator CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"))
         if not input_poly_local_tm_layer or input_poly_local_tm_layer.featureCount() == 0:
             feedback.reportError(self.tr("Failed to reproject input extent polygon to local TM."), True)
             return results
@@ -395,8 +393,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
                 if clipped_buildings_4326 and clipped_buildings_4326.isValid() and clipped_buildings_4326.featureCount() > 0:
                     reproj_buildings_layer_local_tm, _ = reproject_layer_localTM(
-                        clipped_buildings_4326, context, f"bldgs_local_tm_bbox_{context.algorithm().id()[:5]}",
-                        centroid_lon, target_crs_auth_id=local_tm_crs.authid(), feedback=feedback
+                        clipped_buildings_4326, None, f"bldgs_local_tm_bbox_{context.algorithm().id()[:5]}", centroid_lon
                     )
                     if not reproj_buildings_layer_local_tm or not reproj_buildings_layer_local_tm.isValid():
                         feedback.pushWarning(self.tr("Failed to reproject building data, proceeding without it for overlap checks."))
