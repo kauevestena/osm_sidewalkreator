@@ -337,5 +337,3 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
 
 from qgis import processing # For processing.run
 # Ensure newline at end of file
-
-[end of processing/full_sidewalkreator_polygon_algorithm.py]

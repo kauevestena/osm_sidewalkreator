@@ -33,7 +33,7 @@ from .. import parameters # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
     polygonize_lines, reproject_layer_localTM, reproject_layer,
-    get_input_polygon_details, log_plugin_message,
+    log_plugin_message,
     cliplayer_v2, clean_street_network_data, create_memory_layer_from_features,
     CRS_LATLON_4326
 )
