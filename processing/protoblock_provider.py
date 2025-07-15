@@ -2,7 +2,7 @@
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import QgsProcessingProvider, Qgis # Added Qgis for message levels
+from qgis.core import QgsProcessingProvider, Qgis  # Added Qgis for message levels
 import os
 import traceback
 
@@ -16,9 +16,13 @@ import traceback
 from .protoblock_algorithm import ProtoblockAlgorithm
 from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
 from .full_sidewalkreator_polygon_algorithm import FullSidewalkreatorPolygonAlgorithm
-from .full_sidewalkreator_bbox_algorithm import FullSidewalkreatorBboxAlgorithm # Added import
+from .full_sidewalkreator_bbox_algorithm import (
+    FullSidewalkreatorBboxAlgorithm,
+)  # Added import
+
 # It's better practice to handle import errors where these are used (e.g. in loadAlgorithms)
 # or ensure the plugin gracefully handles their absence if an import fails.
+
 
 class ProtoblockProvider(QgsProcessingProvider):
 
@@ -26,7 +30,7 @@ class ProtoblockProvider(QgsProcessingProvider):
         super().__init__()
 
     def tr(self, string):
-        return QCoreApplication.translate('Processing', string)
+        return QCoreApplication.translate("Processing", string)
 
     def loadAlgorithms(self):
         # It's good practice to check if the class was imported successfully before using it
@@ -36,46 +40,58 @@ class ProtoblockProvider(QgsProcessingProvider):
 
         # Re-adding the try-except for robustness during actual addAlgorithm call
         try:
-            if ProtoblockAlgorithm: # Check if class was successfully imported
+            if ProtoblockAlgorithm:  # Check if class was successfully imported
                 self.addAlgorithm(ProtoblockAlgorithm())
         except Exception as e:
             # Use QgsMessageLog for errors not tied to iface, or pass iface if available
-            print(f"CRITICAL: Failed to load ProtoblockAlgorithm: {e}") # Fallback print
+            print(
+                f"CRITICAL: Failed to load ProtoblockAlgorithm: {e}"
+            )  # Fallback print
             traceback.print_exc()
 
         try:
-            if ProtoblockBboxAlgorithm: # Check if class was successfully imported
+            if ProtoblockBboxAlgorithm:  # Check if class was successfully imported
                 self.addAlgorithm(ProtoblockBboxAlgorithm())
         except Exception as e:
-            print(f"CRITICAL: Failed to load ProtoblockBboxAlgorithm: {e}") # Fallback print
+            print(
+                f"CRITICAL: Failed to load ProtoblockBboxAlgorithm: {e}"
+            )  # Fallback print
             traceback.print_exc()
 
         try:
-            if FullSidewalkreatorPolygonAlgorithm: # Check if class was successfully imported
+            if (
+                FullSidewalkreatorPolygonAlgorithm
+            ):  # Check if class was successfully imported
                 self.addAlgorithm(FullSidewalkreatorPolygonAlgorithm())
         except Exception as e:
-            print(f"CRITICAL: Failed to load FullSidewalkreatorPolygonAlgorithm: {e}") # Fallback print
+            print(
+                f"CRITICAL: Failed to load FullSidewalkreatorPolygonAlgorithm: {e}"
+            )  # Fallback print
             traceback.print_exc()
 
         try:
-            if FullSidewalkreatorBboxAlgorithm: # Check if class was successfully imported
+            if (
+                FullSidewalkreatorBboxAlgorithm
+            ):  # Check if class was successfully imported
                 self.addAlgorithm(FullSidewalkreatorBboxAlgorithm())
         except Exception as e:
-            print(f"CRITICAL: Failed to load FullSidewalkreatorBboxAlgorithm: {e}") # Fallback print
+            print(
+                f"CRITICAL: Failed to load FullSidewalkreatorBboxAlgorithm: {e}"
+            )  # Fallback print
             traceback.print_exc()
 
     def id(self):
-        provider_id = 'sidewalkreator_algorithms_provider'
+        provider_id = "sidewalkreator_algorithms_provider"
         return provider_id
 
     def name(self):
         # Display name for the provider, using tr() as is standard
-        provider_name = self.tr('SidewalKreator Algorithms')
+        provider_name = self.tr("SidewalKreator Algorithms")
         return provider_name
 
     def longName(self):
         # More descriptive name (optional)
-        long_provider_name = self.name() # Uses the translated name
+        long_provider_name = self.name()  # Uses the translated name
         return long_provider_name
 
     def icon(self):
@@ -85,7 +101,7 @@ class ProtoblockProvider(QgsProcessingProvider):
             # os.path.dirname(__file__) is processing/
             # os.path.dirname(os.path.dirname(__file__)) is plugin_root/
             plugin_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-            icon_path = os.path.join(plugin_dir, 'icon.png')
+            icon_path = os.path.join(plugin_dir, "icon.png")
             if os.path.exists(icon_path):
                 return QIcon(icon_path)
             else:

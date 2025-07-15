@@ -107,6 +107,9 @@ default_widths = {
 # for case(s) of an unexpected value:
 fallback_default_width = 6.0
 
+# a maximum width for a sidewalk, in meters:
+MAX_SIDEWALK_WIDTH_METERS = 25.0
+
 # ASSETS:
 # names of the assets filenames:
 sidewalks_stylefilename = "sidewalkstyles.qml"

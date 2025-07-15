@@ -1,98 +1,146 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtCore import QVariant
+
 # from qgis.PyQt.QtCore import QVariant
 from qgis import processing
+
 # from processing.tools import dataobjects # Moved into function
-from qgis.core import (QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject, edit,
-                       QgsGeometry, QgsProperty, QgsField, QgsFeature, QgsRasterLayer,
-                       QgsSpatialIndex, QgsFeatureRequest, QgsGeometryUtils, QgsVector,
-                       QgsCoordinateTransform, QgsMultiPoint, QgsPoint, QgsPointXY,
-                       QgsProperty, QgsApplication, Qgis, QgsProcessing) # Added QgsProcessing
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsVectorLayer,
+    QgsProject,
+    edit,
+    QgsGeometry,
+    QgsProperty,
+    QgsField,
+    QgsFeature,
+    QgsRasterLayer,
+    QgsSpatialIndex,
+    QgsFeatureRequest,
+    QgsGeometryUtils,
+    QgsVector,
+    QgsCoordinateTransform,
+    QgsMultiPoint,
+    QgsPoint,
+    QgsPointXY,
+    QgsProperty,
+    QgsApplication,
+    Qgis,
+    QgsProcessing,
+)  # Added QgsProcessing
+
 # from qgis.core import Qgis
-from qgis.core import QgsProcessingContext # Qgis was already imported
+from qgis.core import QgsProcessingContext  # Qgis was already imported
 
 # from processing.gui.AlgorithmExecutor import execute_in_place # Not used in this file
 
-import os, json #, random
-from math import isclose,pi
-
+import os, json  # , random
+from math import isclose, pi
 
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
+
 def create_dir_ifnotexists(folderpath):
     if not os.path.exists(folderpath):
-        if not folderpath == '':
+        if not folderpath == "":
             os.makedirs(folderpath)
 
 
-def generate_buffer(inputlayer,distance,segments=5,dissolve=True,cap_style='FLAT',join_style='ROUND',outputlayer='TEMPORARY_OUTPUT'):
+def generate_buffer(
+    inputlayer,
+    distance,
+    segments=5,
+    dissolve=True,
+    cap_style="FLAT",
+    join_style="ROUND",
+    outputlayer="TEMPORARY_OUTPUT",
+):
+    """
+    interfacing qgis processing operation
 
-    '''
-        interfacing qgis processing operation
+    one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter
+    someting like: '( "width" /2)+1.5'
+    """
 
-        one can specify variable length with an QGIS expression like the defalt value in 'distance' parameter
-        someting like: '( "width" /2)+1.5'
-    '''
-
-    parameter_dict = {'INPUT': inputlayer, 'DISTANCE': distance,'OUTPUT': outputlayer,'DISSOLVE':dissolve,'SEGMENTS':segments}
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "DISTANCE": distance,
+        "OUTPUT": outputlayer,
+        "DISSOLVE": dissolve,
+        "SEGMENTS": segments,
+    }
 
     if type(distance) == str:
-        parameter_dict['DISTANCE'] = QgsProperty.fromExpression(distance)
+        parameter_dict["DISTANCE"] = QgsProperty.fromExpression(distance)
 
-    cap_styles = {"FLAT":1,"ROUND":0,'SQUARE':2}
+    cap_styles = {"FLAT": 1, "ROUND": 0, "SQUARE": 2}
 
     if cap_style.upper() in cap_styles:
-        parameter_dict['END_CAP_STYLE'] = cap_styles[cap_style.upper()]
+        parameter_dict["END_CAP_STYLE"] = cap_styles[cap_style.upper()]
 
-    join_styles = {'ROUND':0,'MITER':1,'BEVEL':2}
+    join_styles = {"ROUND": 0, "MITER": 1, "BEVEL": 2}
 
     if join_style.upper() in join_styles:
-        parameter_dict['JOIN_STYLE'] = join_styles[join_style.upper()]
+        parameter_dict["JOIN_STYLE"] = join_styles[join_style.upper()]
+
+    return processing.run("native:buffer", parameter_dict)["OUTPUT"]
 
 
+def remove_duplicate_geometries(inputlayer, outputlayer):
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer}
 
-    return processing.run('native:buffer',parameter_dict)['OUTPUT']
-
-
-def remove_duplicate_geometries(inputlayer,outputlayer):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
-
-    return processing.run('native:deleteduplicategeometries',parameter_dict)['OUTPUT']
+    return processing.run("native:deleteduplicategeometries", parameter_dict)["OUTPUT"]
 
 
+def remove_duplicate_vertices(inputlayer, tolerance):
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "TOLERANCE": tolerance,
+        "OUTPUT": "TEMPORARY_OUTPUT",
+    }
 
-def remove_duplicate_vertices(inputlayer,tolerance):
-    parameter_dict = {'INPUT': inputlayer,'TOLERANCE':tolerance,'OUTPUT':'TEMPORARY_OUTPUT'}
-
-    return processing.run('native:removeduplicatevertices',parameter_dict)['OUTPUT']
+    return processing.run("native:removeduplicatevertices", parameter_dict)["OUTPUT"]
 
 
-def split_lines_by_max_len(inputlayer,len_val_or_expression,outputlayer='TEMPORARY_OUTPUT'):
+def split_lines_by_max_len(
+    inputlayer, len_val_or_expression, outputlayer="TEMPORARY_OUTPUT"
+):
 
-
-
-    parameter_dict = {'INPUT': inputlayer,'LENGTH':len_val_or_expression, 'OUTPUT': outputlayer}
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "LENGTH": len_val_or_expression,
+        "OUTPUT": outputlayer,
+    }
 
     if type(len_val_or_expression) == str:
-        parameter_dict['LENGTH'] = QgsProperty.fromExpression(len_val_or_expression)
+        parameter_dict["LENGTH"] = QgsProperty.fromExpression(len_val_or_expression)
 
-    return processing.run('native:splitlinesbylength',parameter_dict)['OUTPUT']
-
-
-def vec_layers_intersection(inputlayer,overlay_layer,outputlayer='TEMPORARY_OUTPUT'):
-
-    parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlay_layer, 'OUTPUT': outputlayer}
-
-    return processing.run('qgis:intersection',parameter_dict)['OUTPUT']
+    return processing.run("native:splitlinesbylength", parameter_dict)["OUTPUT"]
 
 
-def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTPUT'):
+def vec_layers_intersection(inputlayer, overlay_layer, outputlayer="TEMPORARY_OUTPUT"):
 
-    parameter_dict = {'INPUT': inputlayer,'OVERLAY':overlaylayer, 'OUTPUT': outputlayer}
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OVERLAY": overlay_layer,
+        "OUTPUT": outputlayer,
+    }
 
-    return processing.run('qgis:difference',parameter_dict)['OUTPUT']
+    return processing.run("qgis:intersection", parameter_dict)["OUTPUT"]
+
+
+def compute_difference_layer(inputlayer, overlaylayer, outputlayer="TEMPORARY_OUTPUT"):
+
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OVERLAY": overlaylayer,
+        "OUTPUT": outputlayer,
+    }
+
+    return processing.run("qgis:difference", parameter_dict)["OUTPUT"]
+
 
 # def difference_inplace(inputlayer,overlaylayer):
 
@@ -111,48 +159,47 @@ def compute_difference_layer(inputlayer,overlaylayer,outputlayer='TEMPORARY_OUTP
 #     inputlayer.commitChanges()
 
 
+def convert_multipart_to_singleparts(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
 
-def convert_multipart_to_singleparts(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer}
 
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
-
-    return processing.run('native:multiparttosingleparts',parameter_dict)['OUTPUT']
+    return processing.run("native:multiparttosingleparts", parameter_dict)["OUTPUT"]
 
 
-def mergelayers(inputlayerlist,dest_crs,outputlayer='TEMPORARY_OUTPUT'):
-    '''
-        Will only work for layers of the same geometry type
-    '''
+def mergelayers(inputlayerlist, dest_crs, outputlayer="TEMPORARY_OUTPUT"):
+    """
+    Will only work for layers of the same geometry type
+    """
 
-    parameter_dict = {'LAYERS': inputlayerlist,'CRS':dest_crs, 'OUTPUT': outputlayer}
+    parameter_dict = {"LAYERS": inputlayerlist, "CRS": dest_crs, "OUTPUT": outputlayer}
 
-    return processing.run('native:mergevectorlayers',parameter_dict)['OUTPUT']
+    return processing.run("native:mergevectorlayers", parameter_dict)["OUTPUT"]
 
 
 # # # def check_distances_layers(layer_many_features,layer_one_feature,idx=0):
 
 
-def dissolve_tosinglegeom(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
+def dissolve_tosinglegeom(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer}
 
-    return processing.run('native:dissolve',parameter_dict)['OUTPUT']
-
-
-def merge_touching_lines(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
-
-    return processing.run('native:mergelines',parameter_dict)['OUTPUT']
+    return processing.run("native:dissolve", parameter_dict)["OUTPUT"]
 
 
-def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
+def merge_touching_lines(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer}
+
+    return processing.run("native:mergelines", parameter_dict)["OUTPUT"]
+
+
+def polygonize_lines(inputlines, outputlayer="TEMPORARY_OUTPUT", keepfields=True):
     # Ensure that the outputlayer string results in a QgsVectorLayer object being returned by processing.run
     # For memory layers, the 'OUTPUT' value in the returned dict IS the QgsVectorLayer instance.
     parameter_dict = {
-        'INPUT': inputlines,
-        'OUTPUT': outputlayer, # e.g., 'memory:my_polygonized_layer'
-        'KEEP_FIELDS': keepfields
+        "INPUT": inputlines,
+        "OUTPUT": outputlayer,  # e.g., 'memory:my_polygonized_layer'
+        "KEEP_FIELDS": keepfields,
     }
-    result_layer = processing.run('native:polygonize', parameter_dict)['OUTPUT']
+    result_layer = processing.run("native:polygonize", parameter_dict)["OUTPUT"]
 
     # It's good practice to ensure the CRS is what we expect,
     # though native:polygonize should set it based on input.
@@ -165,11 +212,11 @@ def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
     # Ensure that the outputlayer string results in a QgsVectorLayer object being returned by processing.run
     # For memory layers, the 'OUTPUT' value in the returned dict IS the QgsVectorLayer instance.
     parameter_dict = {
-        'INPUT': inputlines,
-        'OUTPUT': outputlayer, # e.g., 'memory:my_polygonized_layer'
-        'KEEP_FIELDS': keepfields
+        "INPUT": inputlines,
+        "OUTPUT": outputlayer,  # e.g., 'memory:my_polygonized_layer'
+        "KEEP_FIELDS": keepfields,
     }
-    result_layer = processing.run('native:polygonize', parameter_dict)['OUTPUT']
+    result_layer = processing.run("native:polygonize", parameter_dict)["OUTPUT"]
 
     # It's good practice to ensure the CRS is what we expect,
     # though native:polygonize should set it based on input.
@@ -177,16 +224,28 @@ def polygonize_lines(inputlines,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
         if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
             # This print might be too noisy if it happens often but setCrs works
             # print(f"Warning: CRS mismatch or invalid CRS after polygonize. Input CRS: {inputlines.crs().authid()}, Output CRS: {result_layer.crs().authid()}. Forcing input CRS.")
-            result_layer.setCrs(inputlines.crs()) # Ensure CRS is set from input
+            result_layer.setCrs(inputlines.crs())  # Ensure CRS is set from input
     return result_layer
 
 
-def convex_hulls(inputlayer,outputlayer='TEMPORARY_OUTPUT',keepfields=True):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'KEEP_FIELDS':keepfields}
+def convex_hulls(inputlayer, outputlayer="TEMPORARY_OUTPUT", keepfields=True):
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OUTPUT": outputlayer,
+        "KEEP_FIELDS": keepfields,
+    }
 
-    return processing.run('native:convexhull',parameter_dict)['OUTPUT']
+    return processing.run("native:convexhull", parameter_dict)["OUTPUT"]
 
-def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=False):
+
+def snap_layers(
+    inputlayer,
+    snap_layer,
+    behavior_code=1,
+    tolerance=0.1,
+    outputlayer="TEMPORARY_OUTPUT",
+    dontcheckinvalid=False,
+):
     # Commenting out the explicit fixgeometries call as we'll use the context setting
     # fixed_geometries_output = 'memory:fixed_geometries_for_snapping'
     # fix_params = {'INPUT': inputlayer, 'OUTPUT': fixed_geometries_output}
@@ -197,7 +256,13 @@ def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer=
     #     fixed_layer = inputlayer
     # parameter_dict = {'INPUT': fixed_layer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
 
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'REFERENCE_LAYER':snap_layer,'TOLERANCE':tolerance,'BEHAVIOR':behavior_code}
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OUTPUT": outputlayer,
+        "REFERENCE_LAYER": snap_layer,
+        "TOLERANCE": tolerance,
+        "BEHAVIOR": behavior_code,
+    }
 
     # Create a processing context
     context = QgsProcessingContext()
@@ -233,26 +298,37 @@ def snap_layers(inputlayer,snap_layer,behavior_code=1,tolerance=0.1,outputlayer=
         # which is different from QgsProcessingContext.
         # We should unify this. If dontcheckinvalid is true, it means "GeometryNoCheck".
         # Otherwise, we can try a more lenient policy than the default (which seems to be Abort).
-        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.NoCheck) # Changed GeometryNoCheck to NoCheck
+        context.setInvalidGeometryCheck(
+            Qgis.InvalidGeometryCheck.NoCheck
+        )  # Changed GeometryNoCheck to NoCheck
         # The original code used `dataobjects.createContext()` and then `context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)`
         # This suggests `QgsFeatureRequest.GeometryNoCheck` is the value for `Qgis.InvalidGeometryCheck.GeometryNoCheck`.
         # Let's stick to `Qgis.InvalidGeometryCheck` as per `QgsProcessingContext` docs.
     else:
         # If not specifically asked to ignore, let's try skipping invalid features.
         # This directly addresses the error message's suggestion.
-        context.setInvalidGeometryCheck(Qgis.InvalidGeometryCheck.SkipInvalid) # Changed SkipFeatureWithInvalidGeometry to SkipInvalid
+        context.setInvalidGeometryCheck(
+            Qgis.InvalidGeometryCheck.SkipInvalid
+        )  # Changed SkipFeatureWithInvalidGeometry to SkipInvalid
 
-    return processing.run('native:snapgeometries', parameter_dict, context=context)['OUTPUT']
-
-
-
-def extract_lines_from_polygons(input_polygons,outputlayer='TEMPORARY_OUTPUT'):
-    parameter_dict = {'INPUT': input_polygons, 'OUTPUT': outputlayer}
-
-    return processing.run('native:polygonstolines',parameter_dict)['OUTPUT']
+    return processing.run("native:snapgeometries", parameter_dict, context=context)[
+        "OUTPUT"
+    ]
 
 
-def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],outputlayer='TEMPORARY_OUTPUT',dontcheckinvalid=True):
+def extract_lines_from_polygons(input_polygons, outputlayer="TEMPORARY_OUTPUT"):
+    parameter_dict = {"INPUT": input_polygons, "OUTPUT": outputlayer}
+
+    return processing.run("native:polygonstolines", parameter_dict)["OUTPUT"]
+
+
+def extract_with_spatial_relation(
+    input_layer,
+    compared_layer,
+    predicate: list = [5],
+    outputlayer="TEMPORARY_OUTPUT",
+    dontcheckinvalid=True,
+):
     """
     Generic spatial relationship extractor
 
@@ -264,86 +340,125 @@ def extract_with_spatial_relation(input_layer,compared_layer,predicate:list=[5],
 
     """
 
-    parameter_dict = {'INPUT': input_layer,'PREDICATE':predicate,'INTERSECT':compared_layer, 'OUTPUT': outputlayer}
+    parameter_dict = {
+        "INPUT": input_layer,
+        "PREDICATE": predicate,
+        "INTERSECT": compared_layer,
+        "OUTPUT": outputlayer,
+    }
 
     if dontcheckinvalid:
-        from processing.tools import dataobjects # Import here
+        from processing.tools import dataobjects  # Import here
+
         # thx: https://gis.stackexchange.com/a/307618
         context = dataobjects.createContext()
         context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryNoCheck)
-        return processing.run("qgis:extractbylocation", parameter_dict, context=context)['OUTPUT']
+        return processing.run(
+            "qgis:extractbylocation", parameter_dict, context=context
+        )["OUTPUT"]
 
     else:
-        return processing.run('qgis:extractbylocation',parameter_dict)['OUTPUT']
+        return processing.run("qgis:extractbylocation", parameter_dict)["OUTPUT"]
 
 
-def collected_geoms_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT'):
-    '''
+def collected_geoms_layer(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
+    """
     interface to
     https://docs.qgis.org/3.22/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgiscollect
-    '''
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer}
-
-    return processing.run('native:collect',parameter_dict)['OUTPUT']
-
-def gen_centroids_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',for_allparts=False):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'ALL_PARTS':for_allparts}
-
-    return processing.run('native:centroids',parameter_dict)['OUTPUT']
-
-def gen_voronoi_polygons_layer(inputlayer,outputlayer='TEMPORARY_OUTPUT',buffer_perc=300):
-    parameter_dict = {'INPUT': inputlayer, 'OUTPUT': outputlayer,'BUFFER':buffer_perc}
-
-    return processing.run('qgis:voronoipolygons',parameter_dict)['OUTPUT']
-
-def get_intersections(inputlayer,intersect_layer,outputlayer):
-    parameter_dict = {'INPUT': inputlayer, 'INTERSECT': intersect_layer, 'OUTPUT': outputlayer}
-
-    return processing.run('qgis:lineintersections',parameter_dict)['OUTPUT']
-
-def cliplayer_v2(inputlayer,overlay_lyr,outputlayer='TEMPORARY_OUTPUT'):
     """
-        the first one was intended for datafiles, not memeory layers
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer}
+
+    return processing.run("native:collect", parameter_dict)["OUTPUT"]
+
+
+def gen_centroids_layer(inputlayer, outputlayer="TEMPORARY_OUTPUT", for_allparts=False):
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OUTPUT": outputlayer,
+        "ALL_PARTS": for_allparts,
+    }
+
+    return processing.run("native:centroids", parameter_dict)["OUTPUT"]
+
+
+def gen_voronoi_polygons_layer(
+    inputlayer, outputlayer="TEMPORARY_OUTPUT", buffer_perc=300
+):
+    parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer, "BUFFER": buffer_perc}
+
+    return processing.run("qgis:voronoipolygons", parameter_dict)["OUTPUT"]
+
+
+def get_intersections(inputlayer, intersect_layer, outputlayer):
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "INTERSECT": intersect_layer,
+        "OUTPUT": outputlayer,
+    }
+
+    return processing.run("qgis:lineintersections", parameter_dict)["OUTPUT"]
+
+
+def cliplayer_v2(inputlayer, overlay_lyr, outputlayer="TEMPORARY_OUTPUT"):
     """
-    parameter_dict = {'INPUT': inputlayer, 'OVERLAY': overlay_lyr, 'OUTPUT': outputlayer}
+    the first one was intended for datafiles, not memeory layers
+    """
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "OVERLAY": overlay_lyr,
+        "OUTPUT": outputlayer,
+    }
 
-    return processing.run('qgis:clip',parameter_dict)['OUTPUT']
-
-def reproject_layer(inputlayer,destination_crs='EPSG:4326',output_mode='memory:Reprojected'):
-    parameter_dict = {'INPUT': inputlayer, 'TARGET_CRS': destination_crs,'OUTPUT': output_mode}
-
-    return processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
-
-
-def split_lines(inputlayer,splitterlayer,outputlayer='TEMPORARY_OUTPUT'):
-
-    parameter_dict = {'INPUT': inputlayer, 'LINES': splitterlayer, 'OUTPUT': outputlayer}
-
-    return processing.run('qgis:splitwithlines',parameter_dict)['OUTPUT']
+    return processing.run("qgis:clip", parameter_dict)["OUTPUT"]
 
 
-def cliplayer(inlayerpath,cliplayerpath,outputpath):
-    '''
-        clip a layer
+def reproject_layer(
+    inputlayer, destination_crs="EPSG:4326", output_mode="memory:Reprojected"
+):
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "TARGET_CRS": destination_crs,
+        "OUTPUT": output_mode,
+    }
 
-        all inputs are paths!!!
-
-        will be generated clipped layer as a file in outputpath
-
-        source: https://opensourceoptions.com/blog/pyqgis-clip-vector-layers/ (thx!!)
-    '''
-    #run the clip tool
-    processing.run("native:clip", {'INPUT':inlayerpath,'OVERLAY':cliplayerpath,'OUTPUT':outputpath})
+    return processing.run("native:reprojectlayer", parameter_dict)["OUTPUT"]
 
 
-def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
+def split_lines(inputlayer, splitterlayer, outputlayer="TEMPORARY_OUTPUT"):
+
+    parameter_dict = {
+        "INPUT": inputlayer,
+        "LINES": splitterlayer,
+        "OUTPUT": outputlayer,
+    }
+
+    return processing.run("qgis:splitwithlines", parameter_dict)["OUTPUT"]
+
+
+def cliplayer(inlayerpath, cliplayerpath, outputpath):
+    """
+    clip a layer
+
+    all inputs are paths!!!
+
+    will be generated clipped layer as a file in outputpath
+
+    source: https://opensourceoptions.com/blog/pyqgis-clip-vector-layers/ (thx!!)
+    """
+    # run the clip tool
+    processing.run(
+        "native:clip",
+        {"INPUT": inlayerpath, "OVERLAY": cliplayerpath, "OUTPUT": outputpath},
+    )
+
+
+def remove_biggest_polygon(inputlayer, record_area=False, area_fieldname="area"):
     areas = []
     ids = []
 
-
     # if one extracts only boundaries, one can still use the area value
     if record_area:
-        create_new_layerfield(inputlayer,area_fieldname)
+        create_new_layerfield(inputlayer, area_fieldname)
         area_idx = inputlayer.fields().indexOf(area_fieldname)
 
     with edit(inputlayer):
@@ -353,50 +468,47 @@ def remove_biggest_polygon(inputlayer,record_area=False,area_fieldname='area'):
             ids.append(feature.id())
 
             if record_area:
-                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
-
+                inputlayer.changeAttributeValue(feature.id(), area_idx, area_val)
 
         max_area_idx = areas.index(max(areas))
         inputlayer.deleteFeature(ids[max_area_idx])
+
 
 def single_geom_polygonize(inputgeom):
     return QgsGeometry.polygonize([inputgeom]).asGeometryCollection()[0]
 
 
-def create_area_field(inputlayer,area_fieldname):
-    area_idx = create_new_layerfield(inputlayer,area_fieldname)
-
+def create_area_field(inputlayer, area_fieldname):
+    area_idx = create_new_layerfield(inputlayer, area_fieldname)
 
     with edit(inputlayer):
 
         if inputlayer.geometryType() == 2:
             for feature in inputlayer.getFeatures():
                 area_val = feature.geometry().area()
-                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
+                inputlayer.changeAttributeValue(feature.id(), area_idx, area_val)
 
         elif inputlayer.geometryType() == 1:
             for feature in inputlayer.getFeatures():
                 area_val = single_geom_polygonize(feature.geometry()).area()
-                inputlayer.changeAttributeValue(feature.id(),area_idx,area_val)
+                inputlayer.changeAttributeValue(feature.id(), area_idx, area_val)
 
         # for points or not-spatial will leave all NULL
 
         return area_idx
 
 
-def create_perimeter_field(inputlayer,perimeter_fieldname):
-    perimeter_idx = create_new_layerfield(inputlayer,perimeter_fieldname)
-
+def create_perimeter_field(inputlayer, perimeter_fieldname):
+    perimeter_idx = create_new_layerfield(inputlayer, perimeter_fieldname)
 
     with edit(inputlayer):
 
         if inputlayer.geometryType() == 1:
             for feature in inputlayer.getFeatures():
                 perim_val = feature.geometry().length()
-                inputlayer.changeAttributeValue(feature.id(),perimeter_idx,perim_val)
+                inputlayer.changeAttributeValue(feature.id(), perimeter_idx, perim_val)
 
         # TBD for polygons
-
 
         # elif inputlayer.geometryType() == 2:
         #     for feature in inputlayer.getFeatures():
@@ -408,13 +520,13 @@ def create_perimeter_field(inputlayer,perimeter_fieldname):
         return perimeter_idx
 
 
+def path_from_layer(inputlayer, splitcharacter="|", splitposition=0):
+    return (
+        inputlayer.dataProvider().dataSourceUri().split(splitcharacter)[splitposition]
+    )
 
 
-
-def path_from_layer(inputlayer,splitcharacter='|',splitposition=0):
-    return inputlayer.dataProvider().dataSourceUri().split(splitcharacter)[splitposition]
-
-def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
+def custom_local_projection(lgt_0, lat_0=0, mode="TM", return_wkt=False):
 
     as_wkt = f"""PROJCRS["unknown",
     BASEGEOGCRS["WGS 84",
@@ -466,42 +578,43 @@ def custom_local_projection(lgt_0,lat_0=0,mode='TM',return_wkt=False):
     else:
         return custom_crs
 
-def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
-    '''
-        pass None to "outputpath" in order to use an only memory layer
-    '''
+
+def reproject_layer_localTM(inputlayer, outputpath, layername, lgt_0, lat_0=0):
+    """
+    pass None to "outputpath" in order to use an only memory layer
+    """
 
     # https://docs.qgis.org/3.16/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
 
-    operation = f'+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=tmerc +lat_0={lat_0} +lon_0={lgt_0} +k=1 +x_0=0 +y_0=0 +ellps=WGS84'
+    operation = f"+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=tmerc +lat_0={lat_0} +lon_0={lgt_0} +k=1 +x_0=0 +y_0=0 +ellps=WGS84"
 
-
-    parameter_dict = { 'INPUT' : inputlayer, 'OPERATION' : operation, 'OUTPUT' : outputpath }
+    parameter_dict = {"INPUT": inputlayer, "OPERATION": operation, "OUTPUT": outputpath}
 
     if not outputpath:
         if layername:
-            parameter_dict['OUTPUT'] = f'memory:{layername}'
+            parameter_dict["OUTPUT"] = f"memory:{layername}"
         else:
-            parameter_dict['OUTPUT'] = 'TEMPORARY_OUTPUT'
+            parameter_dict["OUTPUT"] = "TEMPORARY_OUTPUT"
 
     # option 1: creating from wkt
     # proj_wkt = custom_local_projection(lgt_0,return_wkt=True)
     # parameter_dict['TARGET_CRS'] = QgsCoordinateReferenceSystem(proj_wkt)
 
     # option 2: as a crs object, directly
-    new_crs = custom_local_projection(lgt_0,lat_0=lat_0)
-    parameter_dict['TARGET_CRS'] = new_crs
+    new_crs = custom_local_projection(lgt_0, lat_0=lat_0)
+    parameter_dict["TARGET_CRS"] = new_crs
 
     if not outputpath:
-        ret_lyr = processing.run('native:reprojectlayer', parameter_dict)['OUTPUT']
+        ret_lyr = processing.run("native:reprojectlayer", parameter_dict)["OUTPUT"]
     else:
-        processing.run('native:reprojectlayer', parameter_dict)
-        ret_lyr = QgsVectorLayer(outputpath,layername,'ogr')
+        processing.run("native:reprojectlayer", parameter_dict)
+        ret_lyr = QgsVectorLayer(outputpath, layername, "ogr")
 
     # fixing no set layer crs:
     ret_lyr.setCrs(new_crs)
 
     return ret_lyr, new_crs
+
 
 # def retrieve_att(layer,att_id,row_id):
 #     iterr = layer.getFeatures()
@@ -521,7 +634,7 @@ def reproject_layer_localTM(inputlayer,outputpath,layername,lgt_0,lat_0=0):
 #     return [row[i] for row in matrixList]
 
 
-def get_first_feature_or_geom(inputlayer,return_geom=False):
+def get_first_feature_or_geom(inputlayer, return_geom=False):
 
     first_feature = QgsFeature()
 
@@ -544,63 +657,68 @@ def check_empty_layer(inputlayer):
         if feat_count > 1:
             break
 
-    return (feat_count == 0)
+    return feat_count == 0
+
 
 def get_column_names(inputlayer):
     return inputlayer.fields().names()
 
-def create_new_layerfield(inputlayer,fieldname,datatype=QVariant.Double):
-    '''
-        create a new field for the layer, and also return the index of the new field
-    '''
+
+def create_new_layerfield(inputlayer, fieldname, datatype=QVariant.Double):
+    """
+    create a new field for the layer, and also return the index of the new field
+    """
 
     with edit(inputlayer):
-        new_field = QgsField(fieldname,datatype)
+        new_field = QgsField(fieldname, datatype)
         inputlayer.dataProvider().addAttributes([new_field])
         inputlayer.updateFields()
 
     return inputlayer.fields().indexOf(fieldname)
 
 
-def create_filled_newlayerfield(inputlayer,fieldname,fieldvalue,datatype):
+def create_filled_newlayerfield(inputlayer, fieldname, fieldvalue, datatype):
     # creating field
-    field_index = create_new_layerfield(inputlayer,fieldname,datatype)
+    field_index = create_new_layerfield(inputlayer, fieldname, datatype)
 
     # then filling:
     with edit(inputlayer):
-        if isinstance(fieldvalue,dict):
+        if isinstance(fieldvalue, dict):
             dkey = next(iter(fieldvalue))
             # print(dkey,fieldvalue[dkey])
             # by now only length is implemented
-            if dkey == 'geometry':
+            if dkey == "geometry":
                 if fieldvalue[dkey] == "length":
                     for feature in inputlayer.getFeatures():
-                        inputlayer.changeAttributeValue(feature.id(),field_index,feature.geometry().length())
-            if dkey == 'attr_by_id':
+                        inputlayer.changeAttributeValue(
+                            feature.id(), field_index, feature.geometry().length()
+                        )
+            if dkey == "attr_by_id":
                 inner_dict = fieldvalue[dkey]
-
 
                 for feature in inputlayer.getFeatures():
                     if feature.id() in inner_dict:
-                        inputlayer.changeAttributeValue(feature.id(),field_index,inner_dict[feature.id()])
-
-
+                        inputlayer.changeAttributeValue(
+                            feature.id(), field_index, inner_dict[feature.id()]
+                        )
 
         else:
             for feature in inputlayer.getFeatures():
-                inputlayer.changeAttributeValue(feature.id(),field_index,fieldvalue)
+                inputlayer.changeAttributeValue(feature.id(), field_index, fieldvalue)
 
-def create_fill_id_field(inputlayer,fieldname = 'id_on_layer'):
 
-    created_field_index = create_new_layerfield(inputlayer,fieldname,QVariant.Int)
+def create_fill_id_field(inputlayer, fieldname="id_on_layer"):
+
+    created_field_index = create_new_layerfield(inputlayer, fieldname, QVariant.Int)
 
     with edit(inputlayer):
         for feature in inputlayer.getFeatures():
-            inputlayer.changeAttributeValue(feature.id(),created_field_index,feature.id())
+            inputlayer.changeAttributeValue(
+                feature.id(), created_field_index, feature.id()
+            )
 
 
-
-def remove_layerfields(inputlayer,fieldlist):
+def remove_layerfields(inputlayer, fieldlist):
 
     # to assert if the field name really exists in 'fieldlist'
     layer_fields = get_column_names(inputlayer)
@@ -611,17 +729,19 @@ def remove_layerfields(inputlayer,fieldlist):
                 f_idx = inputlayer.fields().indexOf(field_name)
                 inputlayer.deleteAttribute(f_idx)
 
+
 def remove_all_layerfields(inputlayer):
-    remove_layerfields(inputlayer,get_column_names(inputlayer))
+    remove_layerfields(inputlayer, get_column_names(inputlayer))
 
 
-def get_layercolumn_byname(inputlayer,columname):
+def get_layercolumn_byname(inputlayer, columname):
 
     input_table = get_layer_att_table(inputlayer)
 
     column_id = inputlayer.fields().lookupField(columname)
 
     return [sublist[column_id] for sublist in input_table]
+
 
 def get_layer_att_table(inputlayer):
     att_lists = []
@@ -635,9 +755,10 @@ def get_layer_att_table(inputlayer):
 
 def wipe_folder_files(inputfolderpath):
     for filename in os.listdir(inputfolderpath):
-        filepath = os.path.join(inputfolderpath,filename)
+        filepath = os.path.join(inputfolderpath, filename)
 
         os.remove(filepath)
+
 
 # def remove_layer(layername):
 #     # thx https://gis.stackexchange.com/a/310590/49900
@@ -649,11 +770,11 @@ def wipe_folder_files(inputfolderpath):
 #     if lyref:
 #         layerinstance.removeMapLayer(lyref[0].id())
 
+
 def remove_layerlist(listoflayer_alias):
     # thx https://gis.stackexchange.com/a/310590/49900
 
     project_instance = QgsProject.instance()
-
 
     for layerfullname in project_instance.mapLayers():
         if any(alias in layerfullname for alias in listoflayer_alias):
@@ -681,17 +802,18 @@ def remove_layerlist(listoflayer_alias):
 # #     # # # # it works inplace =D ()
 # #     # # # # return inputlayer
 
-def qgs_point_geom_from_line_at(inputlinefeature,index=0):
+
+def qgs_point_geom_from_line_at(inputlinefeature, index=0):
     return QgsGeometry.fromPointXY(inputlinefeature.geometry().asPolyline()[index])
 
-def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
-    '''
-        remove lines in wich one of its ends
-        are not connected to any other segment
 
-        the "layer_to_check_culdesac" is a whole layer (dissolved) that should be checked for 'within' condition
-    '''
+def remove_lines_from_no_block(inputlayer, layer_to_check_culdesac=None):
+    """
+    remove lines in wich one of its ends
+    are not connected to any other segment
 
+    the "layer_to_check_culdesac" is a whole layer (dissolved) that should be checked for 'within' condition
+    """
 
     # TODO: check if will work with multilinestrings
 
@@ -699,17 +821,16 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
 
     if layer_to_check_culdesac:
         check_for_culdesacs = True
-        checker_geom = get_first_feature_or_geom(layer_to_check_culdesac,True)
+        checker_geom = get_first_feature_or_geom(layer_to_check_culdesac, True)
 
     feature_ids_to_be_removed = []
 
     index = QgsSpatialIndex(inputlayer.getFeatures())
 
+    for i, feature_A in enumerate(inputlayer.getFeatures()):
 
-    for i,feature_A in enumerate(inputlayer.getFeatures()):
-
-        P0 = qgs_point_geom_from_line_at(feature_A)    # first point
-        PF = qgs_point_geom_from_line_at(feature_A,-1) # last point
+        P0 = qgs_point_geom_from_line_at(feature_A)  # first point
+        PF = qgs_point_geom_from_line_at(feature_A, -1)  # last point
 
         P0_count = 0
         PF_count = 0
@@ -733,8 +854,7 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
 
         # print(P0_count,PF_count)
 
-
-        if any(count == 0 for count in [P0_count,PF_count]):
+        if any(count == 0 for count in [P0_count, PF_count]):
             # after checking, only add if its not a "culdesac"
             if check_for_culdesacs:
                 if not feature_A.geometry().within(checker_geom):
@@ -749,13 +869,15 @@ def remove_lines_from_no_block(inputlayer,layer_to_check_culdesac=None):
             inputlayer.deleteFeature(feature_id)
 
 
-def remove_features_byattr(inputlayer,attrname,attrvalue):
+def remove_features_byattr(inputlayer, attrname, attrvalue):
     ids_to_delete = []
     # Make sure field name is valid before starting iteration
     field_index = inputlayer.fields().lookupField(attrname)
     if field_index == -1:
         # Or raise an error, or message the user
-        print(f"Warning: Attribute '{attrname}' not found in layer '{inputlayer.name()}'. Skipping deletion.")
+        print(
+            f"Warning: Attribute '{attrname}' not found in layer '{inputlayer.name()}'. Skipping deletion."
+        )
         return
 
     for feature in inputlayer.getFeatures():
@@ -763,39 +885,54 @@ def remove_features_byattr(inputlayer,attrname,attrvalue):
         # For features where attribute might be NULL (QVariant.Invalid), direct comparison might be okay
         # or might need specific handling if attrvalue could also be None/NULL.
         # Assuming attrvalue is not None and we are comparing actual values.
-        current_value = feature.attribute(field_index) # feature[attrname] is also common
+        current_value = feature.attribute(
+            field_index
+        )  # feature[attrname] is also common
         if current_value is not None and current_value == attrvalue:
             ids_to_delete.append(feature.id())
 
-    if ids_to_delete: # Only start editing if there's something to delete
+    if ids_to_delete:  # Only start editing if there's something to delete
         with edit(inputlayer):
             inputlayer.deleteFeatures(ids_to_delete)
 
 
-def add_tms_layer(qms_string,layername):
+def add_tms_layer(qms_string, layername):
     # mostly for user add basemaps buttons
-    QgsProject.instance().addMapLayer(QgsRasterLayer(qms_string,layername, 'wms'))
+    QgsProject.instance().addMapLayer(QgsRasterLayer(qms_string, layername, "wms"))
 
-def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False,input_spatial_index=None,max_dist=100,nn_feat_num=5):
+
+def distance_geom_another_layer(
+    inputgeom,
+    inputlayer,
+    as_list=False,
+    to_sort=False,
+    input_spatial_index=None,
+    max_dist=100,
+    nn_feat_num=5,
+):
     ret_dict = {}
-    '''
+    """
         one passes a geometry and a layer anf get dict/list of distances
-    '''
+    """
 
     feat_request = QgsFeatureRequest()
 
     if input_spatial_index:
         # thx, pt 2 https://gis.stackexchange.com/a/59185/49900
-        nearest_ids = input_spatial_index.nearestNeighbor(inputgeom,nn_feat_num,max_dist)
+        nearest_ids = input_spatial_index.nearestNeighbor(
+            inputgeom, nn_feat_num, max_dist
+        )
         feat_request.setFilterFids(nearest_ids)
     else:
         # Warn if iterating a large layer without an index
-        try: # featureCount() might not be available for all layer types or before data loaded
-            if inputlayer.featureCount() > 100: # Arbitrary threshold for "large"
-                print(f"Warning: Calling distance_geom_another_layer on layer '{inputlayer.name()}' "
-                      f"with {inputlayer.featureCount()} features without a spatial index. This can be slow.")
+        try:  # featureCount() might not be available for all layer types or before data loaded
+            if inputlayer.featureCount() > 100:  # Arbitrary threshold for "large"
+                print(
+                    f"Warning: Calling distance_geom_another_layer on layer '{inputlayer.name()}' "
+                    f"with {inputlayer.featureCount()} features without a spatial index. This can be slow."
+                )
         except:
-            pass # Ignore if featureCount fails
+            pass  # Ignore if featureCount fails
 
     for feature in inputlayer.getFeatures(feat_request):
         ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
@@ -809,23 +946,22 @@ def distance_geom_another_layer(inputgeom,inputlayer,as_list=False,to_sort=False
     else:
         return ret_dict
 
-def gen_layer_spatial_index(inputlayer,use_fullgeom_flag=True):
-    '''
-        return a spatial index filled with all of the layer's features
-    '''
+
+def gen_layer_spatial_index(inputlayer, use_fullgeom_flag=True):
+    """
+    return a spatial index filled with all of the layer's features
+    """
     # thx: https://gis.stackexchange.com/a/59185/49900 (part 1)
-
-
 
     feat_iterator = inputlayer.dataProvider().getFeatures()
 
-
     if use_fullgeom_flag:
         # thx: https://gis.stackexchange.com/a/374282/49900
-        ret_spatial_index = QgsSpatialIndex(feat_iterator,flags=QgsSpatialIndex.FlagStoreFeatureGeometries)
+        ret_spatial_index = QgsSpatialIndex(
+            feat_iterator, flags=QgsSpatialIndex.FlagStoreFeatureGeometries
+        )
     else:
         ret_spatial_index = QgsSpatialIndex(feat_iterator)
-
 
     # temp_feat = QgsFeature() # just to store temporarily
     # # filling:
@@ -834,18 +970,16 @@ def gen_layer_spatial_index(inputlayer,use_fullgeom_flag=True):
 
     return ret_spatial_index
 
+
 # def distances_anotherlyr_unsingNN(inputPTgeom,inputspatialindex,inputlayer,max_dist=100,nn_feat_num=5):
 
 
+def get_major_dif_signed(inputval, inputdict, tol=0.5, print_diffs=False):
+    """
+    in spite of finding a simple way to obtain the 'orthogonal' distance and ID of the orthonogal feature
+    """
 
-
-
-def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
-    '''
-        in spite of finding a simple way to obtain the 'orthogonal' distance and ID of the orthonogal feature
-    '''
-
-    diffs = {} # []
+    diffs = {}  # []
 
     inputval = float(inputval)
 
@@ -854,8 +988,8 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
 
         desired_value = float(inputdict[key])
 
-        if not isclose(inputval,desired_value,abs_tol=tol):
-            diffs[key] = desired_value-inputval #.append(inputdict[key]-inputval)
+        if not isclose(inputval, desired_value, abs_tol=tol):
+            diffs[key] = desired_value - inputval  # .append(inputdict[key]-inputval)
         else:
             refused_key = key
 
@@ -864,16 +998,19 @@ def get_major_dif_signed(inputval,inputdict,tol=0.5,print_diffs=False):
 
     if diffs:
         if len(diffs) > 1:
-            key_maxdif = max(diffs,key=diffs.get)
-            return inputval+diffs[key_maxdif],key_maxdif
+            key_maxdif = max(diffs, key=diffs.get)
+            return inputval + diffs[key_maxdif], key_maxdif
         else:
             # dict with only one key:
-            only_key = next(iter(diffs)) # thx: https://stackoverflow.com/a/46042617/4436950
-            return inputval+diffs[only_key],only_key
+            only_key = next(
+                iter(diffs)
+            )  # thx: https://stackoverflow.com/a/46042617/4436950
+            return inputval + diffs[only_key], only_key
     else:
-        return inputval,refused_key
+        return inputval, refused_key
 
-def geom_to_feature(inputgeom,attrs_list=None):
+
+def geom_to_feature(inputgeom, attrs_list=None):
     # remember that inplace methods generally have a return that isn't the object itself #lessons
 
     ret_feat = QgsFeature()
@@ -885,27 +1022,35 @@ def geom_to_feature(inputgeom,attrs_list=None):
 
     return ret_feat
 
-def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None,output_type = 'memory',CRS=None):
-    '''
-        creating a layer from a list of features (not geometries)
 
-        geomtype must be one of:
-        [“point”, “linestring”, “polygon”, “multipoint”,”multilinestring”,”multipolygon”]
-    '''
+def layer_from_featlist(
+    featlist,
+    layername=None,
+    geomtype="Point",
+    attrs_dict=None,
+    output_type="memory",
+    CRS=None,
+):
+    """
+    creating a layer from a list of features (not geometries)
 
-    lname = 'temp'
+    geomtype must be one of:
+    [“point”, “linestring”, “polygon”, “multipoint”,”multilinestring”,”multipolygon”]
+    """
+
+    lname = "temp"
 
     if layername:
         lname = layername
 
-    ret_layer =  QgsVectorLayer(geomtype, lname, output_type)
+    ret_layer = QgsVectorLayer(geomtype, lname, output_type)
 
     with edit(ret_layer):
         if attrs_dict:
             attrs_list = []
 
             for key in attrs_dict:
-                attrs_list.append(QgsField(key,attrs_dict[key]))
+                attrs_list.append(QgsField(key, attrs_dict[key]))
 
             ret_layer.dataProvider().addAttributes(attrs_list)
 
@@ -921,22 +1066,25 @@ def layer_from_featlist(featlist,layername=None,geomtype="Point",attrs_dict=None
 
     return ret_layer
 
-def items_minor_than_inlist(value,inpulist):
+
+def items_minor_than_inlist(value, inpulist):
     # thx: https://stackoverflow.com/a/10543316/4436950
     return sum(entry < value for entry in inpulist)
 
-def keep_only_contained_within(inputlayer,geomlayer):
 
-    geomtocheck = get_first_feature_or_geom(geomlayer,True)
+def keep_only_contained_within(inputlayer, geomlayer):
+
+    geomtocheck = get_first_feature_or_geom(geomlayer, True)
 
     with edit(inputlayer):
         for feature in inputlayer.getFeatures():
             if not feature.geometry().within(geomtocheck):
                 inputlayer.deleteFeature(feature.id())
 
-def feature_from_fid(inputlayer,fid):
+
+def feature_from_fid(inputlayer, fid):
     """
-        could be a little less burocratic, but...
+    could be a little less burocratic, but...
     """
 
     # thx: https://gis.stackexchange.com/a/59185/49900
@@ -950,30 +1098,28 @@ def feature_from_fid(inputlayer,fid):
     return ret_feat
 
 
-def points_intersecting_buffer_boundary(input_point,inputlayer,featlist=None,buffersize=1,segments=5):
-    '''
-        inputlayer must have geometries of Line type
-    '''
+def points_intersecting_buffer_boundary(
+    input_point, inputlayer, featlist=None, buffersize=1, segments=5
+):
+    """
+    inputlayer must have geometries of Line type
+    """
 
-    boundary = input_point.buffer(buffersize,segments).convertToType(Qgis.GeometryType(1)) # 1 is the value for "LineGeometry" in https://api.qgis.org/api/classQgis.html#a84964253bb44012b246c20790799c04d
+    boundary = input_point.buffer(buffersize, segments).convertToType(
+        Qgis.GeometryType(1)
+    )  # 1 is the value for "LineGeometry" in https://api.qgis.org/api/classQgis.html#a84964253bb44012b246c20790799c04d
 
     # list storing the points that shall be returned:
     ret_list = []
-
 
     feat_request = QgsFeatureRequest()
 
     if featlist:
         feat_request.setFilterFids(featlist)
 
-
-
     for feature in inputlayer.getFeatures(feat_request):
         # ret_list.append(boundary.intersection(feature.geometry()))
         ret_list.append(feature.geometry().intersection(boundary))
-
-
-
 
     return ret_list
 
@@ -983,20 +1129,28 @@ def qgsgeom_to_pointuple(inputgeom):
 
     p = inputgeom.asPoint()
 
-    return p.x(),p.y()
+    return p.x(), p.y()
 
-def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index=False,max_instead=False,print_angles=False):
-    '''
-        that is: the point that will forms the minor angle, compared to other angles spawn by the other points.
 
-        All angles are formed in conjunction with fixed points A and B
-    '''
+def point_forms_minor_angle_w2(
+    fixedpoint_A,
+    centerpoint_B,
+    pointlist,
+    return_index=False,
+    max_instead=False,
+    print_angles=False,
+):
+    """
+    that is: the point that will forms the minor angle, compared to other angles spawn by the other points.
+
+    All angles are formed in conjunction with fixed points A and B
+    """
 
     if len(pointlist) == 0:
         if return_index:
             return 0
         else:
-            return(pointlist[0])
+            return pointlist[0]
 
     else:
         anglelist = []
@@ -1005,13 +1159,13 @@ def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index
 
         pB = qgsgeom_to_pointuple(centerpoint_B)
 
-
         for point in pointlist:
             try:
                 pC = qgsgeom_to_pointuple(point)
 
-
-                angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+                angle = QgsGeometryUtils.angleBetweenThreePoints(*pA, *pB, *pC) * (
+                    180 / pi
+                )
 
                 if angle > 180:
                     angle = 360 - angle
@@ -1035,7 +1189,7 @@ def point_forms_minor_angle_w2(fixedpoint_A,centerpoint_B,pointlist,return_index
             return pointlist[index]
 
 
-def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
+def vector_from_2_pts(point_A, point_B, desiredLen=None, normalized=False):
 
     pA = qgsgeom_to_pointuple(point_A)
 
@@ -1045,7 +1199,7 @@ def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
 
     dy = pB[1] - pA[1]
 
-    ret_vec = QgsVector(dx,dy)
+    ret_vec = QgsVector(dx, dy)
 
     if desiredLen:
         return ret_vec.normalized() * desiredLen
@@ -1055,11 +1209,12 @@ def vector_from_2_pts(point_A,point_B,desiredLen = None,normalized=False):
         else:
             return ret_vec
 
-def check_sidewalk_intersection(intersectiongeom,referencepoint):
+
+def check_sidewalk_intersection(intersectiongeom, referencepoint):
     if not intersectiongeom.isEmpty():
 
         if not intersectiongeom.isMultipart():
-            return True,intersectiongeom
+            return True, intersectiongeom
         else:
             # if it returns Multipart geometry, it was because there are 2 points of intersection, so we chose the nearest to "referencepoint"
 
@@ -1070,13 +1225,14 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
 
             # print([item.type() for item in as_geomcollection])
 
-
             if intersectiongeom.wkbType() == 4:
 
-                distances = [referencepoint.distance(point.asPoint()) for point in as_geomcollection]
+                distances = [
+                    referencepoint.distance(point.asPoint())
+                    for point in as_geomcollection
+                ]
 
-                return True,as_geomcollection[distances.index(min(distances))]
-
+                return True, as_geomcollection[distances.index(min(distances))]
 
             elif intersectiongeom.wkbType() == 5:
 
@@ -1091,15 +1247,16 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
                 # print(points,'\n')
                 # print(distances,'\n')
 
-
-                return True,pointXY_to_geometry(points[distances.index(min(distances))])
+                return True, pointXY_to_geometry(
+                    points[distances.index(min(distances))]
+                )
 
             elif intersectiongeom.wkbType() == 7:
 
                 points = []
 
                 for entity in as_geomcollection:
-                    if   entity.wkbType() == 2:
+                    if entity.wkbType() == 2:
                         for point in entity.asPolyline():
                             points.append(point)
                     elif entity.wkbType() == 1:
@@ -1112,37 +1269,40 @@ def check_sidewalk_intersection(intersectiongeom,referencepoint):
                 # print(points,'\n')
                 # print(distances,'\n')
 
-
-                return True,pointXY_to_geometry(points[distances.index(min(distances))])
-
+                return True, pointXY_to_geometry(
+                    points[distances.index(min(distances))]
+                )
 
     else:
         # if there's no intersection point it's because the vector length big isn't enough in order to make it, so we need to enlarge that vector
-        return False,None
+        return False, None
 
-def interpolate_by_percent(inputline,percent):
+
+def interpolate_by_percent(inputline, percent):
     len = inputline.length()
 
-    len_at_perc = (len/100) * percent
+    len_at_perc = (len / 100) * percent
 
     return inputline.interpolate(len_at_perc)
 
-def get_bbox4326_currCRS(inputbbox,current_crs):
+
+def get_bbox4326_currCRS(inputbbox, current_crs):
     # thx: https://kartoza.com/en/blog/how-to-quickly-transform-a-bounding-box-from-one-crs-to-another-using-qgis/
     dest_crs = QgsCoordinateReferenceSystem(current_crs)
-    source_crs = QgsCoordinateReferenceSystem('EPSG:4326')
+    source_crs = QgsCoordinateReferenceSystem("EPSG:4326")
 
-    transformer = QgsCoordinateTransform(source_crs, dest_crs,QgsProject.instance())
+    transformer = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
 
     return transformer.transformBoundingBox(inputbbox)
 
-def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
+
+def select_vertex_pol_nodes(inputpolygonfeature, minC_angle=160, maxC_angle=200):
     # there are some points at protoblocks that are irrelevant, i.e. they're not actual corners
 
     polygon_vertex_list = inputpolygonfeature.geometry().asPolygon()[0]
-    del polygon_vertex_list[-1] # as the polygon list repeats the first node
+    del polygon_vertex_list[-1]  # as the polygon list repeats the first node
 
-    centroid = inputpolygonfeature.geometry().centroid() #.asPoint()
+    centroid = inputpolygonfeature.geometry().centroid()  # .asPoint()
     # print(centroid)
     prev_size = len(polygon_vertex_list)
 
@@ -1150,21 +1310,19 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
     idx_to_remove = []
 
+    for i, node in enumerate(polygon_vertex_list):
 
-    for i,node in enumerate(polygon_vertex_list):
+        prev = i - 1
+        next = i + 1
 
-        prev = i-1
-        next = i+1
-
-        if i == len(polygon_vertex_list)-1:
+        if i == len(polygon_vertex_list) - 1:
             next = 0
-
 
         pA = polygon_vertex_list[prev]
         pB = node
         pC = polygon_vertex_list[next]
 
-        angle = QgsGeometryUtils.angleBetweenThreePoints(*pA,*pB,*pC) * (180/pi)
+        angle = QgsGeometryUtils.angleBetweenThreePoints(*pA, *pB, *pC) * (180 / pi)
 
         # print(pA,pB,pC)
 
@@ -1173,14 +1331,13 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
         # anglelist.append(int(angle))
 
-    for idx in sorted(idx_to_remove,reverse=True):
+    for idx in sorted(idx_to_remove, reverse=True):
         # TODO: a missing thx here!!!
-        del  polygon_vertex_list[idx]
+        del polygon_vertex_list[idx]
 
     return polygon_vertex_list
 
     # print(prev_size,len(polygon_vertex_list))
-
 
     # for i,node in enumerate(polygon_vertex_list):
 
@@ -1189,7 +1346,6 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
 
     #     if i == len(polygon_vertex_list)-1:
     #         next = 0
-
 
     #     pA = polygon_vertex_list[prev]
     #     pB = node
@@ -1200,36 +1356,34 @@ def select_vertex_pol_nodes(inputpolygonfeature,minC_angle=160,maxC_angle=200):
     #     print(angle)
 
 
-def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incident',total_length_instead=False):
-
+def create_incidence_field_layers_A_B(
+    inputlayer, incident_layer, fieldname="incident", total_length_instead=False
+):
     """
-	Creates incidence field layers A and B based on the given input layer and incident layer.
+    Creates incidence field layers A and B based on the given input layer and incident layer.
 
-	:param inputlayer: The input layer on which the incidence field layers will be created.
-	:type inputlayer: QgsVectorLayer
+    :param inputlayer: The input layer on which the incidence field layers will be created.
+    :type inputlayer: QgsVectorLayer
 
-	:param incident_layer: The incident layer from which the features will be used to create the incidence field layers.
-	:type incident_layer: QgsVectorLayer
+    :param incident_layer: The incident layer from which the features will be used to create the incidence field layers.
+    :type incident_layer: QgsVectorLayer
 
-	:param fieldname: The name of the field in the input layer that will store the incidence information. Defaults to 'incident'.
-	:type fieldname: str
+    :param fieldname: The name of the field in the input layer that will store the incidence information. Defaults to 'incident'.
+    :type fieldname: str
 
-	:param total_length_instead: If True, the total length of intersecting features will be stored in the field. If False, the IDs of intersecting features will be stored. Defaults to False.
-	:type total_length_instead: bool
+    :param total_length_instead: If True, the total length of intersecting features will be stored in the field. If False, the IDs of intersecting features will be stored. Defaults to False.
+    :type total_length_instead: bool
 
-	:return: The field ID of the created incidence field layer.
-	:rtype: int
-	"""
-
-
+    :return: The field ID of the created incidence field layer.
+    :rtype: int
+    """
 
     if total_length_instead:
-        field_id = create_new_layerfield(inputlayer,fieldname,QVariant.Double)
+        field_id = create_new_layerfield(inputlayer, fieldname, QVariant.Double)
     else:
-        field_id = create_new_layerfield(inputlayer,fieldname,QVariant.String)
+        field_id = create_new_layerfield(inputlayer, fieldname, QVariant.String)
 
     index = QgsSpatialIndex(incident_layer.getFeatures())
-
 
     with edit(inputlayer):
 
@@ -1238,9 +1392,7 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
             contained_list = []
             sum = 0
 
-
             intersecting_ids = index.intersects(feature.geometry().boundingBox())
-
 
             # for tested_feature in incident_layer.getFeatures():
             for id in intersecting_ids:
@@ -1255,9 +1407,11 @@ def create_incidence_field_layers_A_B(inputlayer,incident_layer,fieldname='incid
                         contained_list.append(str(tested_feature.id()))
 
             if total_length_instead:
-                inputlayer.changeAttributeValue(feature.id(),field_id,sum)
+                inputlayer.changeAttributeValue(feature.id(), field_id, sum)
             else:
-                inputlayer.changeAttributeValue(feature.id(),field_id,' '.join(contained_list))
+                inputlayer.changeAttributeValue(
+                    feature.id(), field_id, " ".join(contained_list)
+                )
 
     return field_id
 
@@ -1268,10 +1422,12 @@ def pointlist_to_multipoint(inputpointgeomlist):
 
     return QgsGeometry.fromMultiPointXY(as_pointXYList)
 
+
 def pointXY_to_geometry(inputpointXY):
     return QgsGeometry(QgsPoint(inputpointXY))
 
-def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1):
+
+def segments_to_add_points_tolinelayer(input_linelayer, pointgeomlist, buffer_d=1):
 
     # print(len(pointgeomlist))
     # to multipoint to simplify incidence for each feature in inputlayer
@@ -1280,32 +1436,40 @@ def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1)
     segments_list = []
 
     for feature in input_linelayer.getFeatures():
-        buffer = feature.geometry().buffer(buffer_d,5)
+        buffer = feature.geometry().buffer(buffer_d, 5)
 
         centroid = buffer.centroid()
 
         # incident points on buffer
         incident_list = buffer.intersection(as_geom)
 
-
-
         # creating the segments:
         for point in incident_list.asMultiPoint():
 
-            desired_vec_len = centroid.distance(QgsGeometry.fromPointXY(point)) + buffer_d
+            desired_vec_len = (
+                centroid.distance(QgsGeometry.fromPointXY(point)) + buffer_d
+            )
 
             # using vector to ensure that the line that we will build will really intersect the line
-            curr_vec = vector_from_2_pts(centroid,QgsGeometry.fromPointXY(point),desired_vec_len)
+            curr_vec = vector_from_2_pts(
+                centroid, QgsGeometry.fromPointXY(point), desired_vec_len
+            )
 
             P_forline = centroid.asPoint() + curr_vec
 
-            segments_list.append(QgsGeometry.fromPolyline([QgsPoint(centroid.asPoint()),QgsPoint(P_forline)]))
+            segments_list.append(
+                QgsGeometry.fromPolyline(
+                    [QgsPoint(centroid.asPoint()), QgsPoint(P_forline)]
+                )
+            )
 
     segments_asMultiLineString = QgsGeometry.collectGeometry(segments_list)
 
     segments_asfeatlist = [geom_to_feature(segments_asMultiLineString)]
 
-    segments_aslayer = layer_from_featlist(segments_asfeatlist,'segments_intersections','LineString')
+    segments_aslayer = layer_from_featlist(
+        segments_asfeatlist, "segments_intersections", "LineString"
+    )
 
     dissolved_segments_layer = dissolve_tosinglegeom(segments_aslayer)
 
@@ -1314,7 +1478,11 @@ def segments_to_add_points_tolinelayer(input_linelayer,pointgeomlist,buffer_d=1)
     return dissolved_segments_layer
 
 
-def rejoin_splitted_lines(inputlineslayer,incidence_layer,attrs_dict={'highway':QVariant.String,'footway':QVariant.String}):
+def rejoin_splitted_lines(
+    inputlineslayer,
+    incidence_layer,
+    attrs_dict={"highway": QVariant.String, "footway": QVariant.String},
+):
 
     rejoined_features = []
 
@@ -1334,13 +1502,16 @@ def rejoin_splitted_lines(inputlineslayer,incidence_layer,attrs_dict={'highway':
 
         as_singleline.removeDuplicateNodes(0.000001)
 
-        rejoined_features.append(geom_to_feature(as_singleline,attrs))
+        rejoined_features.append(geom_to_feature(as_singleline, attrs))
 
-    return layer_from_featlist(rejoined_features,'rejoined_part1','LineString',attrs_dict=attrs_dict)
+    return layer_from_featlist(
+        rejoined_features, "rejoined_part1", "LineString", attrs_dict=attrs_dict
+    )
 
-def swap_features_layer_another(inputdesiredlayer,layer_with_newfeatures):
+
+def swap_features_layer_another(inputdesiredlayer, layer_with_newfeatures):
     """
-        swapping features, presuming same type and same fields
+    swapping features, presuming same type and same fields
     """
 
     with edit(inputdesiredlayer):
@@ -1353,41 +1524,43 @@ def swap_features_layer_another(inputdesiredlayer,layer_with_newfeatures):
         for new_feature in layer_with_newfeatures.getFeatures():
             inputdesiredlayer.addFeature(new_feature)
 
+
 def read_json(inputpath):
     with open(inputpath) as reader:
         data = reader.read()
 
     return json.loads(data)
 
-def dump_json(inputdict,outputpath):
-    with open(outputpath,'w+') as json_handle:
-        json.dump(inputdict,json_handle)
 
-def merge_geojsons(input_pathlist,outputpath):
-    '''
-        simple function to merge geojsons without using any library.
+def dump_json(inputdict, outputpath):
+    with open(outputpath, "w+") as json_handle:
+        json.dump(inputdict, json_handle)
 
-        Same CRS for all files is assumed.
-    '''
+
+def merge_geojsons(input_pathlist, outputpath):
+    """
+    simple function to merge geojsons without using any library.
+
+    Same CRS for all files is assumed.
+    """
 
     ref_dict = None
 
-    for i,path in enumerate(input_pathlist):
-
+    for i, path in enumerate(input_pathlist):
 
         if i == 0:
             ref_dict = read_json(path)
 
         else:
-            ref_dict['features'] += read_json(path)['features']
+            ref_dict["features"] += read_json(path)["features"]
+
+    dump_json(ref_dict, outputpath)
 
 
-    dump_json(ref_dict,outputpath)
-
-def write_generic_file(outpath:str,inputlist:list,mode='w+'):
-    with open(outpath,mode) as filewriter:
+def write_generic_file(outpath: str, inputlist: list, mode="w+"):
+    with open(outpath, mode) as filewriter:
         for item in inputlist:
-            filewriter.write(item+'\n')
+            filewriter.write(item + "\n")
 
 
 def count_of_vertex(input_feature):
@@ -1407,10 +1580,11 @@ def count_of_vertex(input_feature):
 
     return count
 
-def select_feats_by_attr(inputlayer,attr,value):
-    '''
-        function to select features based on a tag (key/attribute/column_name and value pair)
-    '''
+
+def select_feats_by_attr(inputlayer, attr, value):
+    """
+    function to select features based on a tag (key/attribute/column_name and value pair)
+    """
 
     ret_list = []
 
@@ -1422,7 +1596,7 @@ def select_feats_by_attr(inputlayer,attr,value):
 
 
 def remove_unconnected_lines_v2(inputlayer):
-    #thx: https://sl.bing.net/iIo7elzcg68
+    # thx: https://sl.bing.net/iIo7elzcg68
     index = QgsSpatialIndex(inputlayer.getFeatures())
 
     with edit(inputlayer):
@@ -1450,6 +1624,7 @@ def remove_unconnected_lines_v2(inputlayer):
 
                 if not_intersecting:
                     inputlayer.deleteFeature(feat_id)
+
 
 # def generate_bounded_color(vmin=100,vmax=200):
 #     """Generate a random color with each channel limited to max_brightness."""

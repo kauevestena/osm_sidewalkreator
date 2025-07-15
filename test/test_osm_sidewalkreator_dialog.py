@@ -8,9 +8,9 @@
 
 """
 
-__author__ = 'kauemv2@gmail.com'
-__date__ = '2021-09-29'
-__copyright__ = 'Copyright 2021, Kaue de Moraes Vestena'
+__author__ = "kauemv2@gmail.com"
+__date__ = "2021-09-29"
+__copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
 
@@ -19,6 +19,7 @@ from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
 from osm_sidewalkreator_dialog import sidewalkreatorDialog
 
 from utilities import get_qgis_app
+
 QGIS_APP = get_qgis_app()
 
 
@@ -50,8 +51,8 @@ class sidewalkreatorDialogTest(unittest.TestCase):
         result = self.dialog.result()
         self.assertEqual(result, QDialog.Rejected)
 
+
 if __name__ == "__main__":
     suite = unittest.makeSuite(sidewalkreatorDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-
