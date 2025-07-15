@@ -86,7 +86,7 @@ class ProtoblockProvider(QgsProcessingProvider):
 
     def name(self):
         # Display name for the provider, using tr() as is standard
-        provider_name = self.tr("SidewalKreator Algorithms")
+        provider_name = self.tr("SidewalKreator")
         return provider_name
 
     def longName(self):
