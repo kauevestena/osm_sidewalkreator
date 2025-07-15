@@ -59,6 +59,9 @@ perc_to_interpolate = 0.4
 # distance to add to each side, as we are creating sidewalk axis, not kerbs
 d_to_add_to_each_side = 1  # 1m
 
+# Default timeout for network requests in seconds
+DEFAULT_TIMEOUT_SECONDS = 60
+
 
 # for values that must be ignored one must use "0" as value
 default_widths = {

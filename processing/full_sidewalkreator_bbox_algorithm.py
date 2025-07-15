@@ -32,10 +32,14 @@ from ..osm_fetch import get_osm_data # for fetching OSM data
 from .. import parameters # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
-    polygonize_lines, reproject_layer_localTM, reproject_layer,
-    log_plugin_message,
-    cliplayer_v2, clean_street_network_data, create_memory_layer_from_features,
-    CRS_LATLON_4326
+    polygonize_lines,
+    reproject_layer_localTM,
+    reproject_layer,
+    # log_plugin_message,
+    cliplayer_v2,
+    clean_street_network_data,
+    # create_memory_layer_from_features,
+    CRS_LATLON_4326,
 )
 from .sidewalk_generation_logic import generate_sidewalk_geometries_and_zones # Core logic
 
