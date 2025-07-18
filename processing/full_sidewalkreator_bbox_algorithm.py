@@ -28,7 +28,10 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 # Utility functions from the plugin
-from ..osm_fetch import get_osm_data  # for fetching OSM data
+from ..osm_fetch import (
+    get_osm_data,
+    osm_query_string_by_bbox,
+)  # for fetching OSM data
 from .. import parameters  # For default values and constants
 from .. import generic_functions
 from ..generic_functions import (
@@ -370,15 +373,32 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
         # --- 3. Fetch OSM Road Data ---
         feedback.pushInfo(self.tr("Fetching OSM road data..."))
+
+        # Get bbox coordinates
+        min_lat = extent_4326.yMinimum()
+        min_lgt = extent_4326.xMinimum()
+        max_lat = extent_4326.yMaximum()
+        max_lgt = extent_4326.xMaximum()
+
+        # Build query string for roads
+        road_query_string = osm_query_string_by_bbox(
+            min_lat,
+            min_lgt,
+            max_lat,
+            max_lgt,
+            interest_key="highway",
+            way=True,
+            node=False,
+            relation=False,
+            interest_value="|".join(street_classes_to_process),
+        )
+
         # Use the original EPSG:4326 extent for fetching
         osm_road_data_layer_4326 = get_osm_data(
-            polygon_layer=input_polygon_layer_for_processing,  # Use the 4326 layer for fetching
-            osm_elements=["way"],
-            tags={"highway": street_classes_to_process},
-            timeout_seconds=timeout,
-            output_layer_name="osm_roads_raw_4326_bbox",
-            feedback=feedback,
-            context=context,
+            querystring=road_query_string,
+            tempfilesname="osm_roads_raw_4326_bbox",
+            geomtype="LineString",
+            timeout=timeout,
         )
         if (
             osm_road_data_layer_4326 is None
@@ -487,15 +507,24 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         reproj_buildings_layer_local_tm = None
         if get_building_data:
             feedback.pushInfo(self.tr("Fetching OSM building data..."))
+
+            # Build query string for buildings
+            building_query_string = osm_query_string_by_bbox(
+                min_lat,
+                min_lgt,
+                max_lat,
+                max_lgt,
+                interest_key="building",
+                way=True,
+                relation=True,  # For multipolygons
+                interest_value=None,  # Fetch all building types
+            )
+
             osm_buildings_layer_4326 = get_osm_data(
-                polygon_layer=input_polygon_layer_for_processing,  # Use 4326 layer
-                osm_elements=["way", "relation"],  # Relations for multipolygons
-                tags={"building": True},  # Fetch all building types
-                timeout_seconds=timeout,
-                output_layer_name="osm_buildings_raw_4326_bbox",
-                feedback=feedback,
-                context=context,
-                expected_geom_type="Polygon",
+                querystring=building_query_string,
+                tempfilesname="osm_buildings_raw_4326_bbox",
+                geomtype="Polygon",  # Expected geometry type
+                timeout=timeout,
             )
 
             if osm_buildings_layer_4326 and osm_buildings_layer_4326.featureCount() > 0:
