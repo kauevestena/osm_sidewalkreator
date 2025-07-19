@@ -160,7 +160,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 self.tr("Street Classes to Process"),
                 options=street_options,
                 allowMultiple=True,
-                defaultValue=street_options,
+                defaultValue=list(range(len(street_options))),
             )
         )
 
@@ -331,6 +331,15 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # --- 2. Get Input Polygon Details and Define Local TM CRS ---
         # For BBOX input, the extent is already in EPSG:4326
         extent_4326 = input_extent_rect
+        # Reproject if the input CRS is not EPSG:4326
+        if context.project().crs() != QgsCoordinateReferenceSystem("EPSG:4326"):
+            source_crs = context.project().crs()
+            dest_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+            transform = QgsCoordinateTransform(
+                source_crs, dest_crs, QgsProject.instance()
+            )
+            extent_4326 = transform.transform(extent_4326)
+
         centroid_lon = extent_4326.center().x()
 
         # Reproject the memory input polygon layer to local TM for internal processing
@@ -382,26 +391,30 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
         # Build query string for roads
         road_query_string = osm_query_string_by_bbox(
-            min_lat,
-            min_lgt,
-            max_lat,
-            max_lgt,
+            min_lat=min_lat,
+            min_lgt=min_lgt,
+            max_lat=max_lat,
+            max_lgt=max_lgt,
             interest_key="highway",
             way=True,
             node=False,
             relation=False,
-            interest_value="|".join(street_classes_to_process),
         )
+        feedback.pushInfo(f"Overpass API query for roads: {road_query_string}")
 
         # Use the original EPSG:4326 extent for fetching
-        osm_road_data_layer_4326 = get_osm_data(
+        osm_road_data_filepath = get_osm_data(
             querystring=road_query_string,
             tempfilesname="osm_roads_raw_4326_bbox",
             geomtype="LineString",
             timeout=timeout,
         )
+        osm_road_data_layer_4326 = QgsVectorLayer(
+            osm_road_data_filepath, "osm_roads", "ogr"
+        )
         if (
             osm_road_data_layer_4326 is None
+            or not osm_road_data_layer_4326.isValid()
             or osm_road_data_layer_4326.featureCount() == 0
         ):
             feedback.reportError(
@@ -510,24 +523,34 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
             # Build query string for buildings
             building_query_string = osm_query_string_by_bbox(
-                min_lat,
                 min_lgt,
-                max_lat,
+                min_lat,
                 max_lgt,
+                max_lat,
                 interest_key="building",
                 way=True,
                 relation=True,  # For multipolygons
                 interest_value=None,  # Fetch all building types
             )
+            feedback.pushInfo(
+                f"Overpass API query for buildings: {building_query_string}"
+            )
 
-            osm_buildings_layer_4326 = get_osm_data(
+            osm_buildings_filepath = get_osm_data(
                 querystring=building_query_string,
                 tempfilesname="osm_buildings_raw_4326_bbox",
                 geomtype="Polygon",  # Expected geometry type
                 timeout=timeout,
             )
+            osm_buildings_layer_4326 = QgsVectorLayer(
+                osm_buildings_filepath, "osm_buildings", "ogr"
+            )
 
-            if osm_buildings_layer_4326 and osm_buildings_layer_4326.featureCount() > 0:
+            if (
+                osm_buildings_layer_4326
+                and osm_buildings_layer_4326.isValid()
+                and osm_buildings_layer_4326.featureCount() > 0
+            ):
                 feedback.pushInfo(
                     self.tr(
                         f"Fetched {osm_buildings_layer_4326.featureCount()} raw building features."
