@@ -38,21 +38,15 @@ import math  # For math.sqrt if used in ratio calculations, though not directly 
 
 
 def generate_sidewalk_geometries_and_zones(
-    street_network_layer: QgsVectorLayer,  # Input: filtered_streets_layer (local TM CRS)
-    dissolved_protoblocks_layer: QgsVectorLayer,  # Input: (local TM CRS)
-    buildings_layer: QgsVectorLayer,  # Input: reprojected buildings (local TM CRS), can be None
-    # Parameters
-    check_building_overlap: bool,
-    min_dist_to_building: float,
-    min_generated_width_near_building: float,
-    added_width_for_sidewalk_axis_total: float,
-    curve_radius: float,
-    # Context and Feedback for processing calls (though generic_functions might not use them yet)
-    # For now, these are not explicitly passed down into every generic_function call from here,
-    # as generic_functions primarily use processing.run which gets context implicitly or sometimes takes it.
-    # If progress/cancellation needs to be finer-grained within this function, they'd be used more.
+    road_network_layer_local_tm: QgsVectorLayer,
+    processing_aoi_geom_local_tm: QgsGeometry,
+    building_footprints_layer_local_tm: QgsVectorLayer,
+    protoblocks_layer_local_tm: QgsVectorLayer,
+    parameters: dict,
     feedback: QgsProcessingFeedback,
-) -> tuple[QgsVectorLayer, QgsVectorLayer, QgsVectorLayer, QgsVectorLayer]:
+    context: QgsProcessingContext,
+    local_tm_crs: QgsCoordinateReferenceSystem,
+) -> dict:
     """
     Replicates the core logic of osm_sidewalkreator.py's draw_sidewalks method.
     Returns:
@@ -62,7 +56,7 @@ def generate_sidewalk_geometries_and_zones(
         - width_adjusted_street_network (QgsVectorLayer, LineString in local_tm_crs) - for subsequent steps like crossings
     """
 
-    current_crs = street_network_layer.crs()
+    current_crs = road_network_layer_local_tm.crs()
     feedback.pushInfo(
         f"Sidewalk Generation: Input street network CRS: {current_crs.authid()}"
     )
@@ -78,7 +72,7 @@ def generate_sidewalk_geometries_and_zones(
         "memory",
     )
     width_adjusted_streets_dp = width_adjusted_streets.dataProvider()
-    width_adjusted_streets_dp.addAttributes(street_network_layer.fields())
+    width_adjusted_streets_dp.addAttributes(road_network_layer_local_tm.fields())
     width_adjusted_streets.updateFields()
 
     # Ensure 'widths_fieldname' (e.g. "width") exists on the new layer
@@ -94,19 +88,19 @@ def generate_sidewalk_geometries_and_zones(
     # Copy features and adjust widths if needed
     features_to_add = []
     if (
-        check_building_overlap
-        and buildings_layer
-        and buildings_layer.featureCount() > 0
+        parameters.get("check_building_overlap", False)
+        and building_footprints_layer_local_tm
+        and building_footprints_layer_local_tm.featureCount() > 0
     ):
         feedback.pushInfo("Adjusting street widths based on proximity to buildings...")
         # This part requires careful adaptation of the logic from draw_sidewalks
         # It involves dissolving buildings and checking distances.
         dissolved_buildings = dissolve_tosinglegeom(
-            buildings_layer
+            building_footprints_layer_local_tm
         )  # Assumes buildings_layer is valid
         dissolved_buildings_geom = get_first_feature_or_geom(dissolved_buildings, True)
 
-        for street_feat in street_network_layer.getFeatures():
+        for street_feat in road_network_layer_local_tm.getFeatures():
             if feedback.isCanceled():
                 return None, None, None, None
 
@@ -133,11 +127,11 @@ def generate_sidewalk_geometries_and_zones(
             # Half of the total width that the sidewalk generation process will effectively use on one side
             # This is (road_half_width + added_half_width_for_sidewalk_axis)
             effective_sidewalk_projection_one_side = (current_street_width / 2.0) + (
-                added_width_for_sidewalk_axis_total / 2.0
+                parameters.get("added_width_for_sidewalk_axis_total", 0.0) / 2.0
             )
 
             diff_dist = (
-                d_to_nearest_building - min_dist_to_building
+                d_to_nearest_building - parameters.get("min_dist_to_building", 0.0)
             ) - effective_sidewalk_projection_one_side
 
             adjusted_street_width = current_street_width
@@ -155,7 +149,7 @@ def generate_sidewalk_geometries_and_zones(
                     effective_sidewalk_projection_one_side + diff_dist
                 )
                 new_road_half_width = new_effective_projection_one_side - (
-                    added_width_for_sidewalk_axis_total / 2.0
+                    parameters.get("added_width_for_sidewalk_axis_total", 0.0) / 2.0
                 )
                 adjusted_street_width = 2 * new_road_half_width
 
@@ -170,13 +164,16 @@ def generate_sidewalk_geometries_and_zones(
                 # This seems to imply `min_generated_sidewalk_width` was for the *road width used for buffering*.
                 # This needs careful interpretation. Let's assume min_generated_width_near_building is the target road width for buffering.
                 if (
-                    adjusted_street_width < min_generated_width_near_building
+                    adjusted_street_width
+                    < parameters.get("min_generated_width_near_building", 0.0)
                 ):  # This might be wrong.
                     # The original min_width_box.value() was for the *buffered result*, not the input street width.
                     # Re-evaluating: the original code sets 'new_width' for the street feature's 'width' attribute.
                     # This 'new_width' is then used in the buffer expression: ('width'/2) + (d_to_add/2)
                     # So, min_generated_width_near_building should be the minimum value for this 'width' attribute.
-                    adjusted_street_width = min_generated_width_near_building
+                    adjusted_street_width = parameters.get(
+                        "min_generated_width_near_building", 0.0
+                    )
 
             new_street_feat.setAttribute(width_idx_adjusted, adjusted_street_width)
             features_to_add.append(new_street_feat)
@@ -192,7 +189,7 @@ def generate_sidewalk_geometries_and_zones(
             "Skipping building overlap checks for sidewalk width adjustment."
         )
         # Just copy features as is
-        for street_feat in street_network_layer.getFeatures():
+        for street_feat in road_network_layer_local_tm.getFeatures():
             if feedback.isCanceled():
                 return None, None, None, None
             new_street_feat = QgsFeature(width_adjusted_streets.fields())
@@ -213,9 +210,7 @@ def generate_sidewalk_geometries_and_zones(
 
     # --- 2. Generate initial sidewalk polygons (buffers) ---
     feedback.pushInfo("Generating sidewalk area buffers...")
-    buffer_distance_expression = (
-        f'("{widths_fieldname}" / 2) + {added_width_for_sidewalk_axis_total / 2.0}'
-    )
+    buffer_distance_expression = f'("{widths_fieldname}" / 2) + {parameters.get("added_width_for_sidewalk_axis_total", 0.0) / 2.0}'
 
     proto_undissolved_buffer = generate_buffer(
         width_adjusted_streets, buffer_distance_expression, dissolve=False
@@ -228,12 +223,14 @@ def generate_sidewalk_geometries_and_zones(
         raise QgsProcessingException("Failed at first dissolve for buffer.")
 
     # Rounding buffers
-    proto_dissolved_buffer_step2 = generate_buffer(dissolved_once_buffer, curve_radius)
+    proto_dissolved_buffer_step2 = generate_buffer(
+        dissolved_once_buffer, parameters.get("curve_radius", 0.0)
+    )
     if not proto_dissolved_buffer_step2:
         raise QgsProcessingException("Failed at curve_radius buffer generation.")
 
     dissolved_sidewalk_area_polygons = generate_buffer(
-        proto_dissolved_buffer_step2, -curve_radius
+        proto_dissolved_buffer_step2, -parameters.get("curve_radius", 0.0)
     )
     if not dissolved_sidewalk_area_polygons:
         raise QgsProcessingException(
@@ -296,15 +293,15 @@ def generate_sidewalk_geometries_and_zones(
         # Effective half-width for sidewalk tag based buffering (street half-width + added half-width + small margin)
         # Original plugin: half_width = (float(attrdict.get(widths_fieldname)) + self.dlg.d_to_add_box.value() + 1) / 2 + 0.5
         # This means: ( (original_street_width + total_added_width) / 2 ) + 0.5 + 0.5
-        # ( (current_street_width + added_width_for_sidewalk_axis_total) / 2 ) + 1.0 -> this might be too large.
+        # ( (current_street_width + parameters.get("added_width_for_sidewalk_axis_total", 0.0)) / 2 ) + 1.0 -> this might be too large.
         # The original code: (width_val / 2) + 0.5 where width_val = float(attrdict.get(widths_fieldname)) + self.dlg.d_to_add_box.value() + 1
-        # So, half_buffer_for_tags = (current_street_width + added_width_for_sidewalk_axis_total + 1.0) / 2.0 + 0.5
+        # So, half_buffer_for_tags = (current_street_width + parameters.get("added_width_for_sidewalk_axis_total", 0.0) + 1.0) / 2.0 + 0.5
         # This formula seems a bit off. Let's use the effective sidewalk projection + a small margin.
-        # Effective projection per side = current_street_width/2 + added_width_for_sidewalk_axis_total/2
+        # Effective projection per side = current_street_width/2 + parameters.get("added_width_for_sidewalk_axis_total", 0.0)/2
         # Let's use this effective projection for singleSidedBuffer
         tag_buffer_dist = (
             (current_street_width / 2.0)
-            + (added_width_for_sidewalk_axis_total / 2.0)
+            + (parameters.get("added_width_for_sidewalk_axis_total", 0.0) / 2.0)
             + 0.5
         )  # Added 0.5m margin
 
@@ -443,12 +440,12 @@ def generate_sidewalk_geometries_and_zones(
 
     # --- Filter sidewalk lines by dissolved_protoblocks_layer (remove disjoint) ---
     # This was an important step in the original plugin
-    if dissolved_protoblocks_layer and dissolved_protoblocks_layer.featureCount() > 0:
+    if protoblocks_layer_local_tm and protoblocks_layer_local_tm.featureCount() > 0:
         feedback.pushInfo(
             "Filtering sidewalk lines to keep only those intersecting protoblock areas..."
         )
         dissolved_protoblock_geom = get_first_feature_or_geom(
-            dissolved_protoblocks_layer, True
+            protoblocks_layer_local_tm, True
         )
 
         # Create a new layer for filtered sidewalks
@@ -487,9 +484,9 @@ def generate_sidewalk_geometries_and_zones(
     # This seems more for quality control/potential filtering not directly part of core generation.
     # For now, skipping this complex ratio calculation.
 
-    return (
-        whole_sidewalks_lines,
-        exclusion_zones_poly,
-        sure_zones_poly,
-        width_adjusted_streets,
-    )
+    return {
+        "sidewalk_lines": whole_sidewalks_lines,
+        "exclusion_zones": exclusion_zones_poly,
+        "sure_zones": sure_zones_poly,
+        "width_adjusted_streets": width_adjusted_streets,
+    }
