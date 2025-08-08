@@ -9,5 +9,6 @@ PLUGIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 exec docker run --rm \
     -v "${PLUGIN_DIR}:/app" \
     -w /app \
+    -e PYTHONPATH=/app:/app/test \
     qgis/qgis:latest \
     bash -lc "pip install -r requirements.txt && pytest"
