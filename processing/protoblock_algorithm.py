@@ -12,7 +12,9 @@ from qgis.core import (
     QgsProcessingMultiStepFeedback,
     QgsVectorLayer,
     QgsProcessingUtils,
-)  # Added QgsProcessingUtils
+    QgsMessageLog,
+    Qgis,
+)  # Added QgsProcessingUtils and logging classes
 from qgis.core import (
     QgsProcessingParameterNumber,
     QgsCoordinateReferenceSystem,
@@ -523,39 +525,21 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         # It should be a QgsVectorLayer object if 'OUTPUT' was 'memory:...'
         # and the algorithm is well-behaved with memory outputs.
         reprojected_output_value = reproject_final_result.get("OUTPUT")
+        output_layer_epsg4326 = None
 
-        if not isinstance(reprojected_output_value, QgsVectorLayer):
-            # If it's a string (path or ID), try to load it
-            # This case might occur if TEMPORARY_OUTPUT was used instead of 'memory:' string,
-            # or if the alg behaves differently. For 'memory:...' it's often the object itself.
+        if isinstance(reprojected_output_value, QgsVectorLayer):
+            output_layer_epsg4326 = reprojected_output_value
+        elif reprojected_output_value is not None:
             feedback.pushInfo(
                 self.tr(
-                    f"Reprojection output was not a QgsVectorLayer, but: {type(reprojected_output_value)}. Attempting to load if it's a path/ID: {reprojected_output_value}"
+                    f"Reprojection output was of type {type(reprojected_output_value)}; attempting to load via QgsProcessingUtils.mapLayerFromString"
                 )
             )
-            # We expect 'memory:protoblocks_final_epsg4326_algo' to yield a QgsVectorLayer directly.
-            # If it's a string ID like 'memory_xxxx', QgsProcessingUtils.mapLayerFromString would be needed,
-            # but that's not easily available here without 'context' which is tricky.
-            # For now, assume if it's not a QgsVectorLayer, it's an error for 'memory:' output.
-            if isinstance(reprojected_output_value, str):
-                # Use QgsProcessingUtils.mapLayerFromString to get the layer object
-                output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(
-                    reprojected_output_value, context
-                )
-                if output_layer_epsg4326:
-                    # Optionally set a more friendly name for this in-memory instance if needed
-                    output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
-            else:
-                # This case should ideally not be hit if native:reprojectlayer with 'memory:' output
-                # consistently returns a string ID. If it returns the object, the 'else' below handles it.
-                raise QgsProcessingException(
-                    self.tr(
-                        f"Unexpected output type from final reprojection: {type(reprojected_output_value)} when expecting a string ID."
-                    )
-                )
-        else:  # it is already a QgsVectorLayer object
-            output_layer_epsg4326 = reprojected_output_value
-            # output_layer_epsg4326.setName("protoblocks_epsg4326") # Optional
+            output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(
+                str(reprojected_output_value), context
+            )
+            if output_layer_epsg4326:
+                output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
 
         if (
             not output_layer_epsg4326 or not output_layer_epsg4326.isValid()
@@ -624,7 +608,15 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         return {}
 
 
-from qgis import processing
+try:
+    from qgis import processing
+except ImportError as e:
+    QgsMessageLog.logMessage(
+        f"Failed to import processing module: {e}",
+        "SidewalKreator",
+        Qgis.Critical,
+    )
+    raise
 from qgis.core import (
     QgsWkbTypes,
     QgsProcessingException,

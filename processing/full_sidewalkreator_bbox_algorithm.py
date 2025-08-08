@@ -23,6 +23,8 @@ from qgis.core import (
     QgsFields,
     QgsFeatureRequest,
     QgsProcessingUtils,
+    QgsMessageLog,
+    Qgis,
 )
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
@@ -42,14 +44,22 @@ from ..generic_functions import (
     cliplayer_v2,
     # clean_street_network_data,
     # create_memory_layer_from_features,
-    # CRS_LATLON_4326,
 )
+from ..parameters import CRS_LATLON_4326
 from .sidewalk_generation_logic import (
     generate_sidewalk_geometries_and_zones,
 )  # Core logic
 
 import os
-import processing  # For native algorithms
+try:
+    import processing  # For native algorithms
+except ImportError as e:
+    QgsMessageLog.logMessage(
+        f"Failed to import processing module: {e}",
+        "SidewalKreator",
+        Qgis.Critical,
+    )
+    raise
 
 
 class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
@@ -488,7 +498,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 destination_crs="EPSG:4326",
                 output_mode="memory:protoblocks_4326_debug_bbox",
             )
-            if protoblocks_layer_4326_debug:
+            if (
+                protoblocks_layer_4326_debug
+                and protoblocks_layer_4326_debug.isValid()
+                and protoblocks_layer_4326_debug.featureCount() > 0
+            ):
                 (sink_protoblocks_debug, dest_id_protoblocks_debug) = (
                     self.parameterAsSink(
                         parameters_alg,
@@ -674,7 +688,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 destination_crs="EPSG:4326",
                 output_mode="memory:sidewalks_final_4326_bbox",
             )
-            if sidewalks_layer_4326 and sidewalks_layer_4326.featureCount() > 0:
+            if (
+                sidewalks_layer_4326
+                and sidewalks_layer_4326.isValid()
+                and sidewalks_layer_4326.featureCount() > 0
+            ):
                 (sink_sidewalks, dest_id_sidewalks) = self.parameterAsSink(
                     parameters_alg,
                     self.OUTPUT_SIDEWALKS,
@@ -704,6 +722,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         if (
             save_exclusion_zones_debug
             and exclusion_zones_layer_local_tm
+            and exclusion_zones_layer_local_tm.isValid()
             and exclusion_zones_layer_local_tm.featureCount() > 0
         ):
             (sink_exclusion, dest_id_exclusion) = self.parameterAsSink(
@@ -718,10 +737,15 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 for feature in exclusion_zones_layer_local_tm.getFeatures():
                     sink_exclusion.addFeature(feature, QgsFeatureSink.FastInsert)
                 results[self.OUTPUT_EXCLUSION_ZONES_DEBUG] = dest_id_exclusion
+            else:
+                feedback.pushWarning(
+                    self.tr("Failed to create sink for exclusion zones debug layer.")
+                )
 
         if (
             save_sure_zones_debug
             and sure_zones_layer_local_tm
+            and sure_zones_layer_local_tm.isValid()
             and sure_zones_layer_local_tm.featureCount() > 0
         ):
             (sink_sure, dest_id_sure) = self.parameterAsSink(
@@ -736,10 +760,15 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 for feature in sure_zones_layer_local_tm.getFeatures():
                     sink_sure.addFeature(feature, QgsFeatureSink.FastInsert)
                 results[self.OUTPUT_SURE_ZONES_DEBUG] = dest_id_sure
+            else:
+                feedback.pushWarning(
+                    self.tr("Failed to create sink for sure zones debug layer.")
+                )
 
         if (
             save_streets_width_adjusted_debug
             and width_adjusted_streets_layer_local_tm
+            and width_adjusted_streets_layer_local_tm.isValid()
             and width_adjusted_streets_layer_local_tm.featureCount() > 0
         ):
             (sink_adjusted_streets, dest_id_adjusted_streets) = self.parameterAsSink(
@@ -755,6 +784,10 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     sink_adjusted_streets.addFeature(feature, QgsFeatureSink.FastInsert)
                 results[self.OUTPUT_STREETS_WIDTH_ADJUSTED_DEBUG] = (
                     dest_id_adjusted_streets
+                )
+            else:
+                feedback.pushWarning(
+                    self.tr("Failed to create sink for width-adjusted streets debug layer.")
                 )
 
         feedback.pushInfo(self.tr("Processing finished."))
