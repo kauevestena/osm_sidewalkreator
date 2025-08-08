@@ -2,7 +2,7 @@
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import QgsProcessingProvider, Qgis  # Added Qgis for message levels
+from qgis.core import QgsProcessingProvider, Qgis, QgsMessageLog  # Added message log
 import os
 import traceback
 
@@ -43,19 +43,22 @@ class ProtoblockProvider(QgsProcessingProvider):
             if ProtoblockAlgorithm:  # Check if class was successfully imported
                 self.addAlgorithm(ProtoblockAlgorithm())
         except Exception as e:
-            # Use QgsMessageLog for errors not tied to iface, or pass iface if available
-            print(
-                f"CRITICAL: Failed to load ProtoblockAlgorithm: {e}"
-            )  # Fallback print
+            QgsMessageLog.logMessage(
+                f"Failed to load ProtoblockAlgorithm: {e}",
+                "SidewalKreator",
+                Qgis.Critical,
+            )
             traceback.print_exc()
 
         try:
             if ProtoblockBboxAlgorithm:  # Check if class was successfully imported
                 self.addAlgorithm(ProtoblockBboxAlgorithm())
         except Exception as e:
-            print(
-                f"CRITICAL: Failed to load ProtoblockBboxAlgorithm: {e}"
-            )  # Fallback print
+            QgsMessageLog.logMessage(
+                f"Failed to load ProtoblockBboxAlgorithm: {e}",
+                "SidewalKreator",
+                Qgis.Critical,
+            )
             traceback.print_exc()
 
         try:
@@ -64,9 +67,11 @@ class ProtoblockProvider(QgsProcessingProvider):
             ):  # Check if class was successfully imported
                 self.addAlgorithm(FullSidewalkreatorPolygonAlgorithm())
         except Exception as e:
-            print(
-                f"CRITICAL: Failed to load FullSidewalkreatorPolygonAlgorithm: {e}"
-            )  # Fallback print
+            QgsMessageLog.logMessage(
+                f"Failed to load FullSidewalkreatorPolygonAlgorithm: {e}",
+                "SidewalKreator",
+                Qgis.Critical,
+            )
             traceback.print_exc()
 
         try:
@@ -75,9 +80,11 @@ class ProtoblockProvider(QgsProcessingProvider):
             ):  # Check if class was successfully imported
                 self.addAlgorithm(FullSidewalkreatorBboxAlgorithm())
         except Exception as e:
-            print(
-                f"CRITICAL: Failed to load FullSidewalkreatorBboxAlgorithm: {e}"
-            )  # Fallback print
+            QgsMessageLog.logMessage(
+                f"Failed to load FullSidewalkreatorBboxAlgorithm: {e}",
+                "SidewalKreator",
+                Qgis.Critical,
+            )
             traceback.print_exc()
 
     def id(self):
@@ -108,10 +115,18 @@ class ProtoblockProvider(QgsProcessingProvider):
                 # This case might occur if the icon is missing or path is wrong.
                 # QGIS might show a default icon or no icon.
                 # Avoid using iface here as it might not be available during provider loading.
-                print(f"Provider icon not found at: {icon_path}")
+                QgsMessageLog.logMessage(
+                    f"Provider icon not found at: {icon_path}",
+                    "SidewalKreator",
+                    Qgis.Warning,
+                )
                 return QIcon()
         except Exception as e:
-            print(f"Error in provider icon() method: {e}")
+            QgsMessageLog.logMessage(
+                f"Error in provider icon() method: {e}",
+                "SidewalKreator",
+                Qgis.Warning,
+            )
             # Avoid using iface here.
             # iface.messageBar().pushMessage("Warning", f"Error loading provider icon: {e}", level=Qgis.Warning)
             return QIcon()
