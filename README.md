@@ -100,3 +100,20 @@ docker run --rm -v "$(pwd)":/app osm_sidewalkreator-tests
 ```
 
 Both approaches install Python dependencies from `requirements.txt` and run `pytest` within the QGIS image.
+
+## Creating a release package
+
+The script `release/release_zip.py` bundles the plugin into a ZIP archive for distribution. By default it packages the current repository and writes `osm_sidewalkreator.zip` under `~/sidewalkreator_release`:
+
+```bash
+python release/release_zip.py
+```
+
+You can customize the plugin source, output directory and excluded files:
+
+```bash
+python release/release_zip.py --plugin-dir /path/to/plugin \
+  --output-dir /tmp/build --exclude tests docs "*.pyc"
+```
+
+The `--exclude` option accepts multiple patterns either separated by spaces or by repeating the flag.
