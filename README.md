@@ -48,33 +48,6 @@ It is mostly intended for Acessibility Mapping.
 
 Though the data was generated thinking on the usage for OSM, one may use it for pedestrian network analysis out-of-the-box, or even for other purposes inside or outside QGIS.
 
-## Known Issues:
-
-The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn't come bundled with QGIS, 
-so you can install it manually with:
-
-    <qgis_python_path> -m pip install shapely
-
-### For Flatpak QGIS:
-
-1) Open the flatpak shell for the qgis package:
-
-
-    flatpak run --command=sh org.qgis.qgis
-   
-3) Within the shell, type:
-
-
-    curl https://bootstrap.pypa.io/pip/pip.pyz -o pip.pyz
-   
-5) Install shapely:
-
-
-    python3 pip.pyz install shapely
-
-In a future release, from [this branch]([https://eurogeojournal.eu/index.php/egj/article/view/553](https://github.com/kauevestena/osm_sidewalkreator/tree/remove_dependencies)) this dependency shall be removed.
-
-
 ## Running tests with Docker
 
 The project provides a Docker setup so tests can be executed inside a containerized QGIS environment.
@@ -91,6 +64,8 @@ Mount the current project directory into the container and execute the test suit
 
 ```bash
 ./scripts/run_qgis_tests.sh
+# or to test a packaged release
+./scripts/run_qgis_tests.sh --use-release
 ```
 
 This helper script is equivalent to running the image directly:
@@ -100,6 +75,25 @@ docker run --rm -v "$(pwd)":/app osm_sidewalkreator-tests
 ```
 
 Both approaches install Python dependencies from `requirements.txt` and run `pytest` within the QGIS image.
+
+### Run processing algorithms
+
+The `scripts/run_qgis_processing.sh` helper invokes QGIS Processing algorithms
+from this plugin inside the same containerized environment. It mirrors the
+`--use-release` flag of the test script so algorithms can be executed from the
+source tree or a built release ZIP.
+
+Run an algorithm against the source tree:
+
+```bash
+./scripts/run_qgis_processing.sh generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
+```
+
+Or run it using a release build:
+
+```bash
+./scripts/run_qgis_processing.sh --use-release generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
+```
 
 ## Creating a release package
 
