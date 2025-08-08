@@ -74,3 +74,29 @@ so you can install it manually with:
 
 In a future release, from [this branch]([https://eurogeojournal.eu/index.php/egj/article/view/553](https://github.com/kauevestena/osm_sidewalkreator/tree/remove_dependencies)) this dependency shall be removed.
 
+
+## Running tests with Docker
+
+The project provides a Docker setup so tests can be executed inside a containerized QGIS environment.
+
+### Build the image
+
+```bash
+docker build -t osm_sidewalkreator-tests .
+```
+
+### Run the tests
+
+Mount the current project directory into the container and execute the test suite:
+
+```bash
+./scripts/run_qgis_tests.sh
+```
+
+This helper script is equivalent to running the image directly:
+
+```bash
+docker run --rm -v "$(pwd)":/app osm_sidewalkreator-tests
+```
+
+Both approaches install Python dependencies from `requirements.txt` and run `pytest` within the QGIS image.
