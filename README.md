@@ -68,6 +68,12 @@ Mount the current project directory into the container and execute the test suit
 ./scripts/run_qgis_tests.sh --use-release
 ```
 
+To run tests against the generated release zip, pass the `--use-release` flag:
+
+```bash
+./scripts/run_qgis_tests.sh --use-release
+```
+
 This helper script is equivalent to running the image directly:
 
 ```bash

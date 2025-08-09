@@ -21,6 +21,7 @@ if [[ ${USE_RELEASE} -eq 1 ]]; then
 else
     # Run tests inside the official QGIS container image
     # Mount the plugin directory into /app and execute pytest after installing deps
+
     exec docker run --rm \
         -v "${PLUGIN_DIR}:/app" \
         -w /app \
