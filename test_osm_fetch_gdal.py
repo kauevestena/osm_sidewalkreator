@@ -66,18 +66,12 @@ def run_test():
         # For this standalone test, we might need to adjust expectations or mock basepath if it's complex.
         # For now, let's assume join_to_a_outfolder works and creates ./temporary/ if basepath is '.'
 
-        # Create a dummy 'temporary' folder for the test if it doesn't exist
-        # and set basepath for osm_fetch to current dir for this test.
-        # This is a bit of a hack for standalone testing.
+        # Set basepath for osm_fetch to current dir for this test so that
+        # join_to_a_outfolder writes into ./temporary/
         original_basepath = None
         if "basepath" in sys.modules["osm_fetch"].__dict__:
             original_basepath = sys.modules["osm_fetch"].basepath
             sys.modules["osm_fetch"].basepath = "."  # Override basepath for test
-
-        temp_dir = "temporary"
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-            print(f"Created directory: {temp_dir}")
 
         print(f"\nFetching point data again, this time saving to file...")
         geojson_points_filepath = get_osm_data(
