@@ -25,7 +25,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 """
 
 # import os.path
-import os, requests, codecs, time
+import os, codecs, time
 
 # from os import environ
 
@@ -50,6 +50,7 @@ from qgis.core import (
     QgsGeometryUtils,
     QgsFeatureRequest,
     Qgis,
+    QgsMessageLog,
     NULL,
     QgsStatisticalSummary,
 )
@@ -114,6 +115,7 @@ def _build_plugin_paths(profile_path):
     reports_path = os.path.join(basepath, "reports")
     assets_path = os.path.join(basepath, "assets")
     return basepath, temps_path, reports_path, assets_path
+
 
 
 profilepath = QgsApplication.qgisSettingsDirPath()
