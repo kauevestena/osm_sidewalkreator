@@ -205,6 +205,123 @@ def _patch_full_bbox_alg(monkeypatch, raise_in_generation=False):
     )
 
 
+def _patch_full_polygon_alg(monkeypatch, call_recorder, raise_in_generation=False):
+    def fake_get_osm_data(**kwargs):
+        call_recorder.append(kwargs.get("geomtype"))
+        if kwargs.get("geomtype") == "LineString":
+            return _square_roads_geojson()
+        return json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"addr:housenumber": "1"},
+                        "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    }
+                ],
+            }
+        )
+
+    def fake_reproject(layer, outputpath=None, layername=None, lgt_0=None):
+        from qgis.core import QgsCoordinateReferenceSystem
+
+        return layer, QgsCoordinateReferenceSystem("EPSG:4326")
+
+    def fake_clip(inputlayer, overlay_lyr, outputlayer=None):
+        return inputlayer
+
+    def fake_polygonize(inputlines, outputlayer="TEMPORARY_OUTPUT", keepfields=True):
+        poly = QgsVectorLayer("Polygon?crs=EPSG:4326", "protob", "memory")
+        dp = poly.dataProvider()
+        f = QgsFeature()
+        f.setGeometry(
+            QgsGeometry.fromPolygonXY(
+                [
+                    [
+                        QgsPointXY(0, 0),
+                        QgsPointXY(1, 0),
+                        QgsPointXY(1, 1),
+                        QgsPointXY(0, 1),
+                        QgsPointXY(0, 0),
+                    ]
+                ]
+            )
+        )
+        dp.addFeature(f)
+        poly.updateExtents()
+        return poly
+
+    def fake_generate(
+        street_network_layer,
+        dissolved_protoblocks_layer,
+        buildings_layer,
+        check_building_overlap,
+        min_dist_to_building,
+        min_generated_width_near_building,
+        added_width_for_sidewalk_axis_total,
+        curve_radius,
+        feedback,
+    ):
+        if raise_in_generation:
+            raise QgsProcessingException("forced failure")
+        sidewalks = QgsVectorLayer("LineString?crs=EPSG:4326", "sidewalks", "memory")
+        dp = sidewalks.dataProvider()
+        feat = QgsFeature()
+        feat.setGeometry(
+            QgsGeometry.fromPolylineXY([QgsPointXY(0, 0), QgsPointXY(1, 0)])
+        )
+        dp.addFeature(feat)
+        sidewalks.updateExtents()
+        return (
+            sidewalks,
+            QgsVectorLayer("Polygon?crs=EPSG:4326", "excl", "memory"),
+            QgsVectorLayer("Polygon?crs=EPSG:4326", "sure", "memory"),
+            street_network_layer,
+        )
+
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.get_osm_data",
+        fake_get_osm_data,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.osm_query_string_by_bbox",
+        lambda *a, **k: "dummy",
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.reproject_layer_localTM",
+        fake_reproject,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.cliplayer_v2",
+        fake_clip,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.remove_unconnected_lines_v2",
+        lambda l: None,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.polygonize_lines",
+        fake_polygonize,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.dissolve_tosinglegeom",
+        lambda layer: layer,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.generate_sidewalk_geometries_and_zones",
+        fake_generate,
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.processing.run",
+        lambda *a, **k: {"OUTPUT": k.get("INPUT")},
+    )
+    monkeypatch.setattr(
+        "processing.full_sidewalkreator_polygon_algorithm.QgsProcessingUtils.mapLayerFromString",
+        lambda s, c: s,
+    )
+
+
 def test_full_bbox_success(monkeypatch):
     _patch_full_bbox_alg(monkeypatch)
     params = {
@@ -243,3 +360,44 @@ def test_full_bbox_failure(monkeypatch):
             "sidewalkreator_algorithms_provider:osm_sidewalkreator_full_bbox",
             params,
         )
+
+
+# ---------------------- Full Sidewalkreator Polygon Algorithm Tests ----------------------
+
+
+def test_full_polygon_fetches_addresses(monkeypatch):
+    calls = []
+    _patch_full_polygon_alg(monkeypatch, calls)
+    params = {
+        "INPUT_POLYGON": _simple_polygon_layer(),
+        "TIMEOUT": 30,
+        "FETCH_BUILDINGS_DATA": False,
+        "FETCH_ADDRESS_DATA": True,
+        "DEAD_END_ITERATIONS": 0,
+        "OUTPUT_SIDEWALKS": "memory:sw",
+        "OUTPUT_CROSSINGS": "memory:cr",
+        "OUTPUT_KERBS": "memory:kb",
+    }
+    processing.run(
+        "sidewalkreator_algorithms_provider:fullsidewalkreatorfrompolygon", params
+    )
+    assert "Point" in calls
+
+
+def test_full_polygon_skips_addresses(monkeypatch):
+    calls = []
+    _patch_full_polygon_alg(monkeypatch, calls)
+    params = {
+        "INPUT_POLYGON": _simple_polygon_layer(),
+        "TIMEOUT": 30,
+        "FETCH_BUILDINGS_DATA": False,
+        "FETCH_ADDRESS_DATA": False,
+        "DEAD_END_ITERATIONS": 0,
+        "OUTPUT_SIDEWALKS": "memory:sw",
+        "OUTPUT_CROSSINGS": "memory:cr",
+        "OUTPUT_KERBS": "memory:kb",
+    }
+    processing.run(
+        "sidewalkreator_algorithms_provider:fullsidewalkreatorfrompolygon", params
+    )
+    assert "Point" not in calls

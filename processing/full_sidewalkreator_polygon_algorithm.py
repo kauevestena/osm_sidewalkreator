@@ -328,7 +328,9 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         fetch_buildings_param = self.parameterAsBoolean(
             parameters, self.FETCH_BUILDINGS_DATA, context
         )
-        # fetch_addresses_param = self.parameterAsBoolean(parameters, self.FETCH_ADDRESS_DATA, context) # TODO
+        fetch_addresses_param = self.parameterAsBoolean(
+            parameters, self.FETCH_ADDRESS_DATA, context
+        )
         dead_end_iterations = self.parameterAsInt(
             parameters, self.DEAD_END_ITERATIONS, context
         )
@@ -512,6 +514,48 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             else:
                 feedback.pushInfo(self.tr("Failed to fetch building data string."))
                 osm_buildings_layer_4326 = None
+
+        # Fetch Addresses (if requested)
+        osm_addresses_layer_4326 = None
+        if fetch_addresses_param:
+            feedback.pushInfo(self.tr("Fetching OSM address data..."))
+            query_addresses = osm_query_string_by_bbox(
+                min_lat,
+                min_lgt,
+                max_lat,
+                max_lgt,
+                interest_key="addr:housenumber",
+                node=True,
+                way=False,
+            )
+            osm_addrs_geojson_str = get_osm_data(
+                querystring=query_addresses,
+                tempfilesname="osm_addrs_full_algo",
+                geomtype="Point",
+                timeout=timeout,
+                return_as_string=True,
+            )
+            if osm_addrs_geojson_str:
+                osm_addresses_layer_4326 = QgsVectorLayer(
+                    osm_addrs_geojson_str, "osm_addrs_dl_4326_full", "ogr"
+                )
+                if (
+                    osm_addresses_layer_4326.isValid()
+                    and osm_addresses_layer_4326.featureCount() > 0
+                ):
+                    feedback.pushInfo(
+                        self.tr(
+                            f"Fetched {osm_addresses_layer_4326.featureCount()} OSM addresses."
+                        )
+                    )
+                else:
+                    feedback.pushInfo(
+                        self.tr("No valid address data fetched or layer is empty.")
+                    )
+                    osm_addresses_layer_4326 = None
+            else:
+                feedback.pushInfo(self.tr("Failed to fetch address data string."))
+                osm_addresses_layer_4326 = None
 
         # Clip roads
         clipped_osm_roads_4326 = cliplayer_v2(
