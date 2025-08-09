@@ -33,9 +33,45 @@ from ..generic_functions import (
 from ..parameters import (
     widths_fieldname,
     big_buffer_d,  # , sidewalk_tag_value and other specific tags if needed here
+    min_area_perimeter_ratio,
 )
 import math  # For math.sqrt if used in ratio calculations, though not directly in draw_sidewalks core geom logic
 
+
+def filter_polygons_by_area_perimeter_ratio(
+    polygon_layer: QgsVectorLayer, ratio_threshold: float
+) -> int:
+    """Remove polygons with area/perimeter ratio below threshold.
+
+    Parameters
+    ----------
+    polygon_layer: QgsVectorLayer
+        Layer containing polygon geometries.
+    ratio_threshold: float
+        Minimum allowed area/perimeter ratio.
+
+    Returns
+    -------
+    int
+        Number of removed features.
+    """
+
+    ids_to_remove = []
+    for feat in polygon_layer.getFeatures():
+        geom = feat.geometry()
+        perim = geom.perimeter()
+        if perim == 0:
+            continue
+        area = geom.area()
+        if (area / perim) < ratio_threshold:
+            ids_to_remove.append(feat.id())
+
+    removed = len(ids_to_remove)
+    if removed:
+        with edit(polygon_layer):
+            for fid in ids_to_remove:
+                polygon_layer.deleteFeature(fid)
+    return removed
 
 def generate_sidewalk_geometries_and_zones(
     road_network_layer_local_tm: QgsVectorLayer,
@@ -426,6 +462,18 @@ def generate_sidewalk_geometries_and_zones(
             )
     else:
         feedback.pushInfo("No exclusion zones generated.")
+
+    # Remove polygons that are too thin based on area/perimeter ratio
+    ratio_threshold = parameters.get(
+        "min_area_perimeter_ratio", min_area_perimeter_ratio
+    )
+    removed = filter_polygons_by_area_perimeter_ratio(
+        sidewalk_polygons_final, ratio_threshold
+    )
+    if removed:
+        feedback.pushInfo(
+            f"Removed {removed} sidewalk polygons below ratio {ratio_threshold}."
+        )
 
     # --- Extract final sidewalk lines ---
     whole_sidewalks_lines = extract_lines_from_polygons(
