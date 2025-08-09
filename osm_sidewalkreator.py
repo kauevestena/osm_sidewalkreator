@@ -25,7 +25,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 """
 
 # import os.path
-import os, requests, codecs, time
+import os, codecs, time
 
 # from os import environ
 
