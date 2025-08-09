@@ -50,6 +50,7 @@ from qgis.core import (
     QgsGeometryUtils,
     QgsFeatureRequest,
     Qgis,
+    QgsMessageLog,
     NULL,
     QgsStatisticalSummary,
 )
@@ -108,7 +109,11 @@ base_pluginpath_p2 = "python/plugins/osm_sidewalkreator"
 basepath = os.path.join(profilepath, base_pluginpath_p2)
 temps_path = os.path.join(basepath, "temporary")
 
-print(basepath)
+QgsMessageLog.logMessage(
+    f"Plugin base path: {basepath}",
+    "SidewalKreator",
+    Qgis.Info,
+)
 reports_path = os.path.join(basepath, "reports")
 
 assets_path = os.path.join(basepath, "assets")
