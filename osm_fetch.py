@@ -53,7 +53,7 @@ def delete_filelist_that_exists(filepathlist):
 
 def join_to_a_outfolder(filename, foldername="temporary"):
     outfolder = os.path.join(basepath, foldername)
-
+    os.makedirs(outfolder, exist_ok=True)
     return os.path.join(outfolder, filename)
 
 

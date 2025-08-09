@@ -2,6 +2,7 @@ import unittest
 import json
 import sys
 import os
+import tempfile
 
 # Add the parent directory (project root) to the Python path
 # to allow importing osm_fetch from the root of the repository
@@ -9,7 +10,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 try:
-    from osm_fetch import get_osm_data
+    import osm_fetch
+    from osm_fetch import get_osm_data, join_to_a_outfolder
 
     GDAL_AVAILABLE = True
 except ImportError as e:
@@ -17,7 +19,9 @@ except ImportError as e:
     # This can happen if GDAL is not installed or not found in the PYTHONPATH
     # In a CI environment, GDAL should be installed.
     # For local testing, ensure GDAL Python bindings are available.
+    osm_fetch = None
     get_osm_data = None  # Make it None to skip tests if import fails
+    join_to_a_outfolder = None
     GDAL_AVAILABLE = False
 
 
@@ -277,6 +281,43 @@ class TestOsmFetch(unittest.TestCase):
         self.assertIsNone(
             result, "Function should return None for unsupported geomtype."
         )
+
+    def test_get_osm_data_creates_temp_folder(self):
+        """Ensure get_osm_data creates the temporary folder when absent."""
+        original_basepath = osm_fetch.basepath
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                osm_fetch.basepath = tmpdir
+                temp_name = "folder_creation_test"
+                geojson_filepath = get_osm_data(
+                    querystring=SAMPLE_OSM_XML_LINESTRING_ONLY,
+                    tempfilesname=temp_name,
+                    geomtype="LineString",
+                    return_as_string=False,
+                )
+                expected_folder = os.path.join(tmpdir, "temporary")
+                self.assertTrue(os.path.isdir(expected_folder))
+                self.assertTrue(os.path.isfile(geojson_filepath))
+        finally:
+            osm_fetch.basepath = original_basepath
+
+
+@unittest.skipIf(join_to_a_outfolder is None, "osm_fetch not available")
+class TestJoinToAOutfolder(unittest.TestCase):
+
+    def test_join_to_a_outfolder_creates_directory(self):
+        """join_to_a_outfolder should create the output directory if missing."""
+        original_basepath = osm_fetch.basepath
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                osm_fetch.basepath = tmpdir
+                foldername = "custom_temp"
+                target_path = join_to_a_outfolder("dummy.txt", foldername=foldername)
+                expected_dir = os.path.join(tmpdir, foldername)
+                self.assertTrue(os.path.isdir(expected_dir))
+                self.assertEqual(target_path, os.path.join(expected_dir, "dummy.txt"))
+        finally:
+            osm_fetch.basepath = original_basepath
 
 
 if __name__ == "__main__":
