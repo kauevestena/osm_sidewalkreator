@@ -103,15 +103,21 @@ import math
 from .generic_functions import *
 from .parameters import *
 
+
+def _build_plugin_paths(profile_path):
+    """Return commonly used plugin directories based on the profile path."""
+    profile_path = os.path.normpath(profile_path)
+    basepath = os.path.join(
+        profile_path, "python", "plugins", "osm_sidewalkreator"
+    )
+    temps_path = os.path.join(basepath, "temporary")
+    reports_path = os.path.join(basepath, "reports")
+    assets_path = os.path.join(basepath, "assets")
+    return basepath, temps_path, reports_path, assets_path
+
+
 profilepath = QgsApplication.qgisSettingsDirPath()
-base_pluginpath_p2 = "python/plugins/osm_sidewalkreator"
-basepath = os.path.join(profilepath, base_pluginpath_p2)
-temps_path = os.path.join(basepath, "temporary")
-
-print(basepath)
-reports_path = os.path.join(basepath, "reports")
-
-assets_path = os.path.join(basepath, "assets")
+basepath, temps_path, reports_path, assets_path = _build_plugin_paths(profilepath)
 
 
 # this two are here because of the dependency structure
