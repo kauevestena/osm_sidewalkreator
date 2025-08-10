@@ -13,7 +13,7 @@ fi
 if [[ ${USE_RELEASE} -eq 1 ]]; then
     RELEASE_OUTPUT=$(python "${PLUGIN_DIR}/release/release_zip.py")
     ZIP_PATH=$(echo "${RELEASE_OUTPUT}" | sed -n '1p')
-    DOCKER_CMD="apt-get update -qq && apt-get install -y unzip >/dev/null && unzip /tmp/plugin.zip -d /tmp/plugin && cd /tmp/plugin/osm_sidewalkreator && export PYTHONPATH=/tmp/plugin/osm_sidewalkreator:/tmp/plugin/osm_sidewalkreator/test && pip install -r requirements.txt && pytest"
+    DOCKER_CMD="apt-get update -qq && apt-get install -y unzip >/dev/null && unzip /tmp/plugin.zip -d /tmp/plugin && cd /tmp/plugin/osm_sidewalkreator && export PYTHONPATH=/tmp/plugin/osm_sidewalkreator:/tmp/plugin/osm_sidewalkreator/test && export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest"
     exec docker run --rm \
         -v "${ZIP_PATH}:/tmp/plugin.zip" \
         qgis/qgis:latest \
@@ -27,5 +27,5 @@ else
         -w /app \
         -e PYTHONPATH=/app:/app/test \
         qgis/qgis:latest \
-        bash -lc "pip install -r requirements.txt && pytest"
+        bash -lc "export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest"
 fi
