@@ -25,7 +25,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 """
 
 # import os.path
-import os, requests, codecs, time
+import os, time
 
 # from os import environ
 
@@ -42,16 +42,16 @@ from processing.gui.AlgorithmExecutor import execute_in_place
 from qgis.core import (
     QgsMapLayerProxyModel,
     QgsFeature,
-    QgsCoordinateReferenceSystem,
     QgsVectorLayer,
     QgsProject,
     QgsApplication,
     edit,
-    QgsGeometryUtils,
     QgsFeatureRequest,
     Qgis,
     NULL,
-    QgsStatisticalSummary,
+    QgsSpatialIndex,
+    QgsGeometry,
+    QgsPoint,
 )
 from qgis.utils import iface
 
@@ -64,7 +64,7 @@ from PyQt5.QtCore import QVariant
 
 
 # Initialize Qt resources from file resources.py
-from . import resources
+from . import resources  # noqa
 
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
@@ -73,8 +73,7 @@ import traceback  # For improved error logging
 
 
 # for third-party libraries installation
-import subprocess
-import sys
+
 
 # for output folder unique naming
 import datetime
@@ -135,6 +134,29 @@ from .generic_functions import (
     snap_layers,
     swap_features_layer_another,
     vector_from_2_pts,
+    polygonize_lines,
+    split_lines,
+    get_intersections,
+    remove_duplicate_geometries,
+    gen_voronoi_polygons_layer,
+    get_column_names,
+    select_vertex_pol_nodes,
+    remove_duplicate_vertices,
+    keep_only_contained_within,
+    remove_biggest_polygon,
+    extract_lines_from_polygons,
+    gen_centroids_layer,
+    mergelayers,
+    remove_unconnected_lines_v2,
+    get_layercolumn_byname,
+    vec_layers_intersection,
+    split_lines_by_max_len,
+    extract_with_spatial_relation,
+    create_area_field,
+    create_perimeter_field,
+    pointlist_to_multipoint,
+    get_bbox4326_currCRS,
+    crs_4326,
 )
 from .parameters import (
     buildings_layername,
@@ -147,9 +169,43 @@ from .parameters import (
     osm_higway_layer_finalname,
     perc_to_interpolate,
     roads_layername,
-    sidewalk_tag_value,
     sidewalks_stylefilename,
     widths_fieldname,
+    cutoff_percent_protoblock,
+    protoblocks_buffer,
+    roads_p2_stylefilename,
+    road_intersections_stylefilename,
+    osm_basemap_str,
+    bing_baseimg_str,
+    kerbs_stylefilename,
+    kerbs_layer_name,
+    big_buffer_d,
+    min_d_to_building,
+    default_curve_radius,
+    d_to_add_to_each_side,
+    minimal_buffer,
+    perc_draw_kerbs,
+    perc_tol_crossings,
+    d_to_add_interp_d,
+    CRS_LATLON_4326,
+    inputpolygons_stylefilename,
+    use_buildings,
+    include_relations,
+    draw_buildings,
+    buildings_stylefilename,
+    splitting_pois_stylefilename,
+    roads_p1_stylefilename,
+    roads_p3_stylefilename,
+    abs_max_crossing_len,
+    increment_inward,
+    tiny_segments_tol,
+    exclusion_stylefilename,
+    sure_stylefilename,
+    crossings_layer_name,
+    duplicate_points_tol,
+    snap_disjointed_tol,
+    knn_max_dist,
+    min_stretch_size,
 )
 
 profilepath = QgsApplication.qgisSettingsDirPath()
