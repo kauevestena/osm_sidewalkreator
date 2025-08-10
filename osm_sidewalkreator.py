@@ -65,7 +65,7 @@ from PyQt5.QtCore import QVariant
 
 
 # Initialize Qt resources from file resources.py
-from .resources import *
+from . import resources
 
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
@@ -101,8 +101,57 @@ import math
 # basepath = os.path.join(homepath,basepathp1,user_profile,basepathp2)
 
 # # internal dependencies, part1:
-from .generic_functions import *
-from .parameters import *
+from .generic_functions import (
+    add_tms_layer,
+    check_empty_layer,
+    check_sidewalk_intersection,
+    cliplayer_v2,
+    compute_difference_layer,
+    convert_multipart_to_singleparts,
+    create_dir_ifnotexists,
+    create_fill_id_field,
+    create_filled_newlayerfield,
+    create_incidence_field_layers_A_B,
+    create_new_layerfield,
+    dissolve_tosinglegeom,
+    dump_json,
+    gen_layer_spatial_index,
+    generate_buffer,
+    geom_to_feature,
+    get_first_feature_or_geom,
+    get_major_dif_signed,
+    interpolate_by_percent,
+    layer_from_featlist,
+    merge_geojsons,
+    point_forms_minor_angle_w2,
+    points_intersecting_buffer_boundary,
+    qgs_point_geom_from_line_at,
+    remove_all_layerfields,
+    remove_layerfields,
+    remove_layerlist,
+    remove_lines_from_no_block,
+    reproject_layer,
+    reproject_layer_localTM,
+    select_feats_by_attr,
+    snap_layers,
+    swap_features_layer_another,
+    vector_from_2_pts,
+)
+from .parameters import (
+    buildings_layername,
+    crossing_centers_layername,
+    crossings_stylefilename,
+    default_widths,
+    fallback_default_width,
+    highway_tag,
+    max_crossings_iterations,
+    osm_higway_layer_finalname,
+    perc_to_interpolate,
+    roads_layername,
+    sidewalk_tag_value,
+    sidewalks_stylefilename,
+    widths_fieldname,
+)
 
 
 def _build_plugin_paths(profile_path):
@@ -142,8 +191,12 @@ for folderpath in basic_folderpathlist:
 # import ogr2osm
 
 
-# # internal dependencies, part2:
-from .osm_fetch import *
+# internal dependencies, part2:
+from .osm_fetch import (
+    delete_filelist_that_exists,
+    get_osm_data,
+    osm_query_string_by_bbox,
+)
 
 
 class sidewalkreator:

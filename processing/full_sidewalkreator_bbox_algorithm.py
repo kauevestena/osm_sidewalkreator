@@ -30,13 +30,12 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 
 # Utility functions from the plugin
-from ..osm_fetch import (
+from osm_fetch import (
     get_osm_data,
     osm_query_string_by_bbox,
 )  # for fetching OSM data
-from .. import parameters  # For default values and constants
-from .. import generic_functions
-from ..generic_functions import (
+import parameters  # For default values and constants
+from generic_functions import (
     polygonize_lines,
     reproject_layer_localTM,
     reproject_layer,
@@ -45,7 +44,7 @@ from ..generic_functions import (
     # clean_street_network_data,
     # create_memory_layer_from_features,
 )
-from ..parameters import CRS_LATLON_4326
+from parameters import CRS_LATLON_4326
 from .sidewalk_generation_logic import (
     generate_sidewalk_geometries_and_zones,
 )  # Core logic

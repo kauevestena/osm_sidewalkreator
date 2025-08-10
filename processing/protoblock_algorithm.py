@@ -29,14 +29,14 @@ from qgis.PyQt.QtCore import QVariant
 import math  # For math.isfinite
 
 # Import necessary functions from other plugin modules
-from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
-from ..generic_functions import (
+from osm_fetch import osm_query_string_by_bbox, get_osm_data
+from generic_functions import (
     reproject_layer_localTM,
     cliplayer_v2,
     remove_unconnected_lines_v2,
     polygonize_lines,
 )  # Using polygonize_lines wrapper for now
-from ..parameters import default_widths, highway_tag, CRS_LATLON_4326
+from parameters import default_widths, highway_tag, CRS_LATLON_4326
 
 
 class ProtoblockAlgorithm(QgsProcessingAlgorithm):
