@@ -24,14 +24,14 @@ from qgis.core import (
 import math
 
 # Import necessary functions from other plugin modules
-from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
-from ..generic_functions import (
+from osm_fetch import osm_query_string_by_bbox, get_osm_data
+from generic_functions import (
     reproject_layer_localTM,
     cliplayer_v2,  # cliplayer might not be needed
     remove_unconnected_lines_v2,
     polygonize_lines,
 )
-from ..parameters import default_widths, highway_tag, CRS_LATLON_4326
+from parameters import default_widths, highway_tag, CRS_LATLON_4326
 
 
 class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):

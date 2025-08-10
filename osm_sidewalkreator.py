@@ -64,7 +64,7 @@ from PyQt5.QtCore import QVariant
 
 
 # Initialize Qt resources from file resources.py
-from .resources import *
+from . import resources
 
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog

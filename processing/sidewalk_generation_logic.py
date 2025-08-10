@@ -16,7 +16,7 @@ from qgis.core import (
 )
 
 # Assuming these are available from the main plugin structure
-from ..generic_functions import (
+from generic_functions import (
     dissolve_tosinglegeom,
     get_first_feature_or_geom,
     generate_buffer,
@@ -30,7 +30,7 @@ from ..generic_functions import (
     create_area_field,
     create_perimeter_field,
 )
-from ..parameters import (
+from parameters import (
     widths_fieldname,
     big_buffer_d,  # , sidewalk_tag_value and other specific tags if needed here
 )

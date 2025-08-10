@@ -25,7 +25,7 @@ from qgis.core import (
 )
 import math
 
-from ..parameters import (
+from parameters import (
     default_curve_radius,
     min_d_to_building,
     d_to_add_to_each_side,
@@ -38,8 +38,8 @@ from ..parameters import (
     highway_tag,
     widths_fieldname,
 )
-from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
-from ..generic_functions import (
+from osm_fetch import osm_query_string_by_bbox, get_osm_data
+from generic_functions import (
     reproject_layer_localTM,
     cliplayer_v2,
     remove_unconnected_lines_v2,

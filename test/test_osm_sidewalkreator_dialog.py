@@ -14,7 +14,7 @@ __copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
 
-from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
+from qgis.PyQt.QtWidgets import QDialogButtonBox, QDialog
 
 from osm_sidewalkreator_dialog import sidewalkreatorDialog
 
