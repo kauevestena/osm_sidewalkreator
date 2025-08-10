@@ -13,6 +13,7 @@ from qgis.core import (
     QgsProcessingException,
     Qgis,
     edit,
+    QgsCoordinateReferenceSystem,
 )
 
 # Assuming these are available from the main plugin structure
