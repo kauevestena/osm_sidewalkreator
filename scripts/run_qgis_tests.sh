@@ -2,15 +2,15 @@
 set -euo pipefail
 
 # Ensure Docker is installed and the daemon is accessible
-if ! command -v docker >/dev/null 2>&1; then
+command -v docker >/dev/null 2>&1 || {
     echo "Error: Docker is not installed or not in PATH." >&2
     exit 1
-fi
+}
 
-if ! docker info >/dev/null 2>&1; then
+docker info >/dev/null 2>&1 || {
     echo "Error: Docker daemon is not running or not reachable." >&2
     exit 1
-fi
+}
 
 # Determine the plugin root directory (one level up from the script location)
 PLUGIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
