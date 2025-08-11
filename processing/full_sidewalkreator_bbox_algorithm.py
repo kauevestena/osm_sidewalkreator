@@ -23,6 +23,7 @@ from qgis.core import (
     QgsFields,
     QgsFeatureRequest,
     QgsProcessingUtils,
+    QgsProcessingException,
     QgsMessageLog,
     Qgis,
 )
@@ -303,6 +304,21 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 f"Input extent: {input_extent_rect.asWktPolygon()} (CRS: EPSG:4326 assumed for extent parameter)"
             )
         )
+
+        project_crs = context.project().crs()
+        extent_within_latlon = (
+            -180 <= input_extent_rect.xMinimum() <= 180
+            and -180 <= input_extent_rect.xMaximum() <= 180
+            and -90 <= input_extent_rect.yMinimum() <= 90
+            and -90 <= input_extent_rect.yMaximum() <= 90
+        )
+        if project_crs.authid() != CRS_LATLON_4326 and not extent_within_latlon:
+            msg = self.tr(
+                "Extent coordinates appear outside valid latitude/longitude bounds."
+                " Please supply coordinates in EPSG:4326 or specify the CRS."
+            )
+            feedback.reportError(msg, True)
+            raise QgsProcessingException(msg)
 
         # Create a QgsGeometry from the QgsRectangle
         input_polygon_geom = QgsGeometry.fromRect(input_extent_rect)
