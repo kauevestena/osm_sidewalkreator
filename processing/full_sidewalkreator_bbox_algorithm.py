@@ -42,7 +42,7 @@ from ..generic_functions import (
     reproject_layer,
     # log_plugin_message,
     cliplayer_v2,
-    # clean_street_network_data,
+    clean_street_network_data,
     # create_memory_layer_from_features,
 )
 from ..parameters import CRS_LATLON_4326
