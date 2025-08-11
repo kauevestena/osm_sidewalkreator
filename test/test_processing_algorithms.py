@@ -125,7 +125,7 @@ def _patch_full_bbox_alg(monkeypatch, raise_in_generation=False):
         tmp.close()
         return tmp.name
 
-    def fake_reproject(layer, outputpath=None, layername=None, lgt_0=None):
+    def fake_reproject(layer, outputpath=None, layername=None, lgt_0=None, lat_0=0):
         from qgis.core import QgsCoordinateReferenceSystem
 
         return layer, QgsCoordinateReferenceSystem("EPSG:4326")
@@ -223,7 +223,7 @@ def _patch_full_polygon_alg(monkeypatch, call_recorder, raise_in_generation=Fals
             }
         )
 
-    def fake_reproject(layer, outputpath=None, layername=None, lgt_0=None):
+    def fake_reproject(layer, outputpath=None, layername=None, lgt_0=None, lat_0=0):
         from qgis.core import QgsCoordinateReferenceSystem
 
         return layer, QgsCoordinateReferenceSystem("EPSG:4326")
