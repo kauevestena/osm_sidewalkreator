@@ -12,6 +12,7 @@ from qgis.core import (
     QgsWkbTypes,
     QgsProcessingException,
     Qgis,
+    QgsCoordinateReferenceSystem,
     edit,
 )
 
