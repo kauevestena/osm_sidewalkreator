@@ -304,37 +304,6 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # Create a QgsGeometry from the QgsRectangle
-        input_polygon_geom = QgsGeometry.fromRect(input_extent_rect)
-        if not input_polygon_geom or input_polygon_geom.isEmpty():
-            feedback.reportError(
-                self.tr("Failed to create polygon geometry from input extent."), True
-            )
-            return results
-
-        # Create an in-memory layer for this polygon
-        # The CRS of QgsProcessingParameterExtent is EPSG:4326 by default
-        vl = QgsVectorLayer("Polygon?crs=epsg:4326", "input_extent_polygon", "memory")
-        pr = vl.dataProvider()
-        feat = QgsFeature()
-        feat.setGeometry(input_polygon_geom)
-        pr.addFeatures([feat])
-        vl.updateExtents()
-
-        if vl.featureCount() == 0:
-            feedback.reportError(
-                self.tr("Failed to create in-memory polygon layer from input extent."),
-                True,
-            )
-            return results
-
-        input_polygon_layer_for_processing = vl
-        feedback.pushInfo(
-            self.tr(
-                f"Created temporary polygon layer from extent with {input_polygon_layer_for_processing.featureCount()} feature."
-            )
-        )
-
         # --- The rest of the logic is largely similar to FullSidewalkreatorPolygonAlgorithm ---
         # Use input_polygon_layer_for_processing as the 'actual_input_layer'
 
@@ -349,6 +318,36 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 source_crs, dest_crs, QgsProject.instance()
             )
             extent_4326 = transform.transform(extent_4326)
+
+        # Recreate the in-memory polygon layer using the transformed extent (always in EPSG:4326)
+        input_polygon_geom_4326 = QgsGeometry.fromRect(extent_4326)
+        if not input_polygon_geom_4326 or input_polygon_geom_4326.isEmpty():
+            feedback.reportError(
+                self.tr("Failed to create polygon geometry from transformed extent."),
+                True,
+            )
+            return results
+
+        vl = QgsVectorLayer("Polygon?crs=epsg:4326", "input_extent_polygon", "memory")
+        pr = vl.dataProvider()
+        feat = QgsFeature()
+        feat.setGeometry(input_polygon_geom_4326)
+        pr.addFeatures([feat])
+        vl.updateExtents()
+
+        if vl.featureCount() == 0:
+            feedback.reportError(
+                self.tr("Failed to create in-memory polygon layer from transformed extent."),
+                True,
+            )
+            return results
+
+        input_polygon_layer_for_processing = vl
+        feedback.pushInfo(
+            self.tr(
+                f"Created temporary polygon layer from extent with {input_polygon_layer_for_processing.featureCount()} feature."
+            )
+        )
 
         centroid_lon = extent_4326.center().x()
         centroid_lat = extent_4326.center().y()
