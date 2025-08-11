@@ -8,6 +8,8 @@ from qgis.core import (
     QgsGeometry,
     QgsPointXY,
     QgsProcessingException,
+    QgsProject,
+    QgsCoordinateReferenceSystem,
 )
 from qgis import processing
 
@@ -360,6 +362,29 @@ def test_full_bbox_failure(monkeypatch):
             "sidewalkreator_algorithms_provider:osm_sidewalkreator_full_bbox",
             params,
         )
+
+
+def test_full_bbox_invalid_extent(monkeypatch):
+    _patch_full_bbox_alg(monkeypatch)
+    project = QgsProject.instance()
+    old_crs = project.crs()
+    project.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+    params = {
+        "INPUT_EXTENT": "20037508,0,20037509,1 [EPSG:3857]",
+        "TIMEOUT": 30,
+        "GET_BUILDING_DATA": False,
+        "DEFAULT_WIDTH": 2.0,
+        "MIN_WIDTH": 1.0,
+        "MAX_WIDTH": 5.0,
+        "STREET_CLASSES": [10],
+        "OUTPUT_SIDEWALKS": "memory:sidewalks",
+    }
+    with pytest.raises(QgsProcessingException):
+        processing.run(
+            "sidewalkreator_algorithms_provider:osm_sidewalkreator_full_bbox",
+            params,
+        )
+    project.setCrs(old_crs)
 
 
 # ---------------------- Full Sidewalkreator Polygon Algorithm Tests ----------------------
