@@ -319,26 +319,41 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             feedback.reportError(msg, True)
             raise QgsProcessingException(msg)
 
-        # Create a QgsGeometry from the QgsRectangle
-        input_polygon_geom = QgsGeometry.fromRect(input_extent_rect)
-        if not input_polygon_geom or input_polygon_geom.isEmpty():
+        # --- The rest of the logic is largely similar to FullSidewalkreatorPolygonAlgorithm ---
+        # Use input_polygon_layer_for_processing as the 'actual_input_layer'
+
+        # --- 2. Get Input Polygon Details and Define Local TM CRS ---
+        # For BBOX input, the extent is already in EPSG:4326
+        extent_4326 = input_extent_rect
+        # Reproject if the input CRS is not EPSG:4326
+        if project_crs != QgsCoordinateReferenceSystem("EPSG:4326"):
+            source_crs = project_crs
+            dest_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+            transform = QgsCoordinateTransform(
+                source_crs, dest_crs, QgsProject.instance()
+            )
+            extent_4326 = transform.transform(extent_4326)
+
+        # Recreate the in-memory polygon layer using the transformed extent (always in EPSG:4326)
+        input_polygon_geom_4326 = QgsGeometry.fromRect(extent_4326)
+        if not input_polygon_geom_4326 or input_polygon_geom_4326.isEmpty():
             feedback.reportError(
-                self.tr("Failed to create polygon geometry from input extent."), True
+                self.tr("Failed to create polygon geometry from transformed extent."),
+                True,
             )
             return results
 
-        # Create an in-memory layer for this polygon
-        # The CRS of QgsProcessingParameterExtent is EPSG:4326 by default
         vl = QgsVectorLayer("Polygon?crs=epsg:4326", "input_extent_polygon", "memory")
         pr = vl.dataProvider()
         feat = QgsFeature()
-        feat.setGeometry(input_polygon_geom)
+        feat.setGeometry(input_polygon_geom_4326)
         pr.addFeatures([feat])
         vl.updateExtents()
 
+
         if vl.featureCount() == 0:
             feedback.reportError(
-                self.tr("Failed to create in-memory polygon layer from input extent."),
+                self.tr("Failed to create in-memory polygon layer from transformed extent."),
                 True,
             )
             return results
@@ -350,22 +365,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # --- The rest of the logic is largely similar to FullSidewalkreatorPolygonAlgorithm ---
-        # Use input_polygon_layer_for_processing as the 'actual_input_layer'
-
-        # --- 2. Get Input Polygon Details and Define Local TM CRS ---
-        # For BBOX input, the extent is already in EPSG:4326
-        extent_4326 = input_extent_rect
-        # Reproject if the input CRS is not EPSG:4326
-        if context.project().crs() != QgsCoordinateReferenceSystem("EPSG:4326"):
-            source_crs = context.project().crs()
-            dest_crs = QgsCoordinateReferenceSystem("EPSG:4326")
-            transform = QgsCoordinateTransform(
-                source_crs, dest_crs, QgsProject.instance()
-            )
-            extent_4326 = transform.transform(extent_4326)
-
         centroid_lon = extent_4326.center().x()
+        centroid_lat = extent_4326.center().y()
 
         # Reproject the memory input polygon layer to local TM for internal processing
         # The reproject_layer_localTM function handles the creation of the CRS internally
@@ -375,6 +376,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             None,
             "input_poly_local_tm",
             centroid_lon,
+            centroid_lat,
         )
         if not local_tm_crs.isValid():
             feedback.reportError(
@@ -607,6 +609,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         None,
                         f"bldgs_local_tm_bbox_{context.algorithm().id()[:5]}",
                         centroid_lon,
+                        centroid_lat,
                     )
                     if (
                         not reproj_buildings_layer_local_tm

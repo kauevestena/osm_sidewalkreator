@@ -625,8 +625,20 @@ def custom_local_projection(lgt_0, lat_0=0, mode="TM", return_wkt=False):
 
 
 def reproject_layer_localTM(inputlayer, outputpath, layername, lgt_0, lat_0=0):
-    """
-    pass None to "outputpath" in order to use an only memory layer
+    """Reproject a layer to a custom local Transverse Mercator CRS.
+
+    Parameters
+    ----------
+    inputlayer: QgsVectorLayer
+        Layer to reproject.
+    outputpath: str or None
+        Destination path. Pass ``None`` to create an in-memory layer.
+    layername: str
+        Name for the resulting layer when ``outputpath`` is ``None``.
+    lgt_0: float
+        Central meridian (``lon_0``) for the custom CRS.
+    lat_0: float, optional
+        Latitude of origin (``lat_0``) for the custom CRS.
     """
 
     # https://docs.qgis.org/3.16/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
