@@ -351,6 +351,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             extent_4326 = transform.transform(extent_4326)
 
         centroid_lon = extent_4326.center().x()
+        centroid_lat = extent_4326.center().y()
 
         # Reproject the memory input polygon layer to local TM for internal processing
         # The reproject_layer_localTM function handles the creation of the CRS internally
@@ -360,6 +361,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             None,
             "input_poly_local_tm",
             centroid_lon,
+            centroid_lat,
         )
         if not local_tm_crs.isValid():
             feedback.reportError(
@@ -592,6 +594,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         None,
                         f"bldgs_local_tm_bbox_{context.algorithm().id()[:5]}",
                         centroid_lon,
+                        centroid_lat,
                     )
                     if (
                         not reproj_buildings_layer_local_tm
