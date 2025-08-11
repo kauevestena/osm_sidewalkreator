@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing,
     QgsProcessingAlgorithm,
@@ -23,6 +22,7 @@ from qgis.core import (
     QgsFields,
     QgsFeatureRequest,
     QgsProcessingUtils,
+    QgsProcessingException,
     QgsMessageLog,
     Qgis,
 )
@@ -304,6 +304,21 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
+        project_crs = context.project().crs()
+        extent_within_latlon = (
+            -180 <= input_extent_rect.xMinimum() <= 180
+            and -180 <= input_extent_rect.xMaximum() <= 180
+            and -90 <= input_extent_rect.yMinimum() <= 90
+            and -90 <= input_extent_rect.yMaximum() <= 90
+        )
+        if project_crs.authid() != CRS_LATLON_4326 and not extent_within_latlon:
+            msg = self.tr(
+                "Extent coordinates appear outside valid latitude/longitude bounds."
+                " Please supply coordinates in EPSG:4326 or specify the CRS."
+            )
+            feedback.reportError(msg, True)
+            raise QgsProcessingException(msg)
+
         # --- The rest of the logic is largely similar to FullSidewalkreatorPolygonAlgorithm ---
         # Use input_polygon_layer_for_processing as the 'actual_input_layer'
 
@@ -311,8 +326,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # For BBOX input, the extent is already in EPSG:4326
         extent_4326 = input_extent_rect
         # Reproject if the input CRS is not EPSG:4326
-        if context.project().crs() != QgsCoordinateReferenceSystem("EPSG:4326"):
-            source_crs = context.project().crs()
+        if project_crs != QgsCoordinateReferenceSystem("EPSG:4326"):
+            source_crs = project_crs
             dest_crs = QgsCoordinateReferenceSystem("EPSG:4326")
             transform = QgsCoordinateTransform(
                 source_crs, dest_crs, QgsProject.instance()
@@ -334,6 +349,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         feat.setGeometry(input_polygon_geom_4326)
         pr.addFeatures([feat])
         vl.updateExtents()
+
 
         if vl.featureCount() == 0:
             feedback.reportError(

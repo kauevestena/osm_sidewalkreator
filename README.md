@@ -90,6 +90,12 @@ from this plugin inside the same containerized environment. It mirrors the
 `--use-release` flag of the test script so algorithms can be executed from the
 source tree or a built release ZIP.
 
+> **Note**
+> Algorithms that accept a bounding box require the extent coordinates to be
+> in EPSG:4326. Supplying extents outside valid latitude/longitude bounds or
+> using another CRS will result in a helpful error asking for EPSG:4326
+> coordinates or an explicit CRS.
+
 Run an algorithm against the source tree:
 
 ```bash
