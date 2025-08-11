@@ -423,6 +423,52 @@ def reproject_layer(
     return processing.run("native:reprojectlayer", parameter_dict)["OUTPUT"]
 
 
+def clean_street_network_data(
+    osm_layer,
+    clip_polygon_layer,
+    local_tm_crs,
+    layer_name,
+    feedback=None,
+    context=None,
+):
+    """Clip OSM road data to the input polygon and reproject to a local TM CRS.
+
+    Parameters
+    ----------
+    osm_layer : QgsVectorLayer
+        Road data in EPSG:4326.
+    clip_polygon_layer : QgsVectorLayer
+        Polygon layer defining the area of interest (also in EPSG:4326).
+    local_tm_crs : QgsCoordinateReferenceSystem
+        Destination CRS for local Transverse Mercator projection.
+    layer_name : str
+        Name for the resulting memory layer.
+    feedback : QgsProcessingFeedback, optional
+        Processing feedback object.
+    context : QgsProcessingContext, optional
+        Processing context.
+
+    Returns
+    -------
+    QgsVectorLayer
+        Cleaned and reprojected road layer in ``local_tm_crs``.
+    """
+
+    clipped = cliplayer_v2(osm_layer, clip_polygon_layer)
+
+    params = {
+        "INPUT": clipped,
+        "TARGET_CRS": local_tm_crs,
+        "OUTPUT": f"memory:{layer_name}",
+    }
+
+    result = processing.run(
+        "native:reprojectlayer", params, context=context, feedback=feedback
+    )["OUTPUT"]
+    result.setCrs(local_tm_crs)
+    return result
+
+
 def split_lines(inputlayer, splitterlayer, outputlayer="TEMPORARY_OUTPUT"):
 
     parameter_dict = {
