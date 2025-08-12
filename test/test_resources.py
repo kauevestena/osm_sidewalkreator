@@ -13,8 +13,13 @@ __date__ = "2021-09-29"
 __copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
+import pytest
 
+pytest.importorskip("qgis")
 from qgis.PyQt.QtGui import QIcon
+
+
+pytestmark = pytest.mark.qgis
 
 
 class sidewalkreatorDialogTest(unittest.TestCase):

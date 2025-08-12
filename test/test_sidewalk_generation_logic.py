@@ -1,4 +1,6 @@
 import pytest
+
+pytest.importorskip("qgis")
 from qgis.core import QgsVectorLayer, QgsFeature, QgsGeometry, QgsPointXY
 
 from processing.sidewalk_generation_logic import (
@@ -6,6 +8,8 @@ from processing.sidewalk_generation_logic import (
 )
 from parameters import min_area_perimeter_ratio
 from .utilities import get_qgis_app
+
+pytestmark = pytest.mark.qgis
 
 
 @pytest.fixture(scope="module", autouse=True)

@@ -1,5 +1,10 @@
 import os
+import pytest
+
+pytest.importorskip("qgis")
 from osm_sidewalkreator import _build_plugin_paths
+
+pytestmark = pytest.mark.qgis
 
 
 def test_build_plugin_paths_windows():

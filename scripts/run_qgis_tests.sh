@@ -10,24 +10,29 @@ if [[ "${1:-}" == "--use-release" ]]; then
     shift
 fi
 
-if [[ ${USE_RELEASE} -eq 1 ]]; then
-    RELEASE_OUTPUT=$(python "${PLUGIN_DIR}/release/release_zip.py")
-    ZIP_PATH=$(echo "${RELEASE_OUTPUT}" | sed -n '1p')
-    DOCKER_CMD="apt-get update -qq && apt-get install -y unzip >/dev/null && unzip /tmp/plugin.zip -d /tmp/plugin && cd /tmp/plugin/osm_sidewalkreator && export PYTHONPATH=/tmp/plugin/osm_sidewalkreator:/tmp/plugin/osm_sidewalkreator/test && export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest"
+if command -v docker >/dev/null 2>&1; then
+    if [[ ${USE_RELEASE} -eq 1 ]]; then
+        RELEASE_OUTPUT=$(python "${PLUGIN_DIR}/release/release_zip.py")
+        ZIP_PATH=$(echo "${RELEASE_OUTPUT}" | sed -n '1p')
+        DOCKER_CMD="apt-get update -qq && apt-get install -y unzip >/dev/null && unzip /tmp/plugin.zip -d /tmp/plugin && cd /tmp/plugin/osm_sidewalkreator && export PYTHONPATH=/tmp/plugin/osm_sidewalkreator:/tmp/plugin/osm_sidewalkreator/test && export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest test"
 
-    exec docker run --rm \
-        -v "${ZIP_PATH}:/tmp/plugin.zip" \
-        my-org/qgis-test:latest \
-        bash -lc "${DOCKER_CMD}"
+        exec docker run --rm \
+            -v "${ZIP_PATH}:/tmp/plugin.zip" \
+            my-org/qgis-test:latest \
+            bash -lc "${DOCKER_CMD}"
+    else
+        exec docker run --rm \
+            -v "${PLUGIN_DIR}:/app" \
+            -w /app \
+            -e PYTHONPATH=/app:/app/test \
+            qgis/qgis:latest \
+            bash -lc "export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest test"
+    fi
 else
-    # Run tests inside the official QGIS container image
-    # Mount the plugin directory into /app and execute pytest after installing deps
-
-    exec docker run --rm \
-        -v "${PLUGIN_DIR}:/app" \
-        -w /app \
-        -e PYTHONPATH=/app:/app/test \
-        qgis/qgis:latest \
-        bash -lc "export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest"
-
+    echo "Docker not available, running tests without QGIS (pytest -m 'not qgis')."
+    cd "${PLUGIN_DIR}"
+    export PYTHONPATH="${PLUGIN_DIR}:${PLUGIN_DIR}/test"
+    export PIP_BREAK_SYSTEM_PACKAGES=1
+    pip install -r requirements.txt >/dev/null
+    pytest -m 'not qgis' "$@" test
 fi
