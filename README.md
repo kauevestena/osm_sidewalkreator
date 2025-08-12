@@ -53,6 +53,16 @@ Though the data was generated thinking on the usage for OSM, one may use it for 
 
 The project provides a Docker setup so tests can be executed inside a containerized QGIS environment.
 
+### Install Docker
+
+Install the Docker Engine to run the full test suite. On Debian or Ubuntu systems:
+
+```bash
+sudo apt-get update && sudo apt-get install -y docker.io
+```
+
+For other platforms, see the [Docker installation guide](https://docs.docker.com/engine/install/).
+
 ### Build the image
 
 ```bash
@@ -107,6 +117,17 @@ Or run it using a release build:
 ```bash
 ./scripts/run_qgis_processing.sh --use-release generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
 ```
+
+## Running tests without Docker
+
+You can run the subset of tests that do not require QGIS directly on your machine:
+
+```bash
+pip install -r requirements.txt
+pytest -m "not qgis"
+```
+
+The `not qgis` marker skips tests that need a QGIS environment, providing a quicker feedback loop.
 
 ## Creating a release package
 
