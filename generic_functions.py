@@ -189,27 +189,30 @@ def merge_touching_lines(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
 
     return processing.run("native:mergelines", parameter_dict)["OUTPUT"]
 
-
-def polygonize_lines(inputlines, outputlayer="TEMPORARY_OUTPUT", keepfields=True):
+def polygonize_lines(
+    inputlines,
+    outputlayer="TEMPORARY_OUTPUT",
+    keepfields=True,
+    context=None,
+    feedback=None,
+):
     """Polygonize line geometries and ensure CRS consistency."""
-
     # For memory layers, the 'OUTPUT' value returned by processing.run is the
     # QgsVectorLayer instance. Ensure we pass a valid destination string.
     parameter_dict = {
         "INPUT": inputlines,
-        "OUTPUT": outputlayer,  # e.g., 'memory:my_polygonized_layer'
+        "OUTPUT": outputlayer,  # e.g., "memory:my_polygonized_layer"
         "KEEP_FIELDS": keepfields,
     }
-    result_layer = processing.run("native:polygonize", parameter_dict)["OUTPUT"]
+    result_layer = processing.run(
+        "native:polygonize", parameter_dict, context=context, feedback=feedback
+    )["OUTPUT"]
 
-    # It's good practice to verify the output CRS, though native:polygonize
-    # should copy it from the input layer.
     if isinstance(result_layer, QgsVectorLayer) and inputlines.crs().isValid():
         if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
-            # This print might be too noisy if it happens often but setCrs works
-            # print(f"Warning: CRS mismatch or invalid CRS after polygonize. Input CRS: {inputlines.crs().authid()}, Output CRS: {result_layer.crs().authid()}. Forcing input CRS.")
-            result_layer.setCrs(inputlines.crs())  # Ensure CRS is set from input
+            result_layer.setCrs(inputlines.crs())
     return result_layer
+
 
 
 def convex_hulls(inputlayer, outputlayer="TEMPORARY_OUTPUT", keepfields=True):

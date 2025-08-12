@@ -495,9 +495,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(self.tr("Generating protoblocks..."))
         protoblocks_layer_local_tm = polygonize_lines(
             cleaned_roads_local_tm,
-            output_layer_name="protoblocks_local_tm_bbox",
-            feedback=feedback,
-            context=context,
+            outputlayer="memory:protoblocks_local_tm_bbox",
         )
         if (
             not protoblocks_layer_local_tm
