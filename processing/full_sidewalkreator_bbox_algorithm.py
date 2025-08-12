@@ -12,12 +12,10 @@ from qgis.core import (
     QgsProcessingParameterDefinition,
     QgsFeature,
     QgsGeometry,
-    QgsRectangle,
     QgsVectorLayer,
     QgsFeatureSink,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsProject,
     QgsField,
     QgsFields,
     QgsFeatureRequest,
@@ -259,6 +257,9 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         input_extent_rect = self.parameterAsExtent(
             parameters_alg, self.INPUT_EXTENT, context
         )  # QgsRectangle
+        extent_crs = self.parameterAsExtentCrs(
+            parameters_alg, self.INPUT_EXTENT, context
+        )
         timeout = self.parameterAsInt(parameters_alg, self.TIMEOUT, context)
         get_building_data = self.parameterAsBoolean(
             parameters_alg, self.GET_BUILDING_DATA, context
@@ -300,18 +301,38 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo(
             self.tr(
-                f"Input extent: {input_extent_rect.asWktPolygon()} (CRS: EPSG:4326 assumed for extent parameter)"
+                f"Input extent: {input_extent_rect.asWktPolygon()} (CRS: {extent_crs.authid()})"
             )
         )
 
-        project_crs = context.project().crs()
+        crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
+        if extent_crs != crs_4326:
+            feedback.pushInfo(
+                self.tr(
+                    f"Transforming input extent from {extent_crs.authid()} to EPSG:4326..."
+                )
+            )
+            transform = QgsCoordinateTransform(
+                extent_crs, crs_4326, context.transformContext()
+            )
+            try:
+                extent_4326 = transform.transform(input_extent_rect)
+            except Exception:
+                msg = self.tr(
+                    "Failed to transform extent to EPSG:4326 or transformed extent is empty."
+                )
+                feedback.reportError(msg, True)
+                raise QgsProcessingException(msg)
+        else:
+            extent_4326 = input_extent_rect
+
         extent_within_latlon = (
-            -180 <= input_extent_rect.xMinimum() <= 180
-            and -180 <= input_extent_rect.xMaximum() <= 180
-            and -90 <= input_extent_rect.yMinimum() <= 90
-            and -90 <= input_extent_rect.yMaximum() <= 90
+            -180 <= extent_4326.xMinimum() <= 180
+            and -180 <= extent_4326.xMaximum() <= 180
+            and -90 <= extent_4326.yMinimum() <= 90
+            and -90 <= extent_4326.yMaximum() <= 90
         )
-        if project_crs.authid() != CRS_LATLON_4326 and not extent_within_latlon:
+        if not extent_within_latlon:
             msg = self.tr(
                 "Extent coordinates appear outside valid latitude/longitude bounds."
                 " Please supply coordinates in EPSG:4326 or specify the CRS."
@@ -323,16 +344,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # Use input_polygon_layer_for_processing as the 'actual_input_layer'
 
         # --- 2. Get Input Polygon Details and Define Local TM CRS ---
-        # For BBOX input, the extent is already in EPSG:4326
-        extent_4326 = input_extent_rect
-        # Reproject if the input CRS is not EPSG:4326
-        if project_crs != QgsCoordinateReferenceSystem("EPSG:4326"):
-            source_crs = project_crs
-            dest_crs = QgsCoordinateReferenceSystem("EPSG:4326")
-            transform = QgsCoordinateTransform(
-                source_crs, dest_crs, QgsProject.instance()
-            )
-            extent_4326 = transform.transform(extent_4326)
+        # extent_4326 is now ensured to be in EPSG:4326
 
         # Recreate the in-memory polygon layer using the transformed extent (always in EPSG:4326)
         input_polygon_geom_4326 = QgsGeometry.fromRect(extent_4326)
