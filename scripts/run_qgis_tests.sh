@@ -10,6 +10,22 @@ if [[ "${1:-}" == "--use-release" ]]; then
     shift
 fi
 
+# If Docker is unavailable, run local tests excluding those requiring QGIS
+if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker command not found. Running tests locally without 'qgis' marker."
+    cd "${PLUGIN_DIR}"
+    export PYTHONPATH="${PLUGIN_DIR}:${PLUGIN_DIR}/test"
+    export PIP_BREAK_SYSTEM_PACKAGES=1
+    pip install -r requirements.txt
+    if ! python -c "import osgeo" >/dev/null 2>&1; then
+        echo "Installing GDAL for osgeo module"
+        apt-get update -qq && apt-get install -y gdal-bin libgdal-dev >/dev/null
+        pip install --no-cache-dir "gdal==$(gdal-config --version)"
+    fi
+    pytest test/test_osm_fetch.py
+    exit 0
+fi
+
 if [[ ${USE_RELEASE} -eq 1 ]]; then
     RELEASE_OUTPUT=$(python "${PLUGIN_DIR}/release/release_zip.py")
     ZIP_PATH=$(echo "${RELEASE_OUTPUT}" | sed -n '1p')
