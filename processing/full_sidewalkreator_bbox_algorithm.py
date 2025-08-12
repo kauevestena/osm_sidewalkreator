@@ -41,6 +41,7 @@ from ..generic_functions import (
     # log_plugin_message,
     cliplayer_v2,
     clean_street_network_data,
+    assign_street_widths,
     # create_memory_layer_from_features,
 )
 from ..parameters import CRS_LATLON_4326
@@ -491,10 +492,24 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
+        # Assign default widths to streets that are missing the 'width' attribute
+        feedback.pushInfo(self.tr("Assigning default street widths..."))
+        streets_with_width = assign_street_widths(
+            cleaned_roads_local_tm, "streets_with_width_bbox", feedback
+        )
+        if not streets_with_width or streets_with_width.featureCount() == 0:
+            feedback.reportError(
+                self.tr(
+                    "No road features after assigning widths, or assignment failed."
+                ),
+                True,
+            )
+            return results
+
         # --- 5. Generate Protoblocks (in local TM first, then reproject if saved) ---
         feedback.pushInfo(self.tr("Generating protoblocks..."))
         protoblocks_layer_local_tm = polygonize_lines(
-            cleaned_roads_local_tm,
+            streets_with_width,
             outputlayer="memory:protoblocks_local_tm_bbox",
         )
         if (
@@ -677,7 +692,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # input_poly_local_tm_geom is the geometry of the processing area in local TM
 
         generated_outputs = generate_sidewalk_geometries_and_zones(
-            road_network_layer_local_tm=cleaned_roads_local_tm,
+            road_network_layer_local_tm=streets_with_width,
             processing_aoi_geom_local_tm=input_poly_local_tm_geom,  # Use the geometry of the reprojected input extent
             building_footprints_layer_local_tm=reproj_buildings_layer_local_tm,
             protoblocks_layer_local_tm=protoblocks_layer_local_tm,  # Can be None or empty
