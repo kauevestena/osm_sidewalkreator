@@ -13,7 +13,9 @@ __date__ = "2021-09-29"
 __copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
+import pytest
 
+pytest.importorskip("qgis")
 from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
 
 from osm_sidewalkreator_dialog import sidewalkreatorDialog
@@ -21,6 +23,8 @@ from osm_sidewalkreator_dialog import sidewalkreatorDialog
 from utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
+
+pytestmark = pytest.mark.qgis
 
 
 class sidewalkreatorDialogTest(unittest.TestCase):

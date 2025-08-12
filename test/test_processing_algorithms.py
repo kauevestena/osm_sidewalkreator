@@ -1,6 +1,8 @@
 import json
 import tempfile
 import pytest
+
+pytest.importorskip("qgis")
 from qgis.core import (
     QgsApplication,
     QgsVectorLayer,
@@ -15,6 +17,8 @@ from qgis import processing
 
 from .utilities import get_qgis_app
 from processing.protoblock_provider import ProtoblockProvider
+
+pytestmark = pytest.mark.qgis
 
 
 @pytest.fixture(scope="module", autouse=True)
