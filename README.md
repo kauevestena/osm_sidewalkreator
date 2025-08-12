@@ -129,6 +129,14 @@ pytest -m "not qgis"
 
 The `not qgis` marker skips tests that need a QGIS environment, providing a quicker feedback loop.
 
+### Regenerating test data
+
+The unit tests use a small OSM extract stored at `test/data/curitiba_sample.osm`. Regenerate it with:
+
+```bash
+curl -L "https://overpass-api.de/api/map?bbox=-49.248337,-25.491146,-49.239228,-25.486957" -o test/data/curitiba_sample.osm
+```
+
 ## Creating a release package
 
 The script `release/release_zip.py` bundles the plugin into a ZIP archive for distribution. By default it packages the current repository and writes `osm_sidewalkreator.zip` under `~/sidewalkreator_release`:
