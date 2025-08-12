@@ -2,5 +2,5 @@
 # Allow the tests to run without QGIS by ignoring missing module errors.
 try:
     import qgis  # pylint: disable=W0611  # NOQA
-except ModuleNotFoundError:
+except ImportError:  # pragma: no cover - qgis not installed
     pass
