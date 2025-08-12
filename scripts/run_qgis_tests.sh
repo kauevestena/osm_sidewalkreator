@@ -15,6 +15,18 @@ if command -v docker >/dev/null 2>&1; then
         RELEASE_OUTPUT=$(python "${PLUGIN_DIR}/release/release_zip.py")
         ZIP_PATH=$(echo "${RELEASE_OUTPUT}" | sed -n '1p')
         DOCKER_CMD="apt-get update -qq && apt-get install -y unzip >/dev/null && unzip /tmp/plugin.zip -d /tmp/plugin && cd /tmp/plugin/osm_sidewalkreator && export PYTHONPATH=/tmp/plugin/osm_sidewalkreator:/tmp/plugin/osm_sidewalkreator/test && export PIP_BREAK_SYSTEM_PACKAGES=1 && pip install -r requirements.txt && pytest test"
+        if ! docker image inspect my-org/qgis-test:latest >/dev/null 2>&1; then
+            echo "Docker image my-org/qgis-test:latest not found. Attempting to pull..."
+            if ! docker pull my-org/qgis-test:latest >/dev/null 2>&1; then
+                echo "Warning: my-org/qgis-test:latest unavailable, running tests without QGIS (pytest -m 'not qgis')."
+                cd "${PLUGIN_DIR}"
+                export PYTHONPATH="${PLUGIN_DIR}:${PLUGIN_DIR}/test"
+                export PIP_BREAK_SYSTEM_PACKAGES=1
+                pip install -r requirements.txt >/dev/null
+                pytest -m 'not qgis' "$@" test
+                exit 0
+            fi
+        fi
 
         exec docker run --rm \
             -v "${ZIP_PATH}:/tmp/plugin.zip" \
