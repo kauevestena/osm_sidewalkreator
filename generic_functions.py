@@ -37,6 +37,8 @@ from qgis.core import QgsProcessingContext  # Qgis was already imported
 import os, json  # , random
 from math import isclose, pi
 
+from .parameters import default_widths, highway_tag, widths_fieldname
+
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
 
@@ -1711,3 +1713,84 @@ def remove_unconnected_lines_v2(inputlayer):
 #     layer.triggerRepaint()
 
 #     return colors
+
+
+def assign_street_widths(
+    source_road_layer,
+    output_layer_name,
+    feedback=None
+):
+    """
+    Creates a new line layer from a source road layer, ensuring that a 'width'
+    attribute exists and is populated for every feature.
+
+    It first tries to use the 'width' value from the source. If that is
+    missing, invalid, or zero, it falls back to a default width based on the
+    'highway' tag. Features with a final width less than 0.5m are dropped.
+    """
+    # Get CRS from source
+    source_crs = source_road_layer.crs()
+
+    # Create the output layer
+    output_layer = QgsVectorLayer(
+        f"LineString?crs={source_crs.authid()}",
+        output_layer_name,
+        "memory"
+    )
+    output_dp = output_layer.dataProvider()
+
+    # Copy fields from source and ensure a 'width' field exists
+    source_fields = source_road_layer.fields()
+    output_dp.addAttributes(source_fields)
+    if source_fields.lookupField(widths_fieldname) == -1:
+        output_dp.addAttributes([QgsField(widths_fieldname, QVariant.Double)])
+    output_layer.updateFields()
+
+    # Get field indices
+    highway_field_idx_source = source_fields.lookupField(highway_tag)
+    width_field_idx_source = source_fields.lookupField(widths_fieldname)
+    width_field_idx_target = output_layer.fields().lookupField(widths_fieldname)
+
+    features_to_add = []
+    for feature in source_road_layer.getFeatures():
+        if feedback and feedback.isCanceled():
+            return None
+
+        highway_type_attr = feature.attribute(highway_field_idx_source) if highway_field_idx_source != -1 else None
+        highway_type_str = str(highway_type_attr).lower() if highway_type_attr is not None else ""
+        width_from_defaults = default_widths.get(highway_type_str, 0.0)
+
+        # Determine final width
+        final_width = 0.0
+        # Try to get width from source feature first
+        osm_width_val = feature.attribute(width_field_idx_source) if width_field_idx_source != -1 else None
+
+        valid_osm_width = False
+        if osm_width_val is not None:
+            try:
+                # Try to convert to float, this handles numeric types and valid strings
+                parsed_width = float(osm_width_val)
+                if parsed_width > 0:
+                    final_width = parsed_width
+                    valid_osm_width = True
+            except (ValueError, TypeError):
+                pass # Invalid, will use default
+
+        if not valid_osm_width:
+            final_width = width_from_defaults
+
+        # Only add features that have a sensible width
+        if final_width >= 0.5:
+            new_feat = QgsFeature(output_layer.fields())
+            new_feat.setGeometry(feature.geometry())
+            new_feat.setAttributes(feature.attributes())
+            new_feat.setAttribute(width_field_idx_target, final_width)
+            features_to_add.append(new_feat)
+
+    if features_to_add:
+        output_dp.addFeatures(features_to_add)
+
+    if feedback:
+        feedback.pushInfo(f"Processed street widths. Input: {source_road_layer.featureCount()} features, Output: {output_layer.featureCount()} features.")
+
+    return output_layer
