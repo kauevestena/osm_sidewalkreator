@@ -613,7 +613,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                     )
                 else:
                     # Crucially, ensure the building layer uses the exact same CRS object as roads_local_tm
-                    if not bldg_tm_crs_obj.isIdenticalTo(local_tm_crs):
+                    if bldg_tm_crs_obj != local_tm_crs:
                         feedback.pushWarning(
                             self.tr(
                                 "Building TM CRS definition differs from road TM CRS. Forcing road TM CRS for buildings."
