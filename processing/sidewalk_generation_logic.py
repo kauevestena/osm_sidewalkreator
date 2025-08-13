@@ -60,8 +60,8 @@ def filter_polygons_by_area_perimeter_ratio(
     ids_to_remove = []
     for feat in polygon_layer.getFeatures():
         geom = feat.geometry()
-        perim = geom.perimeter()
-        if perim == 0:
+        perim = geom.perimeter() if hasattr(geom, "perimeter") else geom.length()
+        if perim <= 0:
             continue
         area = geom.area()
         if (area / perim) < ratio_threshold:
