@@ -552,7 +552,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         context,
                         protoblocks_layer_4326_debug.fields(),
                         protoblocks_layer_4326_debug.wkbType(),
-                        CRS_LATLON_4326,
+                        QgsCoordinateReferenceSystem(CRS_LATLON_4326),
                     )
                 )
                 if sink_protoblocks_debug:
@@ -742,7 +742,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     context,
                     sidewalks_layer_4326.fields(),
                     sidewalks_layer_4326.wkbType(),
-                    CRS_LATLON_4326,
+                    QgsCoordinateReferenceSystem(CRS_LATLON_4326),
                 )
                 if sink_sidewalks:
                     for feature in sidewalks_layer_4326.getFeatures():
