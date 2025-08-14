@@ -45,6 +45,15 @@ else
     cd "${PLUGIN_DIR}"
     export PYTHONPATH="${PLUGIN_DIR}:${PLUGIN_DIR}/test"
     export PIP_BREAK_SYSTEM_PACKAGES=1
+    if ! command -v gdal-config >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            apt-get update -qq
+            apt-get install -y gdal-bin libgdal-dev >/dev/null
+        else
+            echo "gdal-config not found. Please install GDAL development libraries." >&2
+            exit 1
+        fi
+    fi
     pip install -r requirements.txt >/dev/null
     pytest -m 'not qgis' "$@" test
 fi
