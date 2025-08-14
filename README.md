@@ -127,7 +127,12 @@ pip install -r requirements.txt
 pytest -m "not qgis"
 ```
 
-The `not qgis` marker skips tests that need a QGIS environment, providing a quicker feedback loop.
+The development requirements include the GDAL Python bindings used by the
+`osm_fetch` module. If your platform does not ship pre-built wheels you may
+need to install system GDAL libraries (e.g. `libgdal-dev`) before running the
+command above. When using `scripts/run_qgis_tests.sh` on Debian-based systems,
+these packages are installed automatically if missing. The `not qgis` marker
+skips tests that need a QGIS environment, providing a quicker feedback loop.
 
 ### Regenerating test data
 

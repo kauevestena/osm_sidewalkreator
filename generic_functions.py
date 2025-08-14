@@ -1749,7 +1749,6 @@ def assign_street_widths(
     # Get field indices
     highway_field_idx_source = source_fields.lookupField(highway_tag)
     width_field_idx_source = source_fields.lookupField(widths_fieldname)
-    width_field_idx_target = output_layer.fields().lookupField(widths_fieldname)
 
     features_to_add = []
     for feature in source_road_layer.getFeatures():
@@ -1784,7 +1783,7 @@ def assign_street_widths(
             new_feat = QgsFeature(output_layer.fields())
             new_feat.setGeometry(feature.geometry())
             new_feat.setAttributes(feature.attributes())
-            new_feat.setAttribute(width_field_idx_target, final_width)
+            new_feat.setAttribute(widths_fieldname, final_width)
             features_to_add.append(new_feat)
 
     if features_to_add:
