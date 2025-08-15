@@ -165,3 +165,4 @@ tests.py
 # gpkg temps
 *.gpkg-shm
 *.gpkg-wal
+.vscode/settings.json
