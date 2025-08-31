@@ -66,7 +66,7 @@ For other platforms, see the [Docker installation guide](https://docs.docker.com
 ### Build the image
 
 ```bash
-docker build -t osm_sidewalkreator-tests .
+docker build -f docker/Dockerfile -t my-org/qgis-test:latest .
 ```
 
 ### Run the tests
@@ -88,10 +88,10 @@ To run tests against the generated release zip, pass the `--use-release` flag:
 This helper script is equivalent to running the image directly:
 
 ```bash
-docker run --rm -v "$(pwd)":/app osm_sidewalkreator-tests
+docker run --rm -v "$(pwd)":/app my-org/qgis-test:latest
 ```
 
-Both approaches install Python dependencies from `requirements.txt` and run `pytest` within the QGIS image.
+Both approaches install Python dependencies from `docker/requirements.txt` and run `pytest` within the QGIS image.
 
 ### Run processing algorithms
 
@@ -123,7 +123,7 @@ Or run it using a release build:
 You can run the subset of tests that do not require QGIS directly on your machine:
 
 ```bash
-pip install -r requirements.txt
+pip install -r docker/requirements.txt
 pytest -m "not qgis"
 ```
 

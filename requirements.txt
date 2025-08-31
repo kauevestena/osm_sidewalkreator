@@ -1,4 +1,0 @@
-pytest
-requests
-folium
-gdal==3.8.4  # GDAL bindings required for osgeo-based tests
