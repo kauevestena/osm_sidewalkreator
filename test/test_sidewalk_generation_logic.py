@@ -3,10 +3,10 @@ import pytest
 pytest.importorskip("qgis")
 from qgis.core import QgsVectorLayer, QgsFeature, QgsGeometry, QgsPointXY
 
-from processing.sidewalk_generation_logic import (
+from osm_sidewalkreator.processing.sidewalk_generation_logic import (
     filter_polygons_by_area_perimeter_ratio,
 )
-from parameters import min_area_perimeter_ratio
+from osm_sidewalkreator.parameters import min_area_perimeter_ratio
 from .utilities import get_qgis_app
 
 pytestmark = pytest.mark.qgis

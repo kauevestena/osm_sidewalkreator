@@ -48,7 +48,23 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate("Processing", string)
 
     def createInstance(self):
-        return ProtoblockBboxAlgorithm()
+        try:
+            print("[ProtoblockBboxAlgorithm] createInstance() called")
+            return ProtoblockBboxAlgorithm()
+        except Exception as e:
+            try:
+                from qgis.core import QgsMessageLog, Qgis
+                import traceback
+
+                QgsMessageLog.logMessage(
+                    f"ProtoblockBboxAlgorithm createInstance failed: {e}",
+                    "SidewalKreator",
+                    Qgis.Critical,
+                )
+                traceback.print_exc()
+            except Exception:
+                pass
+            raise
 
     def name(self):
         return "generateprotoblocksfrombbox"
@@ -158,29 +174,24 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
             relation=False,
         )
 
-        osm_geojson_str = get_osm_data(
+        osm_geojson_path = get_osm_data(
             query_str,
             "osm_streets_bbox_algo",
             geomtype="LineString",
             timeout=timeout,
-            return_as_string=True,
+            return_as_string=False,
         )
-        if osm_geojson_str is None:
+        if osm_geojson_path is None:
             raise QgsProcessingException(
                 self.tr("Failed to download or parse OSM data (returned None).")
             )
 
         osm_data_layer_4326 = QgsVectorLayer(
-            osm_geojson_str, "osm_streets_dl_bbox_4326_algo", "ogr"
+            osm_geojson_path, "osm_streets_dl_bbox_4326_algo", "ogr"
         )
         if not osm_data_layer_4326.isValid():
-            details = ""
-            if osm_geojson_str:
-                details = f" GeoJSON string started with: {osm_geojson_str[:200]}"
             raise QgsProcessingException(
-                self.tr(
-                    f"Downloaded OSM data did not form a valid vector layer.{details}"
-                )
+                self.tr("Downloaded OSM data did not form a valid vector layer.")
             )
 
         feedback.pushInfo(

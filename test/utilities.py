@@ -2,6 +2,7 @@
 """Common functionality used by regression tests."""
 
 import sys
+import os
 import logging
 
 
@@ -23,10 +24,16 @@ def get_qgis_app():
     """
 
     try:
-        from qgis.PyQt import QtGui, QtCore
+        from qgis.PyQt import QtGui, QtCore, QtWidgets
         from qgis.core import QgsApplication
         from qgis.gui import QgsMapCanvas
-        from .qgis_interface import QgisInterface
+        try:
+            from .qgis_interface import QgisInterface  # when imported as package module
+        except Exception:  # pragma: no cover - fallback for alternate import paths
+            try:
+                from test.qgis_interface import QgisInterface  # when tests imported as top-level
+            except Exception:
+                QgisInterface = None  # type: ignore
     except ImportError:
         return None, None, None, None
 
@@ -35,7 +42,12 @@ def get_qgis_app():
     if QGIS_APP is None:
         gui_flag = True  # All test will run qgis in gui mode
         # noinspection PyPep8Naming
-        QGIS_APP = QgsApplication(sys.argv, gui_flag)
+        # Ensure QGIS can find its resources and providers inside containers
+        prefix = os.environ.get("QGIS_PREFIX_PATH", "/usr")
+        QgsApplication.setPrefixPath(prefix, True)
+        plugin_path = os.environ.get("QGIS_PLUGINPATH", "/usr/lib/qgis/plugins")
+        QgsApplication.setPluginPath(plugin_path)
+        QGIS_APP = QgsApplication([], gui_flag)
         # Make sure QGIS_PREFIX_PATH is set in your env if needed!
         QGIS_APP.initQgis()
         s = QGIS_APP.showSettings()
@@ -44,7 +56,7 @@ def get_qgis_app():
     global PARENT  # pylint: disable=W0603
     if PARENT is None:
         # noinspection PyPep8Naming
-        PARENT = QtGui.QWidget()
+        PARENT = QtWidgets.QWidget()
 
     global CANVAS  # pylint: disable=W0603
     if CANVAS is None:
@@ -56,6 +68,6 @@ def get_qgis_app():
     if IFACE is None:
         # QgisInterface is a stub implementation of the QGIS plugin interface
         # noinspection PyPep8Naming
-        IFACE = QgisInterface(CANVAS)
+        IFACE = QgisInterface(CANVAS) if QgisInterface is not None else None
 
     return QGIS_APP, CANVAS, IFACE, PARENT

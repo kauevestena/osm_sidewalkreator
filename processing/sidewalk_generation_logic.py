@@ -37,6 +37,7 @@ from ..parameters import (
     min_area_perimeter_ratio,
 )
 import math  # For math.sqrt if used in ratio calculations, though not directly in draw_sidewalks core geom logic
+from qgis import processing
 
 
 def filter_polygons_by_area_perimeter_ratio(
@@ -97,6 +98,33 @@ def generate_sidewalk_geometries_and_zones(
     feedback.pushInfo(
         f"Sidewalk Generation: Input street network CRS: {current_crs.authid()}"
     )
+
+    def _single_sided_buffer_geom(line_geom: QgsGeometry, left_side: bool, dist: float, segments: int = 5) -> QgsGeometry:
+        """Create a single-sided buffer geometry using the Processing algorithm for stability across QGIS builds."""
+        try:
+            tmp_lyr = QgsVectorLayer(f"LineString?crs={current_crs.authid()}", "tmp_single_side", "memory")
+            dp = tmp_lyr.dataProvider()
+            f = QgsFeature()
+            f.setGeometry(line_geom)
+            dp.addFeatures([f])
+            tmp_lyr.updateExtents()
+
+            params = {
+                "INPUT": tmp_lyr,
+                "DISTANCE": float(dist),
+                "SIDE": 0 if left_side else 1,  # 0 = left, 1 = right
+                "SEGMENTS": int(segments),
+                # Optional extras could be set (END_CAP_STYLE, JOIN_STYLE, MITER_LIMIT)
+                "OUTPUT": "memory:single_side_buf",
+            }
+            out = processing.run("native:singlesidedbuffer", params)
+            out_layer = out.get("OUTPUT")
+            if isinstance(out_layer, QgsVectorLayer) and out_layer.isValid() and out_layer.featureCount() > 0:
+                g = next(out_layer.getFeatures()).geometry()
+                return g
+        except Exception as e:
+            feedback.pushWarning(f"single-sided buffer failed: {e}")
+        return None
 
     # --- 1. Handle building overlap adjustments on street_network_layer widths ---
     # Create a copy of the street_network_layer to modify widths, or modify in place if that's acceptable.
@@ -320,7 +348,6 @@ def generate_sidewalk_geometries_and_zones(
         if feedback.isCanceled():
             return None, None, None, None
 
-        attrs = street_feat.attributeMap()
         current_street_width_val = street_feat.attribute(widths_fieldname)
         try:
             current_street_width = float(current_street_width_val)
@@ -346,10 +373,20 @@ def generate_sidewalk_geometries_and_zones(
         geom_sure = None
 
         # Simplified tag logic (can be expanded as in original plugin)
-        sidewalk_tag = attrs.get("sidewalk", "").lower()
-        sidewalk_left_tag = attrs.get("sidewalk:left", "").lower()
-        sidewalk_right_tag = attrs.get("sidewalk:right", "").lower()
-        sidewalk_both_tag = attrs.get("sidewalk:both", "").lower()
+        def _tag_val(name: str) -> str:
+            try:
+                idx = width_adjusted_streets.fields().lookupField(name)
+                if idx == -1:
+                    return ""
+                val = street_feat.attribute(idx)
+                return ("" if val is None else str(val)).lower()
+            except Exception:
+                return ""
+
+        sidewalk_tag = _tag_val("sidewalk")
+        sidewalk_left_tag = _tag_val("sidewalk:left")
+        sidewalk_right_tag = _tag_val("sidewalk:right")
+        sidewalk_both_tag = _tag_val("sidewalk:both")
 
         street_geom = street_feat.geometry()
 
@@ -360,44 +397,36 @@ def generate_sidewalk_geometries_and_zones(
         elif (
             sidewalk_tag == "left" or sidewalk_left_tag == "yes"
         ):  # Sidewalk only on left
-            geom_sure = street_geom.singleSidedBuffer(
-                tag_buffer_dist, 5, False
-            )  # Left side
-            geom_exclusion = street_geom.singleSidedBuffer(
-                tag_buffer_dist, 5, True
-            )  # Right side is exclusion
+            geom_sure = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
+            geom_exclusion = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
         elif (
             sidewalk_tag == "right" or sidewalk_right_tag == "yes"
         ):  # Sidewalk only on right
-            geom_sure = street_geom.singleSidedBuffer(
-                tag_buffer_dist, 5, True
-            )  # Right side
-            geom_exclusion = street_geom.singleSidedBuffer(
-                tag_buffer_dist, 5, False
-            )  # Left side is exclusion
+            geom_sure = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
+            geom_exclusion = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
         elif sidewalk_left_tag == "no":  # No sidewalk on left
-            current_exclusion = street_geom.singleSidedBuffer(tag_buffer_dist, 5, False)
+            current_exclusion = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
             geom_exclusion = (
                 current_exclusion
                 if geom_exclusion is None
                 else geom_exclusion.combine(current_exclusion)
             )
             if sidewalk_right_tag == "yes":  # Sidewalk on right
-                current_sure = street_geom.singleSidedBuffer(tag_buffer_dist, 5, True)
+                current_sure = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
                 geom_sure = (
                     current_sure
                     if geom_sure is None
                     else geom_sure.combine(current_sure)
                 )
         elif sidewalk_right_tag == "no":  # No sidewalk on right
-            current_exclusion = street_geom.singleSidedBuffer(tag_buffer_dist, 5, True)
+            current_exclusion = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
             geom_exclusion = (
                 current_exclusion
                 if geom_exclusion is None
                 else geom_exclusion.combine(current_exclusion)
             )
             if sidewalk_left_tag == "yes":  # Sidewalk on left
-                current_sure = street_geom.singleSidedBuffer(tag_buffer_dist, 5, False)
+                current_sure = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
                 geom_sure = (
                     current_sure
                     if geom_sure is None

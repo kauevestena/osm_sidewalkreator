@@ -41,7 +41,16 @@ class ProtoblockProvider(QgsProcessingProvider):
         # Re-adding the try-except for robustness during actual addAlgorithm call
         try:
             if ProtoblockAlgorithm:  # Check if class was successfully imported
-                self.addAlgorithm(ProtoblockAlgorithm())
+                alg = ProtoblockAlgorithm()
+                self.addAlgorithm(alg)
+                try:
+                    QgsMessageLog.logMessage(
+                        f"Loaded algorithm: {alg.id()}",
+                        "SidewalKreator",
+                        Qgis.Info,
+                    )
+                except Exception:
+                    pass
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Failed to load ProtoblockAlgorithm: {e}",
@@ -52,7 +61,16 @@ class ProtoblockProvider(QgsProcessingProvider):
 
         try:
             if ProtoblockBboxAlgorithm:  # Check if class was successfully imported
-                self.addAlgorithm(ProtoblockBboxAlgorithm())
+                alg = ProtoblockBboxAlgorithm()
+                self.addAlgorithm(alg)
+                try:
+                    QgsMessageLog.logMessage(
+                        f"Loaded algorithm: {alg.id()}",
+                        "SidewalKreator",
+                        Qgis.Info,
+                    )
+                except Exception:
+                    pass
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Failed to load ProtoblockBboxAlgorithm: {e}",
@@ -65,7 +83,16 @@ class ProtoblockProvider(QgsProcessingProvider):
             if (
                 FullSidewalkreatorPolygonAlgorithm
             ):  # Check if class was successfully imported
-                self.addAlgorithm(FullSidewalkreatorPolygonAlgorithm())
+                alg = FullSidewalkreatorPolygonAlgorithm()
+                self.addAlgorithm(alg)
+                try:
+                    QgsMessageLog.logMessage(
+                        f"Loaded algorithm: {alg.id()}",
+                        "SidewalKreator",
+                        Qgis.Info,
+                    )
+                except Exception:
+                    pass
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Failed to load FullSidewalkreatorPolygonAlgorithm: {e}",
@@ -78,7 +105,16 @@ class ProtoblockProvider(QgsProcessingProvider):
             if (
                 FullSidewalkreatorBboxAlgorithm
             ):  # Check if class was successfully imported
-                self.addAlgorithm(FullSidewalkreatorBboxAlgorithm())
+                alg = FullSidewalkreatorBboxAlgorithm()
+                self.addAlgorithm(alg)
+                try:
+                    QgsMessageLog.logMessage(
+                        f"Loaded algorithm: {alg.id()}",
+                        "SidewalKreator",
+                        Qgis.Info,
+                    )
+                except Exception:
+                    pass
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Failed to load FullSidewalkreatorBboxAlgorithm: {e}",

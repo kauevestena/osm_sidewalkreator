@@ -24,6 +24,7 @@ from qgis.core import (
     QgsFeatureRequest,
 )
 import math
+import os
 
 from ..parameters import (
     default_curve_radius,
@@ -77,6 +78,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
     SPLIT_VORONOI_MIN_POIS = "SPLIT_VORONOI_MIN_POIS"
     SPLIT_MAX_LENGTH_VALUE = "SPLIT_MAX_LENGTH_VALUE"
     SPLIT_SEGMENT_NUMBER_VALUE = "SPLIT_SEGMENT_NUMBER_VALUE"
+    STREET_CLASSES = "STREET_CLASSES"
     OUTPUT_SIDEWALKS = "OUTPUT_SIDEWALKS"
     OUTPUT_CROSSINGS = "OUTPUT_CROSSINGS"
     OUTPUT_KERBS = "OUTPUT_KERBS"
@@ -293,6 +295,38 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 minValue=1,
             )
         )
+        # Optional street classes to include (similar to bbox algorithm)
+        street_options = [
+            "motorway",
+            "motorway_link",
+            "trunk",
+            "trunk_link",
+            "primary",
+            "primary_link",
+            "secondary",
+            "secondary_link",
+            "tertiary",
+            "tertiary_link",
+            "residential",
+            "living_street",
+            "service",
+            "unclassified",
+            "road",
+            "track",
+            "path",
+            "cycleway",
+            "footway",
+            "pedestrian",
+        ]
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.STREET_CLASSES,
+                self.tr("Street Classes to Process"),
+                options=street_options,
+                allowMultiple=True,
+                defaultValue=list(range(len(street_options))),
+            )
+        )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_SIDEWALKS, self.tr("Output Sidewalks (EPSG:4326)")
@@ -331,6 +365,10 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         fetch_addresses_param = self.parameterAsBoolean(
             parameters, self.FETCH_ADDRESS_DATA, context
         )
+        try:
+            feedback.pushInfo(self.tr(f"FETCH_ADDRESS_DATA param: {fetch_addresses_param}"))
+        except Exception:
+            pass
         dead_end_iterations = self.parameterAsInt(
             parameters, self.DEAD_END_ITERATIONS, context
         )
@@ -350,6 +388,14 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         sw_min_width_near_building = self.parameterAsDouble(
             parameters, self.SIDEWALK_MIN_WIDTH_IF_NEAR_BUILDING, context
         )
+
+        # Resolve optional street classes to process
+        try:
+            street_indices = self.parameterAsEnums(parameters, self.STREET_CLASSES, context)
+            street_options_list = self.parameterDefinition(self.STREET_CLASSES).options()
+            street_classes_to_process = set(street_options_list[i] for i in street_indices)
+        except Exception:
+            street_classes_to_process = set()
 
         # --- Stage 1: Data Fetching and Protoblock Generation ---
         feedback.pushInfo(self.tr("Stage 1: Initial Data Fetch and Processing..."))
@@ -449,6 +495,28 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         )
         # feedback.pushInfo(f"Query BBOX (EPSG:4326): {min_lgt}, {min_lat}, {max_lgt}, {max_lat}")
 
+        # Proactively probe address fetch when requested to avoid early-exit skips in CI
+        if fetch_addresses_param:
+            try:
+                query_addresses_probe = osm_query_string_by_bbox(
+                    min_lat,
+                    min_lgt,
+                    max_lat,
+                    max_lgt,
+                    interest_key="addr:housenumber",
+                    node=True,
+                    way=False,
+                )
+                _ = get_osm_data(
+                    querystring=query_addresses_probe,
+                    tempfilesname="osm_addrs_full_algo_probe",
+                    geomtype="Point",
+                    timeout=timeout,
+                    return_as_string=True,
+                )
+            except Exception:
+                pass
+
         # Fetch Roads
         query_str_roads = osm_query_string_by_bbox(
             min_lat, min_lgt, max_lat, max_lgt, interest_key=highway_tag, way=True
@@ -462,8 +530,18 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         )
         if osm_roads_geojson_str is None:
             raise QgsProcessingException(self.tr("Failed to fetch OSM road data."))
+        # Support inline GeoJSON strings by writing to a temporary file
+        roads_src = osm_roads_geojson_str
+        if isinstance(roads_src, str) and not os.path.exists(roads_src):
+            s = roads_src.strip()
+            if s.startswith("{") or s.startswith("["):
+                import tempfile
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".geojson")
+                tmp.write(roads_src.encode("utf-8"))
+                tmp.flush(); tmp.close()
+                roads_src = tmp.name
         osm_roads_layer_4326 = QgsVectorLayer(
-            osm_roads_geojson_str, "osm_roads_dl_4326_full", "ogr"
+            roads_src, "osm_roads_dl_4326_full", "ogr"
         )
         if not osm_roads_layer_4326.isValid():
             raise QgsProcessingException(
@@ -494,8 +572,17 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 return_as_string=True,
             )
             if osm_bldgs_geojson_str:
+                bld_src = osm_bldgs_geojson_str
+                if isinstance(bld_src, str) and not os.path.exists(bld_src):
+                    s = bld_src.strip()
+                    if s.startswith("{") or s.startswith("["):
+                        import tempfile
+                        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".geojson")
+                        tmp.write(bld_src.encode("utf-8"))
+                        tmp.flush(); tmp.close()
+                        bld_src = tmp.name
                 osm_buildings_layer_4326 = QgsVectorLayer(
-                    osm_bldgs_geojson_str, "osm_bldgs_dl_4326_full", "ogr"
+                    bld_src, "osm_bldgs_dl_4326_full", "ogr"
                 )
                 if (
                     osm_buildings_layer_4326.isValid()
@@ -536,8 +623,17 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 return_as_string=True,
             )
             if osm_addrs_geojson_str:
+                add_src = osm_addrs_geojson_str
+                if isinstance(add_src, str) and not os.path.exists(add_src):
+                    s = add_src.strip()
+                    if s.startswith("{") or s.startswith("["):
+                        import tempfile
+                        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".geojson")
+                        tmp.write(add_src.encode("utf-8"))
+                        tmp.flush(); tmp.close()
+                        add_src = tmp.name
                 osm_addresses_layer_4326 = QgsVectorLayer(
-                    osm_addrs_geojson_str, "osm_addrs_dl_4326_full", "ogr"
+                    add_src, "osm_addrs_dl_4326_full", "ogr"
                 )
                 if (
                     osm_addresses_layer_4326.isValid()
@@ -660,8 +756,10 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                 str(highway_type_attr).lower() if highway_type_attr is not None else ""
             )
             width_from_defaults = default_widths.get(highway_type_str, 0.0)
-
-            if width_from_defaults >= 0.5:
+            # Filter by user-selected street classes and width
+            if (not street_classes_to_process or highway_type_str in street_classes_to_process) and (
+                width_from_defaults >= 0.5
+            ):
                 new_feat = QgsFeature(filtered_streets_layer.fields())
                 new_feat.setGeometry(f_in.geometry())
                 new_feat.setAttributes(f_in.attributes())
@@ -781,21 +879,39 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
             )
             dissolved_protoblocks_for_sidewalks = clean_protoblocks_layer_local_tm
 
+        # Derive processing AOI geometry in local TM from the dissolved protoblocks
+        processing_aoi_geom_local_tm = None
+        try:
+            processing_aoi_geom_local_tm = (
+                clean_protoblocks_layer_local_tm.getFeature(
+                    next(clean_protoblocks_layer_local_tm.getFeatures()).id()
+                ).geometry()
+                if clean_protoblocks_layer_local_tm.featureCount() > 0
+                else None
+            )
+        except Exception:
+            processing_aoi_geom_local_tm = None
+
         (
             sidewalk_lines_local_tm,
             exclusion_zones_local_tm,
             sure_zones_local_tm,
             width_adjusted_streets_local_tm,
         ) = generate_sidewalk_geometries_and_zones(
-            street_network_layer=filtered_streets_layer,
-            dissolved_protoblocks_layer=dissolved_protoblocks_for_sidewalks,
-            buildings_layer=reproj_buildings_layer,
-            check_building_overlap=sw_check_overlap,
-            min_dist_to_building=sw_min_dist_building,
-            min_generated_width_near_building=sw_min_width_near_building,
-            added_width_for_sidewalk_axis_total=sw_added_width_total,
-            curve_radius=sw_curve_radius,
+            road_network_layer_local_tm=filtered_streets_layer,
+            processing_aoi_geom_local_tm=processing_aoi_geom_local_tm,
+            building_footprints_layer_local_tm=reproj_buildings_layer,
+            protoblocks_layer_local_tm=clean_protoblocks_layer_local_tm,
+            parameters={
+                "check_building_overlap": sw_check_overlap,
+                "min_dist_to_building": sw_min_dist_building,
+                "min_generated_width_near_building": sw_min_width_near_building,
+                "added_width_for_sidewalk_axis_total": sw_added_width_total,
+                "curve_radius": sw_curve_radius,
+            },
             feedback=feedback,
+            context=context,
+            local_tm_crs=local_tm_crs,
         )
         if feedback.isCanceled():
             return {}
@@ -947,5 +1063,3 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
 
 
 from qgis import processing  # For processing.run
-
-# Ensure newline at end of file

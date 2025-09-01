@@ -129,7 +129,7 @@ def vec_layers_intersection(inputlayer, overlay_layer, outputlayer="TEMPORARY_OU
         "OUTPUT": outputlayer,
     }
 
-    return processing.run("qgis:intersection", parameter_dict)["OUTPUT"]
+    return processing.run("native:intersection", parameter_dict)["OUTPUT"]
 
 
 def compute_difference_layer(inputlayer, overlaylayer, outputlayer="TEMPORARY_OUTPUT"):
@@ -140,7 +140,7 @@ def compute_difference_layer(inputlayer, overlaylayer, outputlayer="TEMPORARY_OU
         "OUTPUT": outputlayer,
     }
 
-    return processing.run("qgis:difference", parameter_dict)["OUTPUT"]
+    return processing.run("native:difference", parameter_dict)["OUTPUT"]
 
 
 # def difference_inplace(inputlayer,overlaylayer):
@@ -375,7 +375,7 @@ def gen_voronoi_polygons_layer(
 ):
     parameter_dict = {"INPUT": inputlayer, "OUTPUT": outputlayer, "BUFFER": buffer_perc}
 
-    return processing.run("qgis:voronoipolygons", parameter_dict)["OUTPUT"]
+    return processing.run("native:voronoipolygons", parameter_dict)["OUTPUT"]
 
 
 def get_intersections(inputlayer, intersect_layer, outputlayer):
@@ -385,7 +385,7 @@ def get_intersections(inputlayer, intersect_layer, outputlayer):
         "OUTPUT": outputlayer,
     }
 
-    return processing.run("qgis:lineintersections", parameter_dict)["OUTPUT"]
+    return processing.run("native:lineintersections", parameter_dict)["OUTPUT"]
 
 
 def cliplayer_v2(inputlayer, overlay_lyr, outputlayer="TEMPORARY_OUTPUT"):
@@ -398,7 +398,7 @@ def cliplayer_v2(inputlayer, overlay_lyr, outputlayer="TEMPORARY_OUTPUT"):
         "OUTPUT": outputlayer,
     }
 
-    return processing.run("qgis:clip", parameter_dict)["OUTPUT"]
+    return processing.run("native:clip", parameter_dict)["OUTPUT"]
 
 
 def reproject_layer(

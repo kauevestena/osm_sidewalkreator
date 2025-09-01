@@ -166,3 +166,5 @@ tests.py
 *.gpkg-shm
 *.gpkg-wal
 .vscode/settings.json
+.venv_local
+.venv_ci
