@@ -599,25 +599,9 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(
             self.tr("Protoblock generation complete. Output (EPSG:4326) written.")
         )
-        # Safely map sink id to a layer object for tests, fallback to id
-        try:
-            final_layer = QgsProcessingUtils.mapLayerFromString(dest_id, context)
-            if not final_layer or not final_layer.isValid():
-                # Fallback: construct a memory layer with empty fields and copy geometries
-                mem = QgsVectorLayer("Polygon?crs=EPSG:4326", "protoblocks", "memory")
-                prov = mem.dataProvider()
-                feats = []
-                for feat in output_layer_epsg4326.getFeatures():
-                    f = QgsFeature(mem.fields())
-                    f.setGeometry(feat.geometry())
-                    feats.append(f)
-                if feats:
-                    prov.addFeatures(feats)
-                    mem.updateExtents()
-                return {self.OUTPUT_PROTOBLOCKS: mem}
-            return {self.OUTPUT_PROTOBLOCKS: final_layer}
-        except Exception:
-            return {self.OUTPUT_PROTOBLOCKS: dest_id}
+        # Return the sink destination directly to avoid potential segfaults
+        # from trying to read the file immediately after writing
+        return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
         # Clean up any persistent temporary layers if necessary

@@ -61,7 +61,10 @@ from osm_sidewalkreator.processing.protoblock_bbox_algorithm import ProtoblockBb
 from qgis import processing
 min_lon=float(os.environ["MIN_LON"]); min_lat=float(os.environ["MIN_LAT"]) 
 max_lon=float(os.environ["MAX_LON"]); max_lat=float(os.environ["MAX_LAT"]) 
-extent=f"{min_lon},{min_lat},{max_lon},{max_lat} [EPSG:4326]"
+# Use same format as run_full_bbox.sh to work around QGIS coordinate swapping
+west_lon, east_lon = min_lon, max_lon
+south_lat, north_lat = min_lat, max_lat
+extent=f"{west_lon},{east_lon},{south_lat},{north_lat} [EPSG:4326]"
 params={
   "EXTENT": extent,
   "TIMEOUT": 60,

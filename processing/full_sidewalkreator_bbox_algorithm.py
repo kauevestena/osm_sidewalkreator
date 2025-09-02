@@ -707,8 +707,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 clipped_buildings_4326 = cliplayer_v2(
                     osm_buildings_layer_4326,
                     input_polygon_layer_for_processing,  # Use the 4326 layer for clipping
-                    f"memory:clipped_bldgs_4326_bbox_{context.algorithm().id()[:5]}",  # Unique name
-                    feedback=feedback,
+                    "memory:clipped_bldgs_4326_bbox",
                 )
 
                 if (
@@ -719,7 +718,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     reproj_buildings_layer_local_tm, _ = reproject_layer_localTM(
                         clipped_buildings_4326,
                         None,
-                        f"bldgs_local_tm_bbox_{context.algorithm().id()[:5]}",
+                        "bldgs_local_tm_bbox",
                         centroid_lon,
                         centroid_lat,
                     )

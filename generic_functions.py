@@ -191,6 +191,7 @@ def merge_touching_lines(inputlayer, outputlayer="TEMPORARY_OUTPUT"):
 
     return processing.run("native:mergelines", parameter_dict)["OUTPUT"]
 
+
 def polygonize_lines(
     inputlines,
     outputlayer="TEMPORARY_OUTPUT",
@@ -214,7 +215,6 @@ def polygonize_lines(
         if not result_layer.crs().isValid() or result_layer.crs() != inputlines.crs():
             result_layer.setCrs(inputlines.crs())
     return result_layer
-
 
 
 def convex_hulls(inputlayer, outputlayer="TEMPORARY_OUTPUT", keepfields=True):
@@ -505,8 +505,10 @@ def remove_biggest_polygon(inputlayer, record_area=False, area_fieldname="area")
             if record_area:
                 inputlayer.changeAttributeValue(feature.id(), area_idx, area_val)
 
-        max_area_idx = areas.index(max(areas))
-        inputlayer.deleteFeature(ids[max_area_idx])
+        # Check if there are any features before trying to find the max
+        if areas:
+            max_area_idx = areas.index(max(areas))
+            inputlayer.deleteFeature(ids[max_area_idx])
 
 
 def single_geom_polygonize(inputgeom):
@@ -1715,11 +1717,7 @@ def remove_unconnected_lines_v2(inputlayer):
 #     return colors
 
 
-def assign_street_widths(
-    source_road_layer,
-    output_layer_name,
-    feedback=None
-):
+def assign_street_widths(source_road_layer, output_layer_name, feedback=None):
     """
     Creates a new line layer from a source road layer, ensuring that a 'width'
     attribute exists and is populated for every feature.
@@ -1733,9 +1731,7 @@ def assign_street_widths(
 
     # Create the output layer
     output_layer = QgsVectorLayer(
-        f"LineString?crs={source_crs.authid()}",
-        output_layer_name,
-        "memory"
+        f"LineString?crs={source_crs.authid()}", output_layer_name, "memory"
     )
     output_dp = output_layer.dataProvider()
 
@@ -1755,14 +1751,24 @@ def assign_street_widths(
         if feedback and feedback.isCanceled():
             return None
 
-        highway_type_attr = feature.attribute(highway_field_idx_source) if highway_field_idx_source != -1 else None
-        highway_type_str = str(highway_type_attr).lower() if highway_type_attr is not None else ""
+        highway_type_attr = (
+            feature.attribute(highway_field_idx_source)
+            if highway_field_idx_source != -1
+            else None
+        )
+        highway_type_str = (
+            str(highway_type_attr).lower() if highway_type_attr is not None else ""
+        )
         width_from_defaults = default_widths.get(highway_type_str, 0.0)
 
         # Determine final width
         final_width = 0.0
         # Try to get width from source feature first
-        osm_width_val = feature.attribute(width_field_idx_source) if width_field_idx_source != -1 else None
+        osm_width_val = (
+            feature.attribute(width_field_idx_source)
+            if width_field_idx_source != -1
+            else None
+        )
 
         valid_osm_width = False
         if osm_width_val is not None:
@@ -1773,7 +1779,7 @@ def assign_street_widths(
                     final_width = parsed_width
                     valid_osm_width = True
             except (ValueError, TypeError):
-                pass # Invalid, will use default
+                pass  # Invalid, will use default
 
         if not valid_osm_width:
             final_width = width_from_defaults
@@ -1790,6 +1796,8 @@ def assign_street_widths(
         output_dp.addFeatures(features_to_add)
 
     if feedback:
-        feedback.pushInfo(f"Processed street widths. Input: {source_road_layer.featureCount()} features, Output: {output_layer.featureCount()} features.")
+        feedback.pushInfo(
+            f"Processed street widths. Input: {source_road_layer.featureCount()} features, Output: {output_layer.featureCount()} features."
+        )
 
     return output_layer
