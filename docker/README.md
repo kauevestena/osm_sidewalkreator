@@ -94,12 +94,15 @@ QgsApplication.processingRegistry().addProvider(ProtoblockProvider())
 from qgis import processing
 params = {
   "INPUT_POLYGON": "/repo/assets/test_data/polygon.geojson",
+  "INPUT_CRS": "EPSG:4326",  # Optional: specify input CRS, defaults to layer CRS
   "TIMEOUT": 60,
   "OUTPUT_PROTOBLOCKS": "/repo/output/protoblocks_polygon.geojson"
 }
 print(processing.run("sidewalkreator_algorithms_provider:generateprotoblocksfromosm", params))
 PY'
 ```
+
+**New**: The algorithm now accepts an `INPUT_CRS` parameter to handle polygons in any coordinate reference system (e.g., EPSG:3857, UTM zones, etc.). The algorithm will automatically reproject to EPSG:4326 for OSM data fetching.
 
 Run “Full Sidewalkreator from Polygon” (algorithm id: `sidewalkreator_algorithms_provider:fullsidewalkreatorfrompolygon`):
 
@@ -228,12 +231,27 @@ PY'
   - Shapefile: `/repo/output/sidewalks.shp`
   - (any other OGR driver supported by the container)
 
+### Testing
+
+The `tests/` directory contains comprehensive test scripts for validating algorithm functionality:
+
+- **test_protoblock_direct.sh**: Basic protoblock algorithm test with polygon input
+- **test_protoblock_with_provider.sh**: Tests protoblock algorithm via provider
+- **test_protoblock_with_provider_fixed.sh**: Enhanced test with proper CRS handling
+- **run_full_protoblock_test.sh**: Complete test suite with coordinate transformation
+- **convert_coords.py**: Utility for converting coordinates between EPSG:4326 and EPSG:3857
+
+Run all tests with:
+```bash
+cd tests && ./run_full_protoblock_test.sh
+```
+
 ### Troubleshooting
 
 - Make sure the repo is mounted and on `PYTHONPATH` as shown, so the provider module can be imported.
 - If you see Processing errors for algorithms like `native:clip`, ensure Native algorithms were registered (the snippets add `QgsNativeAlgorithms`).
 - If running on headless servers, keeping `QT_QPA_PLATFORM=offscreen` and a 0700 `XDG_RUNTIME_DIR` is important.
-- For bbox runs, always pass EPSG:4326 coordinates.
+- The algorithms now support CRS parameters - use `INPUT_CRS` to specify coordinate systems other than EPSG:4326.
 
 ## Notes
 

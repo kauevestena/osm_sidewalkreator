@@ -384,12 +384,22 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
             return results
 
+        feedback.pushInfo(
+            f"DEBUG: Created polygon geometry from extent: {input_polygon_geom_4326.asWkt()[:200]}..."
+        )
+
         vl = QgsVectorLayer("Polygon?crs=epsg:4326", "input_extent_polygon", "memory")
         pr = vl.dataProvider()
         feat = QgsFeature()
         feat.setGeometry(input_polygon_geom_4326)
         pr.addFeatures([feat])
         vl.updateExtents()
+
+        feedback.pushInfo(
+            f"DEBUG: Memory layer extent after adding feature: {vl.extent().toString()}"
+        )
+        feedback.pushInfo(f"DEBUG: Memory layer CRS: {vl.crs().authid()}")
+        feedback.pushInfo(f"DEBUG: Memory layer feature count: {vl.featureCount()}")
 
         if vl.featureCount() == 0:
             feedback.reportError(

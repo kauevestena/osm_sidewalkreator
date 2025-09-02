@@ -6,6 +6,7 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFeatureSink,
+    QgsProcessingParameterCrs,
     QgsProcessingContext,
     QgsFeatureSink,
     QgsProcessingParameterEnum,
@@ -14,8 +15,6 @@ from qgis.core import (
     QgsProcessingUtils,
     QgsMessageLog,
     Qgis,
-)  # Added QgsProcessingUtils and logging classes
-from qgis.core import (
     QgsProcessingParameterNumber,
     QgsCoordinateReferenceSystem,
     QgsProject,
@@ -24,7 +23,11 @@ from qgis.core import (
     QgsField,
     QgsFeature,
     edit,
-)
+    QgsWkbTypes,
+    QgsProcessingException,
+    QgsCoordinateTransform,
+    QgsRectangle,
+)  # Added QgsProcessingUtils and logging classes
 from qgis.PyQt.QtCore import QVariant
 import math  # For math.isfinite
 
@@ -46,6 +49,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     """
 
     INPUT_POLYGON = "INPUT_POLYGON"
+    INPUT_CRS = "INPUT_CRS"
     TIMEOUT = "TIMEOUT"
     OUTPUT_PROTOBLOCKS = "OUTPUT_PROTOBLOCKS"
 
@@ -80,15 +84,24 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self):
         return self.tr(
-            "Fetches OSM street data for an input polygon area, processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. Output is in EPSG:4326."
+            "Fetches OSM street data for an input polygon area, processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. "
+            "Input can be in any CRS (specify via Input CRS parameter or it will use the layer's CRS). Output is always in EPSG:4326."
         )
 
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT_POLYGON,
-                self.tr("Input Area Polygon Layer (EPSG:4326 recommended)"),
+                self.tr("Input Area Polygon Layer"),
                 [QgsProcessing.TypeVectorPolygon],
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                self.INPUT_CRS,
+                self.tr("Input Coordinate Reference System"),
+                defaultValue=CRS_LATLON_4326,
+                optional=True,
             )
         )
         self.addParameter(
@@ -120,6 +133,24 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 self.invalidSourceError(parameters, self.INPUT_POLYGON)
             )
 
+        # Get input CRS parameter (with fallback to source CRS if not specified)
+        input_crs_param = self.parameterAsCrs(parameters, self.INPUT_CRS, context)
+        source_crs = input_polygon_feature_source.sourceCrs()
+
+        # Use the parameter CRS if specified, otherwise use source CRS
+        if input_crs_param and input_crs_param.isValid():
+            effective_input_crs = input_crs_param
+            feedback.pushInfo(
+                f"Using specified input CRS: {effective_input_crs.authid()}"
+            )
+        else:
+            effective_input_crs = source_crs
+            feedback.pushInfo(
+                f"Using source CRS from input layer: {effective_input_crs.authid()}"
+            )
+
+        feedback.pushInfo(f"Input polygon source CRS: {source_crs.authid()}")
+
         actual_input_layer = input_polygon_feature_source.materialize(
             QgsFeatureRequest()
         )
@@ -135,6 +166,13 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 )
             )
 
+        # Update the materialized layer CRS if different from effective input CRS
+        if effective_input_crs != source_crs:
+            feedback.pushInfo(
+                f"Updating materialized layer CRS from {source_crs.authid()} to {effective_input_crs.authid()}"
+            )
+            actual_input_layer.setCrs(effective_input_crs)
+
         feedback.pushInfo(
             self.tr(
                 f"Using input polygon layer: {actual_input_layer.name()} ({actual_input_layer.featureCount()} features)"
@@ -147,13 +185,14 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(self.tr("Calculating BBOX for OSM query..."))
 
         # Ensure input_poly_for_bbox is in EPSG:4326
-        source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
 
         input_poly_for_bbox = actual_input_layer
-        if source_crs.authid() != crs_4326.authid():  # Compare authids for robustness
+        if (
+            effective_input_crs.authid() != crs_4326.authid()
+        ):  # Compare authids for robustness
             feedback.pushInfo(
-                f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation."
+                f"Reprojecting input layer from {effective_input_crs.authid()} to EPSG:4326 for BBOX calculation."
             )
             reproject_params = {
                 "INPUT": actual_input_layer,
@@ -164,45 +203,115 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 1, feedback
             )  # Child feedback
             sub_feedback_reproject.setCurrentStep(0)
-            reproject_result = processing.run(
-                "native:reprojectlayer",
-                reproject_params,
-                context=context,
-                feedback=sub_feedback_reproject,
-                is_child_algorithm=True,
-            )
-            if sub_feedback_reproject.isCanceled():
-                return {}
 
-            input_poly_for_bbox = QgsVectorLayer(
-                reproject_result["OUTPUT"], "input_reprojected_for_bbox_layer", "memory"
-            )
-            if (
-                not input_poly_for_bbox.isValid()
-                or input_poly_for_bbox.featureCount() == 0
-            ):
+            try:
+                reproject_result = processing.run(
+                    "native:reprojectlayer",
+                    reproject_params,
+                    context=context,
+                    feedback=sub_feedback_reproject,
+                    is_child_algorithm=True,
+                )
+                feedback.pushInfo(f"Results: {reproject_result}")
+
+                if sub_feedback_reproject.isCanceled():
+                    return {}
+
+                if not reproject_result or "OUTPUT" not in reproject_result:
+                    raise QgsProcessingException(
+                        self.tr("Reprojection did not return expected output.")
+                    )
+
+                # Try to get the output layer
+                output_path = reproject_result["OUTPUT"]
+                feedback.pushInfo(f"Reprojection output path: {output_path}")
+
+                # Use QgsProcessingUtils to get the layer properly
+                input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(
+                    output_path, context
+                )
+
+                if input_poly_for_bbox is None:
+                    # Fallback to creating layer directly
+                    feedback.pushInfo("Falling back to direct layer creation")
+                    input_poly_for_bbox = QgsVectorLayer(
+                        output_path,
+                        "input_reprojected_for_bbox_layer",
+                        "memory" if "memory:" in output_path else "ogr",
+                    )
+
+                if input_poly_for_bbox is None or not input_poly_for_bbox.isValid():
+                    raise QgsProcessingException(
+                        self.tr(
+                            f"Failed to create layer from reprojection output: {output_path}"
+                        )
+                    )
+
+                if input_poly_for_bbox.featureCount() == 0:
+                    raise QgsProcessingException(
+                        self.tr(
+                            f"Reprojected layer is empty. Layer path: {output_path}"
+                        )
+                    )
+
+                feedback.pushInfo(
+                    f"Successfully reprojected to EPSG:4326. Features: {input_poly_for_bbox.featureCount()}"
+                )
+
+            except Exception as e:
                 raise QgsProcessingException(
-                    self.tr("Failed to reproject, or reprojected input layer is empty.")
+                    self.tr(f"Reprojection failed with error: {str(e)}")
                 )
         else:
             feedback.pushInfo("Input layer is already in EPSG:4326.")
 
         # Calculate BBOX from the (potentially reprojected) layer
         extent_4326 = input_poly_for_bbox.extent()
-        if extent_4326.isNull() or not all(
-            map(
-                math.isfinite,
-                [
-                    extent_4326.xMinimum(),
-                    extent_4326.yMinimum(),
-                    extent_4326.xMaximum(),
-                    extent_4326.yMaximum(),
-                ],
+
+        # Debug: log the extent details
+        feedback.pushInfo(f"Layer extent: {extent_4326.toString()}")
+        feedback.pushInfo(f"Extent isNull: {extent_4326.isNull()}")
+        feedback.pushInfo(
+            f"Extent bounds: xMin={extent_4326.xMinimum()}, yMin={extent_4326.yMinimum()}, xMax={extent_4326.xMaximum()}, yMax={extent_4326.yMaximum()}"
+        )
+
+        # Also check individual feature geometries for debugging
+        feature_count = 0
+        for feature in input_poly_for_bbox.getFeatures():
+            geom = feature.geometry()
+            if geom and not geom.isEmpty():
+                geom_bbox = geom.boundingBox()
+                feedback.pushInfo(
+                    f"Feature {feature_count} geometry bbox: {geom_bbox.toString()}"
+                )
+                feature_count += 1
+                if feature_count >= 3:  # Limit debug output
+                    break
+
+        # Validate extent coordinates are within reasonable geographic bounds
+        if (
+            extent_4326.isNull()
+            or not all(
+                map(
+                    math.isfinite,
+                    [
+                        extent_4326.xMinimum(),
+                        extent_4326.yMinimum(),
+                        extent_4326.xMaximum(),
+                        extent_4326.yMaximum(),
+                    ],
+                )
             )
+            or extent_4326.xMinimum() < -180
+            or extent_4326.xMaximum() > 180
+            or extent_4326.yMinimum() < -90
+            or extent_4326.yMaximum() > 90
         ):
             raise QgsProcessingException(
                 self.tr(
-                    f"Cannot determine a valid bounding box. Extent: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty."
+                    f"Invalid bounding box coordinates. Extent: {extent_4326.toString()}. "
+                    f"Coordinates must be in valid lat/lon range (-180 to 180 for longitude, -90 to 90 for latitude). "
+                    f"Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and was properly reprojected to EPSG:4326."
                 )
             )
 
@@ -619,9 +728,3 @@ except ImportError as e:
         Qgis.Critical,
     )
     raise
-from qgis.core import (
-    QgsWkbTypes,
-    QgsProcessingException,
-    QgsCoordinateTransform,
-    QgsRectangle,
-)
