@@ -275,9 +275,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     from qgis.core import QgsRectangle, QgsCoordinateReferenceSystem
 
                     if len(nums) == 4:
-                        feedback.pushInfo(f"DEBUG: Creating QgsRectangle({nums[0]}, {nums[1]}, {nums[2]}, {nums[3]})")
+                        feedback.pushInfo(
+                            f"DEBUG: Creating QgsRectangle({nums[0]}, {nums[1]}, {nums[2]}, {nums[3]})"
+                        )
                         input_extent_rect = QgsRectangle(*nums)
-                        feedback.pushInfo(f"DEBUG: Created rectangle - xMin:{input_extent_rect.xMinimum()}, yMin:{input_extent_rect.yMinimum()}, xMax:{input_extent_rect.xMaximum()}, yMax:{input_extent_rect.yMaximum()}")
+                        feedback.pushInfo(
+                            f"DEBUG: Created rectangle - xMin:{input_extent_rect.xMinimum()}, yMin:{input_extent_rect.yMinimum()}, xMax:{input_extent_rect.xMaximum()}, yMax:{input_extent_rect.yMaximum()}"
+                        )
                         if not crs_part:
                             extent_crs = QgsCoordinateReferenceSystem("EPSG:4326")
                         else:
@@ -448,13 +452,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # --- 3. Fetch OSM Road Data ---
         feedback.pushInfo(self.tr("Fetching OSM road data..."))
 
-        # Get bbox coordinates from extent  
+        # Get bbox coordinates from extent
         # extent_4326 is a QgsRectangle with xMin,yMin,xMax,yMax
         x_min = extent_4326.xMinimum()  # longitude (west)
         y_min = extent_4326.yMinimum()  # latitude (south)
-        x_max = extent_4326.xMaximum()  # longitude (east) 
+        x_max = extent_4326.xMaximum()  # longitude (east)
         y_max = extent_4326.yMaximum()  # latitude (north)
-        
+
         # For geographic coordinates: x=longitude, y=latitude
         min_lon = x_min
         min_lat = y_min
@@ -462,16 +466,22 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         max_lat = y_max
 
         # Debug: Print the actual coordinate values
-        feedback.pushInfo(f"DEBUG: QgsRectangle bounds: xMin={x_min}, yMin={y_min}, xMax={x_max}, yMax={y_max}")
-        feedback.pushInfo(f"DEBUG: Geographic coords: min_lon={min_lon}, min_lat={min_lat}, max_lon={max_lon}, max_lat={max_lat}")
-        feedback.pushInfo(f"DEBUG: Expected Overpass bbox (south,west,north,east): ({min_lat},{min_lon},{max_lat},{max_lon})")
+        feedback.pushInfo(
+            f"DEBUG: QgsRectangle bounds: xMin={x_min}, yMin={y_min}, xMax={x_max}, yMax={y_max}"
+        )
+        feedback.pushInfo(
+            f"DEBUG: Geographic coords: min_lon={min_lon}, min_lat={min_lat}, max_lon={max_lon}, max_lat={max_lat}"
+        )
+        feedback.pushInfo(
+            f"DEBUG: Expected Overpass bbox (south,west,north,east): ({min_lat},{min_lon},{max_lat},{max_lon})"
+        )
 
         # Build query string for roads
         # Build using positional args to avoid any name-mapping issues
         # osm_query_string_by_bbox expects (min_lat, min_lon, max_lat, max_lon)
         road_query_string = osm_query_string_by_bbox(
             min_lat,  # lat min (south)
-            min_lon,  # lon min (west) 
+            min_lon,  # lon min (west)
             max_lat,  # lat max (north)
             max_lon,  # lon max (east)
             interest_key="highway",
