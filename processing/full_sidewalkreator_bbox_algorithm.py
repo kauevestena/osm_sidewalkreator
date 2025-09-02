@@ -51,6 +51,7 @@ from .sidewalk_generation_logic import (
 )  # Core logic
 
 import os
+
 try:
     import processing  # For native algorithms
 except ImportError as e:
@@ -265,14 +266,18 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # Fallback: parse string extents like "minx,miny,maxx,maxy [EPSG:XXXX]"
         if not input_extent_rect or input_extent_rect.isEmpty():
             raw = parameters_alg.get(self.INPUT_EXTENT)
+            feedback.pushInfo(f"DEBUG: Parsing extent string: '{raw}'")
             if isinstance(raw, str):
                 try:
                     spec, _, crs_part = raw.partition("[")
                     nums = [float(x.strip()) for x in spec.split(",")[:4]]
+                    feedback.pushInfo(f"DEBUG: Parsed numbers: {nums}")
                     from qgis.core import QgsRectangle, QgsCoordinateReferenceSystem
 
                     if len(nums) == 4:
+                        feedback.pushInfo(f"DEBUG: Creating QgsRectangle({nums[0]}, {nums[1]}, {nums[2]}, {nums[3]})")
                         input_extent_rect = QgsRectangle(*nums)
+                        feedback.pushInfo(f"DEBUG: Created rectangle - xMin:{input_extent_rect.xMinimum()}, yMin:{input_extent_rect.yMinimum()}, xMax:{input_extent_rect.xMaximum()}, yMax:{input_extent_rect.yMaximum()}")
                         if not crs_part:
                             extent_crs = QgsCoordinateReferenceSystem("EPSG:4326")
                         else:
@@ -382,10 +387,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         pr.addFeatures([feat])
         vl.updateExtents()
 
-
         if vl.featureCount() == 0:
             feedback.reportError(
-                self.tr("Failed to create in-memory polygon layer from transformed extent."),
+                self.tr(
+                    "Failed to create in-memory polygon layer from transformed extent."
+                ),
                 True,
             )
             return results
@@ -442,19 +448,32 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # --- 3. Fetch OSM Road Data ---
         feedback.pushInfo(self.tr("Fetching OSM road data..."))
 
-        # Get bbox coordinates
-        min_lat = extent_4326.yMinimum()
-        min_lgt = extent_4326.xMinimum()
-        max_lat = extent_4326.yMaximum()
-        max_lgt = extent_4326.xMaximum()
+        # Get bbox coordinates from extent  
+        # extent_4326 is a QgsRectangle with xMin,yMin,xMax,yMax
+        x_min = extent_4326.xMinimum()  # longitude (west)
+        y_min = extent_4326.yMinimum()  # latitude (south)
+        x_max = extent_4326.xMaximum()  # longitude (east) 
+        y_max = extent_4326.yMaximum()  # latitude (north)
+        
+        # For geographic coordinates: x=longitude, y=latitude
+        min_lon = x_min
+        min_lat = y_min
+        max_lon = x_max
+        max_lat = y_max
+
+        # Debug: Print the actual coordinate values
+        feedback.pushInfo(f"DEBUG: QgsRectangle bounds: xMin={x_min}, yMin={y_min}, xMax={x_max}, yMax={y_max}")
+        feedback.pushInfo(f"DEBUG: Geographic coords: min_lon={min_lon}, min_lat={min_lat}, max_lon={max_lon}, max_lat={max_lat}")
+        feedback.pushInfo(f"DEBUG: Expected Overpass bbox (south,west,north,east): ({min_lat},{min_lon},{max_lat},{max_lon})")
 
         # Build query string for roads
         # Build using positional args to avoid any name-mapping issues
+        # osm_query_string_by_bbox expects (min_lat, min_lon, max_lat, max_lon)
         road_query_string = osm_query_string_by_bbox(
-            min_lat,  # lat min
-            min_lgt,  # lon min
-            max_lat,  # lat max
-            max_lgt,  # lon max
+            min_lat,  # lat min (south)
+            min_lon,  # lon min (west) 
+            max_lat,  # lat max (north)
+            max_lon,  # lon max (east)
             interest_key="highway",
             way=True,
             node=False,
@@ -528,15 +547,23 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
 
         # Optional: filter by selected street classes to reduce workload
         try:
-            street_indices = self.parameterAsEnums(parameters_alg, self.STREET_CLASSES, context)
-            street_options_list = self.parameterDefinition(self.STREET_CLASSES).options()
+            street_indices = self.parameterAsEnums(
+                parameters_alg, self.STREET_CLASSES, context
+            )
+            street_options_list = self.parameterDefinition(
+                self.STREET_CLASSES
+            ).options()
             allowed_classes = set(street_options_list[i] for i in street_indices)
         except Exception:
             allowed_classes = set()
         if allowed_classes:
-            highway_idx = streets_with_width.fields().lookupField(parameters.highway_tag)
+            highway_idx = streets_with_width.fields().lookupField(
+                parameters.highway_tag
+            )
             filtered = QgsVectorLayer(
-                f"LineString?crs={local_tm_crs.authid()}", "filtered_streets_bbox", "memory"
+                f"LineString?crs={local_tm_crs.authid()}",
+                "filtered_streets_bbox",
+                "memory",
             )
             fdp = filtered.dataProvider()
             fdp.addAttributes(streets_with_width.fields())
@@ -549,7 +576,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             if feats:
                 fdp.addFeatures(feats)
                 filtered.updateExtents()
-                feedback.pushInfo(self.tr(f"Filtered streets by classes: {filtered.featureCount()} remain."))
+                feedback.pushInfo(
+                    self.tr(
+                        f"Filtered streets by classes: {filtered.featureCount()} remain."
+                    )
+                )
                 streets_with_width = filtered
 
         # --- 5. Generate Protoblocks (in local TM first, then reproject if saved) ---
@@ -626,9 +657,9 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             # Build query string for buildings
             building_query_string = osm_query_string_by_bbox(
                 min_lat,  # lat min
-                min_lgt,  # lon min
+                min_lon,  # lon min
                 max_lat,  # lat max
-                max_lgt,  # lon max
+                max_lon,  # lon max
                 interest_key="building",
                 way=True,
                 relation=True,  # For multipolygons
@@ -887,7 +918,9 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 )
             else:
                 feedback.pushWarning(
-                    self.tr("Failed to create sink for width-adjusted streets debug layer.")
+                    self.tr(
+                        "Failed to create sink for width-adjusted streets debug layer."
+                    )
                 )
 
         feedback.pushInfo(self.tr("Processing finished."))
@@ -926,6 +959,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         if os.path.exists(icon_path):
             return QIcon(icon_path)
         return QIcon()
+
     def createInstance(self):
         try:
             print("[FullSidewalkreatorBboxAlgorithm] createInstance() called")

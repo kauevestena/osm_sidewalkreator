@@ -892,12 +892,7 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         except Exception:
             processing_aoi_geom_local_tm = None
 
-        (
-            sidewalk_lines_local_tm,
-            exclusion_zones_local_tm,
-            sure_zones_local_tm,
-            width_adjusted_streets_local_tm,
-        ) = generate_sidewalk_geometries_and_zones(
+        generated_outputs = generate_sidewalk_geometries_and_zones(
             road_network_layer_local_tm=filtered_streets_layer,
             processing_aoi_geom_local_tm=processing_aoi_geom_local_tm,
             building_footprints_layer_local_tm=reproj_buildings_layer,
@@ -915,6 +910,10 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         )
         if feedback.isCanceled():
             return {}
+        sidewalk_lines_local_tm = generated_outputs.get("sidewalk_lines")
+        exclusion_zones_local_tm = generated_outputs.get("exclusion_zones")
+        sure_zones_local_tm = generated_outputs.get("sure_zones")
+        width_adjusted_streets_local_tm = generated_outputs.get("width_adjusted_streets")
         if not sidewalk_lines_local_tm or not sidewalk_lines_local_tm.isValid():
             raise QgsProcessingException(
                 self.tr(
