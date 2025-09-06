@@ -22,6 +22,7 @@ from qgis.core import (
     QgsProcessingUtils,
     QgsProcessingException,
     QgsMessageLog,
+    QgsWkbTypes,
     Qgis,
 )
 from qgis.PyQt.QtGui import QIcon
@@ -275,12 +276,46 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     from qgis.core import QgsRectangle, QgsCoordinateReferenceSystem
 
                     if len(nums) == 4:
+                        # Create test rectangles for both interpretations
+                        rect1 = QgsRectangle(
+                            nums[0], nums[1], nums[2], nums[3]
+                        )  # minX,minY,maxX,maxY
+                        rect2 = QgsRectangle(
+                            nums[0], nums[2], nums[1], nums[3]
+                        )  # minX,maxX,minY,maxY reordered
+
+                        area1 = rect1.width() * rect1.height()
+                        area2 = rect2.width() * rect2.height()
+
                         feedback.pushInfo(
-                            f"DEBUG: Creating QgsRectangle({nums[0]}, {nums[1]}, {nums[2]}, {nums[3]})"
+                            f"DEBUG: Interpretation 1 (minX,minY,maxX,maxY): {rect1.width():.1f}m × {rect1.height():.1f}m (area: {area1:.0f})"
                         )
-                        input_extent_rect = QgsRectangle(*nums)
                         feedback.pushInfo(
-                            f"DEBUG: Created rectangle - xMin:{input_extent_rect.xMinimum()}, yMin:{input_extent_rect.yMinimum()}, xMax:{input_extent_rect.xMaximum()}, yMax:{input_extent_rect.yMaximum()}"
+                            f"DEBUG: Interpretation 2 (minX,maxX,minY,maxY): {rect2.width():.1f}m × {rect2.height():.1f}m (area: {area2:.0f})"
+                        )
+
+                        # Choose the interpretation that results in a smaller, more reasonable area
+                        # For neighborhood processing, we expect areas less than 100 km²
+                        if (
+                            area2 < area1 and area2 < 100_000_000
+                        ):  # 100 km² = 100,000,000 m²
+                            feedback.pushInfo(
+                                "DEBUG: Using interpretation 2 (reordered coordinates) - smaller area"
+                            )
+                            input_extent_rect = rect2
+                        elif area1 < 100_000_000:
+                            feedback.pushInfo(
+                                "DEBUG: Using interpretation 1 (original order) - reasonable area"
+                            )
+                            input_extent_rect = rect1
+                        else:
+                            feedback.pushInfo(
+                                "DEBUG: Both interpretations result in very large areas, using smaller one"
+                            )
+                            input_extent_rect = rect2 if area2 < area1 else rect1
+
+                        feedback.pushInfo(
+                            f"DEBUG: Final rectangle - xMin:{input_extent_rect.xMinimum()}, yMin:{input_extent_rect.yMinimum()}, xMax:{input_extent_rect.xMaximum()}, yMax:{input_extent_rect.yMaximum()}"
                         )
                         if not crs_part:
                             extent_crs = QgsCoordinateReferenceSystem("EPSG:4326")
@@ -423,22 +458,49 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         # Reproject the memory input polygon layer to local TM for internal processing
         # The reproject_layer_localTM function handles the creation of the CRS internally
         feedback.pushInfo(self.tr("Reprojecting input extent polygon to local TM..."))
-        input_poly_local_tm_layer, local_tm_crs = reproject_layer_localTM(
-            input_polygon_layer_for_processing,
-            None,
-            "input_poly_local_tm",
-            centroid_lon,
-            centroid_lat,
+
+        # Calculate UTM zone as primary approach (more reliable than custom TM)
+        utm_zone = int((centroid_lon + 180) / 6) + 1
+        hemisphere = "north" if centroid_lat >= 0 else "south"
+
+        if hemisphere == "south":
+            utm_epsg = 32700 + utm_zone  # UTM South zones
+        else:
+            utm_epsg = 32600 + utm_zone  # UTM North zones
+
+        feedback.pushInfo(
+            f"Using UTM Zone {utm_zone}{hemisphere[0].upper()} (EPSG:{utm_epsg}) for projection."
         )
+        feedback.pushInfo(
+            f"Centroid coordinates: {centroid_lon:.6f}, {centroid_lat:.6f}"
+        )
+
+        # Create UTM CRS
+        local_tm_crs = qcore.QgsCoordinateReferenceSystem(f"EPSG:{utm_epsg}")
+
         if not local_tm_crs.isValid():
             feedback.reportError(
-                self.tr("Could not determine a valid local Transverse Mercator CRS."),
+                self.tr(f"Could not create UTM CRS EPSG:{utm_epsg}"),
+                True,
+            )
+            return results
+
+        # Reproject using standard QGIS reprojection to UTM
+        input_poly_local_tm_layer = reproject_layer(
+            input_polygon_layer_for_processing,
+            destination_crs=f"EPSG:{utm_epsg}",
+            output_mode="memory:input_poly_utm",
+        )
+
+        if not input_poly_local_tm_layer:
+            feedback.reportError(
+                self.tr("Failed to reproject input polygon to UTM"),
                 True,
             )
             return results
         feedback.pushInfo(
             self.tr(
-                f"Using local Transverse Mercator CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"
+                f"Successfully created UTM CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"
             )
         )
         if (
@@ -725,12 +787,10 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     and clipped_buildings_4326.isValid()
                     and clipped_buildings_4326.featureCount() > 0
                 ):
-                    reproj_buildings_layer_local_tm, _ = reproject_layer_localTM(
+                    reproj_buildings_layer_local_tm = reproject_layer(
                         clipped_buildings_4326,
-                        None,
-                        "bldgs_local_tm_bbox",
-                        centroid_lon,
-                        centroid_lat,
+                        destination_crs=local_tm_crs.authid(),
+                        output_mode="memory:bldgs_utm",
                     )
                     if (
                         not reproj_buildings_layer_local_tm
@@ -743,12 +803,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         )
                         reproj_buildings_layer_local_tm = None
                     else:
-                        # Ensure CRS is correctly set on the output memory layer from reproject_layer_localTM
-                        if reproj_buildings_layer_local_tm.crs() != local_tm_crs:
-                            feedback.pushWarning(
-                                f"Building layer CRS mismatch after reprojection. Expected {local_tm_crs.authid()}, got {reproj_buildings_layer_local_tm.crs().authid()}. Forcing."
-                            )
-                            reproj_buildings_layer_local_tm.setCrs(local_tm_crs)
+                        # Ensure CRS is correctly set
+                        reproj_buildings_layer_local_tm.setCrs(local_tm_crs)
 
                         feedback.pushInfo(
                             self.tr(
@@ -776,6 +832,18 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             "default_width_m": default_width,
             "min_width_m": min_width,
             "max_width_m": max_width,
+            "d_to_add_to_each_side": getattr(
+                parameters, "d_to_add_to_each_side", 1.0
+            ),  # Default 1m
+            "curve_radius": getattr(
+                parameters, "default_curve_radius", 3.0
+            ),  # Default 3m
+            "min_dist_to_building": getattr(
+                parameters, "min_d_to_building", 1.0
+            ),  # Default 1m
+            "min_area_perimeter_ratio": getattr(
+                parameters, "min_area_perimeter_ratio", 0.0008
+            ),  # Default ratio
             # 'street_classes_to_draw': street_classes_to_process, # This is handled by input road filtering
             "debug_output_path": None,  # Not saving intermediate files from here for now
             "save_debug_layers": save_exclusion_zones_debug
@@ -810,7 +878,20 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             or sidewalk_lines_layer_local_tm.featureCount() == 0
         ):
             feedback.pushWarning(self.tr("No sidewalk lines were generated."))
-            # Depending on strictness, this could be an error or just an empty output
+            # Create an empty output layer so the user can see that the algorithm ran but produced no results
+            empty_layer = QgsVectorLayer(
+                f"LineString?crs=epsg:4326", "Empty Sidewalks", "memory"
+            )
+            (sink_empty, dest_id_empty) = self.parameterAsSink(
+                parameters_alg,
+                self.OUTPUT_SIDEWALKS,
+                context,
+                QgsFields(),  # Empty fields
+                QgsWkbTypes.LineString,
+                qcore.QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+            )
+            if sink_empty:
+                results[self.OUTPUT_SIDEWALKS] = dest_id_empty
         else:
             feedback.pushInfo(
                 self.tr(
@@ -822,11 +903,153 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(
                 self.tr("Reprojecting final sidewalk lines to EPSG:4326...")
             )
+
+            # Debug: Check geometry validity before reprojection
+            valid_geoms = 0
+            invalid_geoms = 0
+            for feat in sidewalk_lines_layer_local_tm.getFeatures():
+                if feat.geometry().isGeosValid():
+                    valid_geoms += 1
+                else:
+                    invalid_geoms += 1
+            feedback.pushInfo(
+                f"Geometry validation: {valid_geoms} valid, {invalid_geoms} invalid"
+            )
+
+            # Debug: Check bounds of local TM geometries
+            extent = sidewalk_lines_layer_local_tm.extent()
+            feedback.pushInfo(
+                f"Local TM layer extent: {extent.xMinimum():.2f}, {extent.yMinimum():.2f} to {extent.xMaximum():.2f}, {extent.yMaximum():.2f}"
+            )
+
+            # Debug: Check CRS before reprojection
+            source_crs = sidewalk_lines_layer_local_tm.crs()
+            feedback.pushInfo(
+                f"Source CRS: {source_crs.authid()} - {source_crs.description()}"
+            )
+            feedback.pushInfo(f"Source CRS is valid: {source_crs.isValid()}")
+
+            # Test manual coordinate transformation
+            dest_crs_4326 = qcore.QgsCoordinateReferenceSystem("EPSG:4326")
+            transform = qcore.QgsCoordinateTransform(
+                source_crs, dest_crs_4326, context.project()
+            )
+
+            # Sample a point from local TM and transform it manually
+            for i, feat in enumerate(sidewalk_lines_layer_local_tm.getFeatures()):
+                if i >= 1:  # Just test first feature
+                    break
+                geom = feat.geometry()
+                if geom.isGeosValid():
+                    # Get a point from the geometry
+                    bbox = geom.boundingBox()
+                    center_point = qcore.QgsPointXY(bbox.center())
+                    feedback.pushInfo(
+                        f"Original center point (Local TM): {center_point.x():.2f}, {center_point.y():.2f}"
+                    )
+
+                    # Transform manually
+                    try:
+                        transformed_point = transform.transform(center_point)
+                        feedback.pushInfo(
+                            f"Manually transformed point (4326): {transformed_point.x():.6f}, {transformed_point.y():.6f}"
+                        )
+                    except Exception as e:
+                        feedback.pushWarning(f"Manual transformation failed: {e}")
+
             sidewalks_layer_4326 = reproject_layer(
                 sidewalk_lines_layer_local_tm,
                 destination_crs="EPSG:4326",
                 output_mode="memory:sidewalks_final_4326_bbox",
             )
+
+            # Check if reprojection worked correctly by examining coordinates
+            reprojection_failed = False
+            if sidewalks_layer_4326:
+                extent_4326 = sidewalks_layer_4326.extent()
+                # If coordinates are still in the range of the Local TM (hundreds of meters), reprojection failed
+                if (
+                    abs(extent_4326.xMinimum()) > 180
+                    or abs(extent_4326.xMaximum()) > 180
+                    or abs(extent_4326.yMinimum()) > 90
+                    or abs(extent_4326.yMaximum()) > 90
+                ):
+                    feedback.pushWarning(
+                        "Reprojection failed - coordinates are outside valid lat/lon range!"
+                    )
+                    reprojection_failed = True
+                elif (
+                    abs(extent_4326.xMinimum()) < 1 and abs(extent_4326.yMinimum()) < 1
+                ):
+                    # Coordinates are very small, likely still in meters
+                    feedback.pushWarning(
+                        "Reprojection may have failed - coordinates seem to still be in meters!"
+                    )
+                    reprojection_failed = True
+
+            if reprojection_failed:
+                feedback.pushInfo("Attempting manual coordinate transformation...")
+                # Create a new layer with manually transformed coordinates
+                dest_crs_4326 = qcore.QgsCoordinateReferenceSystem("EPSG:4326")
+                transform = qcore.QgsCoordinateTransform(
+                    source_crs, dest_crs_4326, context.project()
+                )
+
+                # Create a new memory layer
+                sidewalks_layer_4326 = QgsVectorLayer(
+                    f"LineString?crs=EPSG:4326",
+                    "manually_reprojected_sidewalks",
+                    "memory",
+                )
+                dp = sidewalks_layer_4326.dataProvider()
+                dp.addAttributes(sidewalk_lines_layer_local_tm.fields())
+                sidewalks_layer_4326.updateFields()
+
+                # Transform features manually
+                transformed_features = []
+                for feat in sidewalk_lines_layer_local_tm.getFeatures():
+                    new_feat = QgsFeature(sidewalks_layer_4326.fields())
+                    new_feat.setAttributes(feat.attributes())
+
+                    geom = feat.geometry()
+                    if geom.isGeosValid():
+                        # Transform the geometry
+                        geom.transform(transform)
+                        new_feat.setGeometry(geom)
+                        transformed_features.append(new_feat)
+
+                dp.addFeatures(transformed_features)
+                sidewalks_layer_4326.updateExtents()
+                feedback.pushInfo(
+                    f"Manual transformation completed: {len(transformed_features)} features"
+                )
+
+            # Debug: Check reprojection results
+            if sidewalks_layer_4326:
+                dest_crs = sidewalks_layer_4326.crs()
+                feedback.pushInfo(
+                    f"Destination CRS: {dest_crs.authid()} - {dest_crs.description()}"
+                )
+                extent_4326 = sidewalks_layer_4326.extent()
+                feedback.pushInfo(
+                    f"EPSG:4326 layer extent: {extent_4326.xMinimum():.6f}, {extent_4326.yMinimum():.6f} to {extent_4326.xMaximum():.6f}, {extent_4326.yMaximum():.6f}"
+                )
+
+                # Sample a few coordinates to verify actual transformation
+                sample_count = min(3, sidewalks_layer_4326.featureCount())
+                for i, feat in enumerate(sidewalks_layer_4326.getFeatures()):
+                    if i >= sample_count:
+                        break
+                    geom = feat.geometry()
+                    if geom.isGeosValid():
+                        bbox = geom.boundingBox()
+                        feedback.pushInfo(
+                            f"Sample feature {i+1} bbox: {bbox.xMinimum():.6f}, {bbox.yMinimum():.6f} to {bbox.xMaximum():.6f}, {bbox.yMaximum():.6f}"
+                        )
+            else:
+                feedback.pushWarning(
+                    "Reprojection failed - sidewalks_layer_4326 is None!"
+                )
             if (
                 sidewalks_layer_4326
                 and sidewalks_layer_4326.isValid()

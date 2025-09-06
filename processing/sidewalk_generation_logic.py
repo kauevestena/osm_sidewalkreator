@@ -75,6 +75,7 @@ def filter_polygons_by_area_perimeter_ratio(
                 polygon_layer.deleteFeature(fid)
     return removed
 
+
 def generate_sidewalk_geometries_and_zones(
     road_network_layer_local_tm: QgsVectorLayer,
     processing_aoi_geom_local_tm: QgsGeometry,
@@ -99,10 +100,14 @@ def generate_sidewalk_geometries_and_zones(
         f"Sidewalk Generation: Input street network CRS: {current_crs.authid()}"
     )
 
-    def _single_sided_buffer_geom(line_geom: QgsGeometry, left_side: bool, dist: float, segments: int = 5) -> QgsGeometry:
+    def _single_sided_buffer_geom(
+        line_geom: QgsGeometry, left_side: bool, dist: float, segments: int = 5
+    ) -> QgsGeometry:
         """Create a single-sided buffer geometry using the Processing algorithm for stability across QGIS builds."""
         try:
-            tmp_lyr = QgsVectorLayer(f"LineString?crs={current_crs.authid()}", "tmp_single_side", "memory")
+            tmp_lyr = QgsVectorLayer(
+                f"LineString?crs={current_crs.authid()}", "tmp_single_side", "memory"
+            )
             dp = tmp_lyr.dataProvider()
             f = QgsFeature()
             f.setGeometry(line_geom)
@@ -119,7 +124,11 @@ def generate_sidewalk_geometries_and_zones(
             }
             out = processing.run("native:singlesidedbuffer", params)
             out_layer = out.get("OUTPUT")
-            if isinstance(out_layer, QgsVectorLayer) and out_layer.isValid() and out_layer.featureCount() > 0:
+            if (
+                isinstance(out_layer, QgsVectorLayer)
+                and out_layer.isValid()
+                and out_layer.featureCount() > 0
+            ):
                 g = next(out_layer.getFeatures()).geometry()
                 return g
         except Exception as e:
@@ -174,8 +183,11 @@ def generate_sidewalk_geometries_and_zones(
             new_street_feat.setAttributes(street_feat.attributes())
 
             original_width_val = street_feat.attribute(widths_fieldname)
-            if original_width_val is None:
-                original_width_val = 0.0  # Handle NULL widths
+            if original_width_val is None or original_width_val == 0.0:
+                # Use default width when no width is specified
+                original_width_val = parameters.get(
+                    "default_width_m", 6.0
+                )  # Default to 6m
 
             try:
                 current_street_width = float(original_width_val)
@@ -228,9 +240,8 @@ def generate_sidewalk_geometries_and_zones(
                 # This `new_width` was then compared to `min_width_box.value()` which is `min_generated_sidewalk_width`
                 # This seems to imply `min_generated_sidewalk_width` was for the *road width used for buffering*.
                 # This needs careful interpretation. Let's assume min_generated_width_near_building is the target road width for buffering.
-                if (
-                    adjusted_street_width
-                    < parameters.get("min_generated_width_near_building", 0.0)
+                if adjusted_street_width < parameters.get(
+                    "min_generated_width_near_building", 0.0
                 ):  # This might be wrong.
                     # The original min_width_box.value() was for the *buffered result*, not the input street width.
                     # Re-evaluating: the original code sets 'new_width' for the street feature's 'width' attribute.
@@ -262,12 +273,17 @@ def generate_sidewalk_geometries_and_zones(
             new_street_feat.setAttributes(street_feat.attributes())
             # Ensure width attribute is correctly copied or defaulted if null
             original_width_val = street_feat.attribute(widths_fieldname)
-            if original_width_val is None:
-                original_width_val = 0.0
+            if original_width_val is None or original_width_val == 0.0:
+                # Use default width when no width is specified
+                original_width_val = parameters.get(
+                    "default_width_m", 6.0
+                )  # Default to 6m
             try:
                 current_street_width = float(original_width_val)
             except:
-                current_street_width = 0.0
+                current_street_width = parameters.get(
+                    "default_width_m", 6.0
+                )  # Default to 6m
             new_street_feat.setAttribute(width_idx_adjusted, current_street_width)
             features_to_add.append(new_street_feat)
         if features_to_add:
@@ -275,41 +291,78 @@ def generate_sidewalk_geometries_and_zones(
 
     # --- 2. Generate initial sidewalk polygons (buffers) ---
     feedback.pushInfo("Generating sidewalk area buffers...")
-    buffer_distance_expression = f'("{widths_fieldname}" / 2) + {parameters.get("added_width_for_sidewalk_axis_total", 0.0) / 2.0}'
+    # Use the same buffer expression as the GUI version
+    d_to_add_value = parameters.get("d_to_add_to_each_side", 1.0)  # Default 1m
+    buffer_distance_expression = f'("{widths_fieldname}" / 2) + {d_to_add_value / 2.0}'
+
+    feedback.pushInfo(f"Buffer expression: {buffer_distance_expression}")
+    feedback.pushInfo(f"d_to_add_to_each_side: {d_to_add_value}")
+    feedback.pushInfo(f"widths_fieldname: '{widths_fieldname}'")
+
+    # Debug: Check if width field exists and has values
+    width_field_idx = width_adjusted_streets.fields().lookupField(widths_fieldname)
+    feedback.pushInfo(f"Width field index in streets layer: {width_field_idx}")
+    if width_field_idx >= 0:
+        # Sample a few width values
+        sample_count = min(5, width_adjusted_streets.featureCount())
+        sample_widths = []
+        for i, feat in enumerate(width_adjusted_streets.getFeatures()):
+            if i >= sample_count:
+                break
+            width_val = feat.attribute(widths_fieldname)
+            sample_widths.append(width_val)
+        feedback.pushInfo(f"Sample width values: {sample_widths}")
+    else:
+        feedback.pushWarning(f"Width field '{widths_fieldname}' not found!")
 
     proto_undissolved_buffer = generate_buffer(
         width_adjusted_streets, buffer_distance_expression, dissolve=False
     )
     if not proto_undissolved_buffer:
         raise QgsProcessingException("Failed at proto_undissolved_buffer generation.")
+    feedback.pushInfo(
+        f"Proto undissolved buffer: {proto_undissolved_buffer.featureCount()} features"
+    )
 
     dissolved_once_buffer = dissolve_tosinglegeom(proto_undissolved_buffer)
     if not dissolved_once_buffer:
         raise QgsProcessingException("Failed at first dissolve for buffer.")
+    feedback.pushInfo(
+        f"Dissolved once buffer: {dissolved_once_buffer.featureCount()} features"
+    )
 
     # Rounding buffers
-    proto_dissolved_buffer_step2 = generate_buffer(
-        dissolved_once_buffer, parameters.get("curve_radius", 0.0)
-    )
+    curve_radius = parameters.get("curve_radius", 3.0)  # Default 3m
+    feedback.pushInfo(f"Curve radius: {curve_radius}")
+    proto_dissolved_buffer_step2 = generate_buffer(dissolved_once_buffer, curve_radius)
     if not proto_dissolved_buffer_step2:
         raise QgsProcessingException("Failed at curve_radius buffer generation.")
+    feedback.pushInfo(
+        f"Proto dissolved buffer step2: {proto_dissolved_buffer_step2.featureCount()} features"
+    )
 
     dissolved_sidewalk_area_polygons = generate_buffer(
-        proto_dissolved_buffer_step2, -parameters.get("curve_radius", 0.0)
+        proto_dissolved_buffer_step2, -curve_radius
     )
     if not dissolved_sidewalk_area_polygons:
         raise QgsProcessingException(
             "Failed at negative curve_radius buffer generation."
         )
     dissolved_sidewalk_area_polygons.setCrs(current_crs)
+    feedback.pushInfo(
+        f"Dissolved sidewalk area polygons: {dissolved_sidewalk_area_polygons.featureCount()} features"
+    )
 
-    # --- 3. Extract sidewalk lines (Original logic: difference of big buffer and sidewalk area) ---
+    # --- 6. Extract final sidewalk lines FIRST (before applying exclusion zones) ---
     feedback.pushInfo("Extracting sidewalk lines from buffered areas...")
     big_temp_buffer_for_diff = generate_buffer(
         dissolved_sidewalk_area_polygons, big_buffer_d
     )  # Outer extent
     if not big_temp_buffer_for_diff:
         raise QgsProcessingException("Failed to create big_temp_buffer_for_diff.")
+    feedback.pushInfo(
+        f"Big temp buffer for diff: {big_temp_buffer_for_diff.featureCount()} features"
+    )
 
     # This diff_layer contains the "donut" polygons representing sidewalks
     sidewalk_polygons_as_donuts = compute_difference_layer(
@@ -320,6 +373,9 @@ def generate_sidewalk_geometries_and_zones(
             "Failed at compute_difference_layer for sidewalk donuts."
         )
     sidewalk_polygons_as_donuts.setCrs(current_crs)
+    feedback.pushInfo(
+        f"Sidewalk polygons as donuts: {sidewalk_polygons_as_donuts.featureCount()} features"
+    )
 
     sidewalk_polygons_singleparts = convert_multipart_to_singleparts(
         sidewalk_polygons_as_donuts
@@ -328,13 +384,53 @@ def generate_sidewalk_geometries_and_zones(
         raise QgsProcessingException(
             "Failed at convert_multipart_to_singleparts for sidewalk polygons."
         )
+    feedback.pushInfo(
+        f"Sidewalk polygons singleparts: {sidewalk_polygons_singleparts.featureCount()} features"
+    )
 
     # remove_biggest_polygon also adds 'area' field if record_area=True
-    # The original plugin records area, let's assume it's not strictly needed for processing alg unless specified
+    before_removal_count = sidewalk_polygons_singleparts.featureCount()
     remove_biggest_polygon(sidewalk_polygons_singleparts, record_area=False)
+    after_removal_count = sidewalk_polygons_singleparts.featureCount()
+    feedback.pushInfo(
+        f"Removed biggest polygon: {before_removal_count} -> {after_removal_count} features"
+    )
 
-    # At this point, sidewalk_polygons_singleparts contains the actual sidewalk area polygons.
-    # These are not yet lines.
+    # Remove polygons that are too thin based on area/perimeter ratio
+    ratio_threshold = parameters.get(
+        "min_area_perimeter_ratio", min_area_perimeter_ratio
+    )
+    removed = filter_polygons_by_area_perimeter_ratio(
+        sidewalk_polygons_singleparts, ratio_threshold
+    )
+    if removed:
+        feedback.pushInfo(
+            f"Removed {removed} sidewalk polygons below ratio {ratio_threshold}."
+        )
+
+    # Extract sidewalk lines from polygons (this is our main extraction)
+    whole_sidewalks_lines = extract_lines_from_polygons(
+        sidewalk_polygons_singleparts, "memory:whole_sidewalks_lines_algo"
+    )
+    if not whole_sidewalks_lines:
+        raise QgsProcessingException("Failed to extract final sidewalk lines.")
+    whole_sidewalks_lines.setCrs(current_crs)
+
+    initial_count = whole_sidewalks_lines.featureCount()
+    feedback.pushInfo(f"Initial sidewalk lines extracted: {initial_count} features.")
+
+    # Debug: Report polygon count before line extraction
+    feedback.pushInfo(
+        f"Sidewalk polygons processed: {sidewalk_polygons_singleparts.featureCount()} features."
+    )
+
+    if initial_count == 0:
+        feedback.pushWarning("No sidewalk lines extracted! This may indicate:")
+        feedback.pushWarning("1. Buffer generation produced empty results")
+        feedback.pushWarning("2. Donut polygons were invalid or empty")
+        feedback.pushWarning(
+            "3. All polygons were filtered out by area/perimeter ratio"
+        )
 
     # --- 5. Generate exclusion_zones and sure_zones based on OSM tags ---
     # This needs to iterate the original street_network_layer (or width_adjusted_streets if tags are preserved)
@@ -369,6 +465,16 @@ def generate_sidewalk_geometries_and_zones(
             + 0.5
         )  # Added 0.5m margin
 
+        # Debug: Log buffer distance calculation for problematic cases
+        if tag_buffer_dist > 50:  # Log if buffer is larger than 50m
+            feedback.pushWarning(
+                f"Large exclusion buffer detected: {tag_buffer_dist:.1f}m for street width {current_street_width:.1f}m"
+            )
+        elif current_street_width > 50:  # Log if street width seems unusually large
+            feedback.pushWarning(
+                f"Unusually large street width: {current_street_width:.1f}m, buffer: {tag_buffer_dist:.1f}m"
+            )
+
         geom_exclusion = None
         geom_sure = None
 
@@ -391,42 +497,61 @@ def generate_sidewalk_geometries_and_zones(
         street_geom = street_feat.geometry()
 
         if sidewalk_tag == "no" or sidewalk_both_tag == "no":
+            feedback.pushInfo(
+                f"Creating exclusion zone for street with sidewalk='{sidewalk_tag}' or sidewalk:both='{sidewalk_both_tag}', buffer={tag_buffer_dist:.1f}m"
+            )
             geom_exclusion = street_geom.buffer(
                 tag_buffer_dist, 5, Qgis.EndCapStyle.Flat, Qgis.JoinStyle.Miter, 10
             )
         elif (
             sidewalk_tag == "left" or sidewalk_left_tag == "yes"
         ):  # Sidewalk only on left
-            geom_sure = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
-            geom_exclusion = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
+            geom_sure = _single_sided_buffer_geom(
+                street_geom, left_side=True, dist=tag_buffer_dist, segments=5
+            )
+            geom_exclusion = _single_sided_buffer_geom(
+                street_geom, left_side=False, dist=tag_buffer_dist, segments=5
+            )
         elif (
             sidewalk_tag == "right" or sidewalk_right_tag == "yes"
         ):  # Sidewalk only on right
-            geom_sure = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
-            geom_exclusion = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
+            geom_sure = _single_sided_buffer_geom(
+                street_geom, left_side=False, dist=tag_buffer_dist, segments=5
+            )
+            geom_exclusion = _single_sided_buffer_geom(
+                street_geom, left_side=True, dist=tag_buffer_dist, segments=5
+            )
         elif sidewalk_left_tag == "no":  # No sidewalk on left
-            current_exclusion = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
+            current_exclusion = _single_sided_buffer_geom(
+                street_geom, left_side=True, dist=tag_buffer_dist, segments=5
+            )
             geom_exclusion = (
                 current_exclusion
                 if geom_exclusion is None
                 else geom_exclusion.combine(current_exclusion)
             )
             if sidewalk_right_tag == "yes":  # Sidewalk on right
-                current_sure = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
+                current_sure = _single_sided_buffer_geom(
+                    street_geom, left_side=False, dist=tag_buffer_dist, segments=5
+                )
                 geom_sure = (
                     current_sure
                     if geom_sure is None
                     else geom_sure.combine(current_sure)
                 )
         elif sidewalk_right_tag == "no":  # No sidewalk on right
-            current_exclusion = _single_sided_buffer_geom(street_geom, left_side=False, dist=tag_buffer_dist, segments=5)
+            current_exclusion = _single_sided_buffer_geom(
+                street_geom, left_side=False, dist=tag_buffer_dist, segments=5
+            )
             geom_exclusion = (
                 current_exclusion
                 if geom_exclusion is None
                 else geom_exclusion.combine(current_exclusion)
             )
             if sidewalk_left_tag == "yes":  # Sidewalk on left
-                current_sure = _single_sided_buffer_geom(street_geom, left_side=True, dist=tag_buffer_dist, segments=5)
+                current_sure = _single_sided_buffer_geom(
+                    street_geom, left_side=True, dist=tag_buffer_dist, segments=5
+                )
                 geom_sure = (
                     current_sure
                     if geom_sure is None
@@ -464,56 +589,39 @@ def generate_sidewalk_geometries_and_zones(
         f"Generated {exclusion_zones_poly.featureCount()} exclusion zones, {sure_zones_poly.featureCount()} sure zones."
     )
 
-    # --- 6. Apply exclusion zones to sidewalk polygons ---
-    feedback.pushInfo("Applying exclusion zones to sidewalk areas...")
-    sidewalk_polygons_final = (
-        sidewalk_polygons_singleparts  # Start with all sidewalk polygons
-    )
-    if exclusion_zones_poly.featureCount() > 0:
-        # Dissolve exclusion zones first to avoid issues with many small overlaps
-        dissolved_exclusions = dissolve_tosinglegeom(exclusion_zones_poly)
-        if dissolved_exclusions and dissolved_exclusions.featureCount() > 0:
-            sidewalk_polygons_final = compute_difference_layer(
-                sidewalk_polygons_singleparts, dissolved_exclusions
-            )
-            if not sidewalk_polygons_final:
-                feedback.pushWarning(
-                    "Difference operation for exclusion zones failed. Using un-excluded sidewalks."
-                )
-                sidewalk_polygons_final = sidewalk_polygons_singleparts  # Fallback
-            else:
-                sidewalk_polygons_final.setCrs(current_crs)
-                feedback.pushInfo(
-                    f"Sidewalk areas after exclusion: {sidewalk_polygons_final.featureCount()} parts."
-                )
-        else:
-            feedback.pushInfo(
-                "No valid exclusion zones to apply or dissolving them failed."
-            )
-    else:
-        feedback.pushInfo("No exclusion zones generated.")
-
-    # Remove polygons that are too thin based on area/perimeter ratio
-    ratio_threshold = parameters.get(
-        "min_area_perimeter_ratio", min_area_perimeter_ratio
-    )
-    removed = filter_polygons_by_area_perimeter_ratio(
-        sidewalk_polygons_final, ratio_threshold
-    )
-    if removed:
-        feedback.pushInfo(
-            f"Removed {removed} sidewalk polygons below ratio {ratio_threshold}."
-        )
-
-    # --- Extract final sidewalk lines ---
-    whole_sidewalks_lines = extract_lines_from_polygons(
-        sidewalk_polygons_final, "memory:whole_sidewalks_lines_algo"
-    )
-    if not whole_sidewalks_lines:
-        raise QgsProcessingException("Failed to extract final sidewalk lines.")
-    whole_sidewalks_lines.setCrs(current_crs)
+    # --- 6. Skip polygon-level exclusion zones (will apply to final lines instead) ---
+    # Following GUI approach: generate all sidewalks first, then subtract exclusions from final lines
     feedback.pushInfo(
-        f"Final sidewalk lines extracted: {whole_sidewalks_lines.featureCount()} features."
+        "Skipping polygon-level exclusion zone application (will apply to final lines)..."
+    )
+
+    # Use the already extracted whole_sidewalks_lines from earlier
+    # (No need to re-extract - we already did this above)
+
+    # --- Apply exclusion zones to final sidewalk lines (like GUI version) ---
+    if exclusion_zones_poly and exclusion_zones_poly.featureCount() > 0:
+        feedback.pushInfo(
+            f"Applying {exclusion_zones_poly.featureCount()} exclusion zones to sidewalk lines..."
+        )
+        final_sidewalks_with_exclusions = compute_difference_layer(
+            whole_sidewalks_lines, exclusion_zones_poly
+        )
+        if final_sidewalks_with_exclusions:
+            final_sidewalks_with_exclusions.setCrs(current_crs)
+            feedback.pushInfo(
+                f"Final sidewalk lines after exclusions: {final_sidewalks_with_exclusions.featureCount()} features."
+            )
+            whole_sidewalks_lines = (
+                final_sidewalks_with_exclusions  # Update the variable
+            )
+        else:
+            feedback.pushInfo("Warning: All sidewalks were removed by exclusion zones!")
+            # Keep original whole_sidewalks_lines if difference fails
+    else:
+        feedback.pushInfo("No exclusion zones to apply to sidewalk lines.")
+
+    feedback.pushInfo(
+        f"Final sidewalk lines after exclusion zone processing: {whole_sidewalks_lines.featureCount()} features."
     )
 
     # --- Filter sidewalk lines by dissolved_protoblocks_layer (remove disjoint) ---
@@ -522,8 +630,32 @@ def generate_sidewalk_geometries_and_zones(
         feedback.pushInfo(
             "Filtering sidewalk lines to keep only those intersecting protoblock areas..."
         )
+
+        # If there are very few protoblocks relative to sidewalks, consider skipping filtering
+        protoblock_count = protoblocks_layer_local_tm.featureCount()
+        sidewalk_count = whole_sidewalks_lines.featureCount()
+
+        if (
+            protoblock_count < sidewalk_count * 0.3
+        ):  # Less than 30% as many protoblocks as sidewalks
+            feedback.pushInfo(
+                f"Warning: Only {protoblock_count} protoblocks for {sidewalk_count} sidewalks. Protoblock filtering may be too restrictive."
+            )
+
         dissolved_protoblock_geom = get_first_feature_or_geom(
             protoblocks_layer_local_tm, True
+        )
+
+        # Add a small buffer to protoblocks to catch sidewalks that run along block edges
+        # This is more realistic since sidewalks are typically at the boundary of blocks
+        buffer_distance = 2.0  # 2 meters buffer to catch edge sidewalks
+        # Temporarily disable buffering due to QGIS version compatibility issues
+        # TODO: Re-enable after resolving buffer method signature
+        feedback.pushInfo("Using protoblocks without buffer (compatibility mode)")
+        buffered_protoblocks = dissolved_protoblock_geom
+
+        feedback.pushInfo(
+            f"Using {buffer_distance}m buffer around protoblocks for sidewalk filtering"
         )
 
         # Create a new layer for filtered sidewalks
@@ -539,18 +671,39 @@ def generate_sidewalk_geometries_and_zones(
         filtered_sidewalk_lines.updateFields()
 
         kept_sidewalks = []
+        rejected_count = 0
         for sw_feat in whole_sidewalks_lines.getFeatures():
             if feedback.isCanceled():
                 return None, None, None, None
-            if not sw_feat.geometry().disjoint(dissolved_protoblock_geom):
+            # Use buffered protoblocks for intersection test
+            if not sw_feat.geometry().disjoint(buffered_protoblocks):
                 kept_sidewalks.append(QgsFeature(sw_feat))
+            else:
+                rejected_count += 1
 
         if kept_sidewalks:
             filtered_sidewalk_lines_dp.addFeatures(kept_sidewalks)
-        feedback.pushInfo(
-            f"Sidewalk lines filtered by protoblocks: {filtered_sidewalk_lines.featureCount()} features remain."
-        )
-        whole_sidewalks_lines = filtered_sidewalk_lines  # Replace with filtered
+
+        # If filtering removed too many sidewalks, warn the user
+        kept_count = filtered_sidewalk_lines.featureCount()
+        rejection_rate = rejected_count / max(sidewalk_count, 1)
+
+        if rejection_rate > 0.5:  # More than 50% rejected (was 80%)
+            feedback.pushWarning(
+                f"Protoblock filtering too aggressive ({rejection_rate:.1%} rejection rate). Using all sidewalks instead."
+            )
+            # Use all sidewalks instead of the filtered ones
+            # whole_sidewalks_lines remains unchanged (keeps all original sidewalks)
+        else:
+            if kept_count < sidewalk_count * 0.1:  # Less than 10% kept
+                feedback.pushWarning(
+                    f"Protoblock filtering removed {rejected_count}/{sidewalk_count} sidewalks. Consider reviewing protoblock generation or disabling filtering."
+                )
+
+            feedback.pushInfo(
+                f"Sidewalk lines filtered by protoblocks: {kept_count} features remain, {rejected_count} rejected."
+            )
+            whole_sidewalks_lines = filtered_sidewalk_lines  # Replace with filtered
     else:
         feedback.pushWarning(
             "No dissolved protoblocks layer provided or it's empty; skipping filtering of sidewalks by protoblocks."
