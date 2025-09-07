@@ -44,6 +44,10 @@ from ..generic_functions import (
     cliplayer_v2,
     clean_street_network_data,
     assign_street_widths,
+    dissolve_tosinglegeom,
+    get_first_feature_or_geom,
+    layer_from_featlist,
+    geom_to_feature,
     # create_memory_layer_from_features,
 )
 from ..parameters import CRS_LATLON_4326
@@ -84,6 +88,8 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
     SAVE_STREETS_WIDTH_ADJUSTED_DEBUG = "SAVE_STREETS_WIDTH_ADJUSTED_DEBUG"
 
     OUTPUT_SIDEWALKS = "OUTPUT_SIDEWALKS"
+    OUTPUT_CROSSINGS = "OUTPUT_CROSSINGS"
+    OUTPUT_KERBS = "OUTPUT_KERBS"
     OUTPUT_PROTOBLOCKS_DEBUG = "OUTPUT_PROTOBLOCKS_DEBUG"
     OUTPUT_EXCLUSION_ZONES_DEBUG = "OUTPUT_EXCLUSION_ZONES_DEBUG"
     OUTPUT_SURE_ZONES_DEBUG = "OUTPUT_SURE_ZONES_DEBUG"
@@ -210,10 +216,28 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # Main output
+        # Main outputs
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_SIDEWALKS, self.tr("Generated Sidewalks (EPSG:4326)")
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_CROSSINGS,
+                self.tr("Generated Crossings (EPSG:4326)"),
+                QgsProcessing.TypeVectorLine,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_KERBS,
+                self.tr("Generated Kerbs (EPSG:4326)"),
+                QgsProcessing.TypeVectorPoint,
+                optional=True,
             )
         )
 
@@ -256,7 +280,404 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         self.addParameter(param)
 
+    def generate_crossings_and_kerbs(
+        self, sidewalk_lines_layer, streets_layer, local_crs, feedback
+    ):
+        """Generate crossings and kerbs from street intersections.
+
+        This mirrors the GUI version logic:
+        1. Find street intersections (where multiple streets meet)
+        2. Create crossing lines connecting sidewalks across intersections
+        3. Place kerb points along crossing lines (NOT at sidewalk endpoints)
+        """
+        feedback.pushInfo("Starting crossings and kerbs generation...")
+
+        # Create crossings layer (LineString)
+        crossings_layer = QgsVectorLayer(
+            f"LineString?crs={local_crs.authid()}", "crossings_local_tm", "memory"
+        )
+        crossings_dp = crossings_layer.dataProvider()
+        crossings_dp.addAttributes(
+            [
+                QgsField("crossing_id", QVariant.Int),
+                QgsField("length", QVariant.Double),
+                QgsField("type", QVariant.String),
+            ]
+        )
+        crossings_layer.updateFields()
+
+        # Create kerbs layer (Point)
+        kerbs_layer = QgsVectorLayer(
+            f"Point?crs={local_crs.authid()}", "kerbs_local_tm", "memory"
+        )
+        kerbs_dp = kerbs_layer.dataProvider()
+        kerbs_dp.addAttributes(
+            [
+                QgsField("kerb_id", QVariant.Int),
+                QgsField("crossing_id", QVariant.Int),
+                QgsField("type", QVariant.String),
+            ]
+        )
+        kerbs_layer.updateFields()
+
+        if not sidewalk_lines_layer or sidewalk_lines_layer.featureCount() == 0:
+            feedback.pushWarning(
+                "No sidewalk lines available for crossings/kerbs generation"
+            )
+            return crossings_layer, kerbs_layer
+
+        if not streets_layer or streets_layer.featureCount() == 0:
+            feedback.pushWarning("No street network available for crossings generation")
+            return crossings_layer, kerbs_layer
+
+        # Find street endpoint intersections (like GUI: P0/PF intersections)
+        feedback.pushInfo("Finding street endpoint intersections for crossings...")
+
+        # Mirror GUI logic: iterate through street segments to find endpoint intersections
+        street_features = list(streets_layer.getFeatures())
+        street_index = qcore.QgsSpatialIndex(streets_layer.getFeatures())
+
+        # Store crossing centers and their data (like GUI's inner_pts_featlist)
+        crossing_centers = []
+        endpoints_belonging = {}  # Maps crossing_center_id to belonging street
+        inward_distances = {}  # Maps crossing_center_id to inward distance
+        dirvecs_dict = {}  # Maps crossing_center_id to direction vector
+
+        crossing_center_id = 1
+
+        feedback.pushInfo(
+            f"Starting endpoint analysis with {len(street_features)} streets..."
+        )
+
+        processed_count = 0
+
+        for street_feat in street_features:
+            if feedback.isCanceled():
+                break
+
+            processed_count += 1
+            if processed_count <= 5:  # Log first 5 streets
+                feedback.pushInfo(
+                    f"Processing street {processed_count}: ID={street_feat.id()}"
+                )
+
+            geom = street_feat.geometry()
+            if not geom.isGeosValid():
+                if processed_count <= 5:
+                    feedback.pushInfo(
+                        f"Street {street_feat.id()}: Invalid geometry, skipping"
+                    )
+                continue
+
+            # Get street endpoints (P0 and PF like GUI)
+            if geom.type() == qcore.QgsWkbTypes.LineGeometry:
+                if processed_count <= 5:
+                    feedback.pushInfo(
+                        f"Street {street_feat.id()}: Line geometry confirmed"
+                    )
+            else:
+                if processed_count <= 5:
+                    feedback.pushInfo(
+                        f"Street {street_feat.id()}: Not line geometry (type={geom.type()}), skipping"
+                    )
+                continue
+
+            if geom.type() == qcore.QgsWkbTypes.LineGeometry:
+                if processed_count <= 5:
+                    feedback.pushInfo(
+                        f"Street {street_feat.id()}: Line geometry confirmed"
+                    )
+
+                # Handle both single-part and multipart line geometries
+                if geom.isMultipart():
+                    if processed_count <= 5:
+                        feedback.pushInfo(
+                            f"Street {street_feat.id()}: Multipart geometry, using first part"
+                        )
+                    # Get the first part of the multipart geometry
+                    multiline = geom.asMultiPolyline()
+                    if not multiline or len(multiline) == 0:
+                        if processed_count <= 5:
+                            feedback.pushInfo(
+                                f"Street {street_feat.id()}: Empty multipart, skipping"
+                            )
+                        continue
+                    polyline = multiline[0]  # Use first part
+                else:
+                    polyline = geom.asPolyline()
+
+                if len(polyline) < 2:
+                    if processed_count <= 5:
+                        feedback.pushInfo(
+                            f"Street {street_feat.id()}: Too few points ({len(polyline)}), skipping"
+                        )
+                    continue
+
+                P0 = polyline[0]  # First point
+                PF = polyline[-1]  # Last point
+
+                street_width = float(street_feat.attribute("width") or 6.0)
+                street_length = geom.length()
+
+                if processed_count <= 5:
+                    feedback.pushInfo(
+                        f"Street {street_feat.id()}: P0=({P0.x():.1f},{P0.y():.1f}), PF=({PF.x():.1f},{PF.y():.1f}), length={street_length:.1f}m"
+                    )
+
+                # Debug: Log every street being processed
+                if street_feat.id() % 10 == 0:  # Log every 10th street to avoid spam
+                    feedback.pushInfo(
+                        f"Processing street {street_feat.id()}, length={street_length:.1f}m, width={street_width}"
+                    )
+
+                # Find intersecting streets at each endpoint (like GUI's spatial index search)
+                for endpoint_type, endpoint in [("P0", P0), ("PF", PF)]:
+                    endpoint_geom = qcore.QgsGeometry.fromPointXY(endpoint)
+                    # Use slightly larger buffer than GUI to catch more intersections in UTM coordinates
+                    search_buffer = 1.0  # increased from 0.1 to 1.0 meters in UTM
+                    search_region = endpoint_geom.buffer(search_buffer, 5).boundingBox()
+
+                    intersecting_ids = street_index.intersects(search_region)
+                    intersecting_widths = {}
+                    intersecting_count = 0
+
+                    # Debug: Log spatial index results
+                    if len(intersecting_ids) > 1:  # More than just the street itself
+                        feedback.pushInfo(
+                            f"Street {street_feat.id()} {endpoint_type}: spatial index found {len(intersecting_ids)} candidates"
+                        )
+
+                    # Count ALL intersecting features (like GUI's P0_count)
+                    for other_id in intersecting_ids:
+                        other_feat = streets_layer.getFeature(other_id)
+                        other_geom = other_feat.geometry()
+
+                        if other_geom.intersects(
+                            endpoint_geom.buffer(search_buffer, 5)
+                        ):
+                            intersecting_count += 1
+                            # Only collect widths from OTHER streets (not self)
+                            if other_id != street_feat.id():
+                                intersecting_widths[other_id] = float(
+                                    other_feat.attribute("width") or 6.0
+                                )
+
+                    # Debug: log intersection counts for troubleshooting
+                    if (
+                        intersecting_count > 1
+                    ):  # Only log if there are actual intersections with others
+                        feedback.pushInfo(
+                            f"Street {street_feat.id()} {endpoint_type}: {intersecting_count} total intersections"
+                        )
+
+                    # Only create crossing center if enough intersections (like GUI's P0_count > 2)
+                    if intersecting_count > 2:
+                        feedback.pushInfo(
+                            f"Creating crossing center for street {street_feat.id()} {endpoint_type} with {intersecting_count} intersections"
+                        )
+                        center_id = f"{street_feat.id()}_{endpoint_type}"
+
+                        # Calculate inward distance (like GUI's d_to_interpolate)
+                        max_intersecting_width = (
+                            max(intersecting_widths.values())
+                            if intersecting_widths
+                            else street_width
+                        )
+                        d_to_interpolate = (
+                            (max_intersecting_width * 0.5) + 3.0 + 1.0
+                        )  # GUI: (width/2) + curveradius + d_to_add_inward
+
+                        # Limit to half street length if too big
+                        if d_to_interpolate > (0.5 * street_length):
+                            d_to_interpolate = (
+                                street_length * 0.1
+                            )  # GUI: featurelen * perc_to_interpolate
+                            inward_distances[center_id] = None
+                        else:
+                            inward_distances[center_id] = d_to_interpolate
+
+                        # Interpolate crossing center point inward from endpoint (like GUI)
+                        if endpoint_type == "P0":
+                            center_point_geom = geom.interpolate(d_to_interpolate)
+                        else:  # PF
+                            center_point_geom = geom.interpolate(
+                                street_length - d_to_interpolate
+                            )
+
+                        if center_point_geom:
+                            center_point = center_point_geom.asPoint()
+
+                            # Create direction vector perpendicular to street (simplified GUI logic)
+                            if endpoint_type == "P0":
+                                street_dir_point = geom.interpolate(
+                                    d_to_interpolate + 1.0
+                                ).asPoint()
+                            else:
+                                street_dir_point = geom.interpolate(
+                                    street_length - d_to_interpolate - 1.0
+                                ).asPoint()
+
+                            # Calculate perpendicular vector
+                            dx = street_dir_point.x() - center_point.x()
+                            dy = street_dir_point.y() - center_point.y()
+                            # Perpendicular: swap and negate one component
+                            perp_dx = -dy
+                            perp_dy = dx
+                            # Normalize and scale
+                            length = (perp_dx**2 + perp_dy**2) ** 0.5
+                            if length > 0:
+                                scale = street_width + 2.0  # crossing width
+                                perp_dx = (perp_dx / length) * scale
+                                perp_dy = (perp_dy / length) * scale
+
+                            crossing_centers.append(
+                                {
+                                    "id": center_id,
+                                    "point": center_point,
+                                    "street_feat": street_feat,
+                                    "endpoint_type": endpoint_type,
+                                }
+                            )
+
+                            endpoints_belonging[center_id] = street_feat
+                            dirvecs_dict[center_id] = (perp_dx, perp_dy)
+
+        feedback.pushInfo(
+            f"Endpoint analysis complete. Processed {len(street_features)} streets."
+        )
+        feedback.pushInfo(f"Found {len(crossing_centers)} potential crossing centers")
+
+        # Now create crossings from valid centers (like GUI's crossing construction loop)
+        crossings_features = []
+        kerbs_features = []
+        crossing_id = 1
+        kerb_id = 1
+
+        for center_data in crossing_centers:
+            if feedback.isCanceled():
+                break
+
+            center_id = center_data["id"]
+            center_point = center_data["point"]
+            belonging_street = center_data["street_feat"]
+
+            # Skip if street segment too short (like GUI's min_seg_len check)
+            if belonging_street.geometry().length() < 20.0:
+                continue
+
+            # Get direction vector
+            perp_dx, perp_dy = dirvecs_dict[center_id]
+
+            # Find intersections with sidewalks (simplified version of GUI's two_intersections_byvector_with_sidewalks)
+            center_geom = qcore.QgsGeometry.fromPointXY(center_point)
+
+            # Create crossing line in both directions from center
+            pA_point = qcore.QgsPointXY(
+                center_point.x() - perp_dx, center_point.y() - perp_dy
+            )
+            pE_point = qcore.QgsPointXY(
+                center_point.x() + perp_dx, center_point.y() + perp_dy
+            )
+
+            # Find actual intersections with sidewalks
+            crossing_line = qcore.QgsGeometry.fromPolylineXY([pA_point, pE_point])
+
+            pA_crossings = None
+            pE_crossings = None
+
+            # Find intersections with sidewalk network
+            for sidewalk_feat in sidewalk_lines_layer.getFeatures():
+                sidewalk_geom = sidewalk_feat.geometry()
+                if not sidewalk_geom.isGeosValid():
+                    continue
+
+                intersection = crossing_line.intersection(sidewalk_geom)
+                if intersection and not intersection.isEmpty():
+                    if intersection.type() == qcore.QgsWkbTypes.PointGeometry:
+                        if intersection.isMultipart():
+                            points = intersection.asMultiPoint()
+                        else:
+                            points = [intersection.asPoint()]
+
+                        for pt in points:
+                            # Assign to A or E based on which side of center
+                            dist_to_A = pA_point.distance(pt)
+                            dist_to_E = pE_point.distance(pt)
+
+                            if dist_to_A < dist_to_E:
+                                if not pA_crossings or pA_point.distance(
+                                    pt
+                                ) < pA_point.distance(pA_crossings):
+                                    pA_crossings = pt
+                            else:
+                                if not pE_crossings or pE_point.distance(
+                                    pt
+                                ) < pE_point.distance(pE_crossings):
+                                    pE_crossings = pt
+
+            # Create crossing if we found both endpoints
+            if pA_crossings and pE_crossings:
+                # Create 5-point crossing: A-B-C-D-E (like GUI)
+                pC = center_point
+
+                # Calculate kerb points B and D (like GUI's interpolate_by_percent)
+                segment_AC = qcore.QgsGeometry.fromPolylineXY([pA_crossings, pC])
+                segment_EC = qcore.QgsGeometry.fromPolylineXY([pE_crossings, pC])
+
+                kerb_perc = 0.25  # 25% like GUI default
+
+                # Interpolate kerb points
+                pB_geom = segment_AC.interpolate(segment_AC.length() * kerb_perc)
+                pD_geom = segment_EC.interpolate(segment_EC.length() * kerb_perc)
+
+                if pB_geom and pD_geom:
+                    pB = pB_geom.asPoint()
+                    pD = pD_geom.asPoint()
+
+                    # Create 5-point crossing geometry
+                    crossing_points = [pA_crossings, pB, pC, pD, pE_crossings]
+                    crossing_geom = qcore.QgsGeometry.fromPolylineXY(crossing_points)
+
+                    # Create crossing feature
+                    crossing_feat = QgsFeature(crossings_layer.fields())
+                    crossing_feat.setGeometry(crossing_geom)
+                    crossing_feat.setAttributes(
+                        [crossing_id, crossing_geom.length(), "street_endpoint"]
+                    )
+                    crossings_features.append(crossing_feat)
+
+                    # Create kerb features (ONLY at points B and D)
+                    kerb_B = QgsFeature(kerbs_layer.fields())
+                    kerb_B.setGeometry(qcore.QgsGeometry.fromPointXY(pB))
+                    kerb_B.setAttributes([kerb_id, crossing_id, "crossing_kerb"])
+                    kerbs_features.append(kerb_B)
+                    kerb_id += 1
+
+                    kerb_D = QgsFeature(kerbs_layer.fields())
+                    kerb_D.setGeometry(qcore.QgsGeometry.fromPointXY(pD))
+                    kerb_D.setAttributes([kerb_id, crossing_id, "crossing_kerb"])
+                    kerbs_features.append(kerb_D)
+                    kerb_id += 1
+
+                    crossing_id += 1
+
+        # Add features to layers
+        if crossings_features:
+            crossings_dp.addFeatures(crossings_features)
+        if kerbs_features:
+            kerbs_dp.addFeatures(kerbs_features)
+
+        feedback.pushInfo(
+            f"Generated {len(crossings_features)} crossings and {len(kerbs_features)} kerb points"
+        )
+
+        return crossings_layer, kerbs_layer
+
     def processAlgorithm(self, parameters_alg, context, feedback):
+        # Initialize output layers to None
+        crossings_layer_local_tm = None
+        kerbs_layer_local_tm = None
+
         # Get parameters
         input_extent_rect = self.parameterAsExtent(
             parameters_alg, self.INPUT_EXTENT, context
@@ -899,6 +1320,18 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 )
             )
 
+            # --- 7.5. Generate Crossings and Kerbs ---
+            feedback.pushInfo(self.tr("Generating crossings and kerbs..."))
+
+            crossings_layer_local_tm, kerbs_layer_local_tm = (
+                self.generate_crossings_and_kerbs(
+                    sidewalk_lines_layer_local_tm,
+                    streets_with_width,
+                    local_tm_crs,
+                    feedback,
+                )
+            )
+
             # --- 8. Reproject Sidewalks to EPSG:4326 and Save Output ---
             feedback.pushInfo(
                 self.tr("Reprojecting final sidewalk lines to EPSG:4326...")
@@ -1087,6 +1520,126 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 feedback.reportError(
                     self.tr(
                         "Failed to reproject sidewalks to EPSG:4326 or no sidewalks to reproject."
+                    ),
+                    True,
+                )
+
+        # --- 8.2. Reproject Crossings to EPSG:4326 and Create Output ---
+        if (
+            crossings_layer_local_tm
+            and crossings_layer_local_tm.isValid()
+            and crossings_layer_local_tm.featureCount() > 0
+        ):
+            feedback.pushInfo(
+                f"Reprojecting {crossings_layer_local_tm.featureCount()} crossings to EPSG:4326..."
+            )
+            crossings_layer_4326 = processing.run(
+                "native:reprojectlayer",
+                {
+                    "INPUT": crossings_layer_local_tm,
+                    "TARGET_CRS": qcore.QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+                    "OUTPUT": "memory:",
+                },
+                context=context,
+                feedback=feedback,
+            )["OUTPUT"]
+
+            if (
+                crossings_layer_4326
+                and crossings_layer_4326.isValid()
+                and crossings_layer_4326.featureCount() > 0
+            ):
+                (sink_crossings, dest_id_crossings) = self.parameterAsSink(
+                    parameters_alg,
+                    self.OUTPUT_CROSSINGS,
+                    context,
+                    crossings_layer_4326.fields(),
+                    crossings_layer_4326.wkbType(),
+                    qcore.QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+                )
+                if sink_crossings:
+                    for feature in crossings_layer_4326.getFeatures():
+                        sink_crossings.addFeature(feature, QgsFeatureSink.FastInsert)
+                    # Return an actual layer object for tests instead of an id string
+                    try:
+                        layer_obj = QgsProcessingUtils.mapLayerFromString(
+                            dest_id_crossings, context
+                        )
+                        if not layer_obj or not layer_obj.isValid():
+                            results[self.OUTPUT_CROSSINGS] = crossings_layer_4326
+                        else:
+                            results[self.OUTPUT_CROSSINGS] = layer_obj
+                    except Exception:
+                        results[self.OUTPUT_CROSSINGS] = crossings_layer_4326
+                else:
+                    feedback.reportError(
+                        self.tr("Failed to create sink for crossings layer."),
+                        True,
+                    )
+            else:
+                feedback.reportError(
+                    self.tr(
+                        "Failed to reproject crossings to EPSG:4326 or no crossings to reproject."
+                    ),
+                    True,
+                )
+
+        # --- 8.3. Reproject Kerbs to EPSG:4326 and Create Output ---
+        if (
+            kerbs_layer_local_tm
+            and kerbs_layer_local_tm.isValid()
+            and kerbs_layer_local_tm.featureCount() > 0
+        ):
+            feedback.pushInfo(
+                f"Reprojecting {kerbs_layer_local_tm.featureCount()} kerbs to EPSG:4326..."
+            )
+            kerbs_layer_4326 = processing.run(
+                "native:reprojectlayer",
+                {
+                    "INPUT": kerbs_layer_local_tm,
+                    "TARGET_CRS": qcore.QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+                    "OUTPUT": "memory:",
+                },
+                context=context,
+                feedback=feedback,
+            )["OUTPUT"]
+
+            if (
+                kerbs_layer_4326
+                and kerbs_layer_4326.isValid()
+                and kerbs_layer_4326.featureCount() > 0
+            ):
+                (sink_kerbs, dest_id_kerbs) = self.parameterAsSink(
+                    parameters_alg,
+                    self.OUTPUT_KERBS,
+                    context,
+                    kerbs_layer_4326.fields(),
+                    kerbs_layer_4326.wkbType(),
+                    qcore.QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+                )
+                if sink_kerbs:
+                    for feature in kerbs_layer_4326.getFeatures():
+                        sink_kerbs.addFeature(feature, QgsFeatureSink.FastInsert)
+                    # Return an actual layer object for tests instead of an id string
+                    try:
+                        layer_obj = QgsProcessingUtils.mapLayerFromString(
+                            dest_id_kerbs, context
+                        )
+                        if not layer_obj or not layer_obj.isValid():
+                            results[self.OUTPUT_KERBS] = kerbs_layer_4326
+                        else:
+                            results[self.OUTPUT_KERBS] = layer_obj
+                    except Exception:
+                        results[self.OUTPUT_KERBS] = kerbs_layer_4326
+                else:
+                    feedback.reportError(
+                        self.tr("Failed to create sink for kerbs layer."),
+                        True,
+                    )
+            else:
+                feedback.reportError(
+                    self.tr(
+                        "Failed to reproject kerbs to EPSG:4326 or no kerbs to reproject."
                     ),
                     True,
                 )
