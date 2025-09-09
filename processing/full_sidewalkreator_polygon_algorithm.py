@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtGui import QIcon
 from qgis.core import (
     QgsProcessing,
     QgsProcessingAlgorithm,
@@ -110,6 +111,11 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
         return self.tr(
             "Fetches OSM road and building data for an input polygon area. This algorithm focuses on generating sidewalk lines and related features (like exclusion zones for debugging) using configurable parameters. Main sidewalk output is in EPSG:4326. (Full plugin includes crossings and kerbs)."
         )
+
+    def icon(self):
+        plugin_dir = os.path.dirname(os.path.dirname(__file__))
+        icon_path = os.path.join(plugin_dir, "icon.png")
+        return QIcon(icon_path) if os.path.exists(icon_path) else QIcon()
 
     def initAlgorithm(self, config=None):
         self.addParameter(

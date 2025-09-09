@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtGui import QIcon
 from qgis.core import (
     QgsProcessing,
     QgsProcessingAlgorithm,
@@ -22,6 +23,7 @@ from qgis.core import (
     QgsProcessingParameterExtent,
 )  # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform
 import math
+import os
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
@@ -76,6 +78,11 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         return self.tr(
             "Fetches OSM street data for a given BBOX (extent), processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. The input extent should ideally be in EPSG:4326. Output is in EPSG:4326."
         )
+
+    def icon(self):
+        plugin_dir = os.path.dirname(os.path.dirname(__file__))
+        icon_path = os.path.join(plugin_dir, "icon.png")
+        return QIcon(icon_path) if os.path.exists(icon_path) else QIcon()
 
     def initAlgorithm(self, config=None):
         self.addParameter(
