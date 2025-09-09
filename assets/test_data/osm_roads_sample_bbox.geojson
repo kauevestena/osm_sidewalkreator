@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3048, -25.5179], [-49.3026, -25.5179]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3048, -25.5172], [-49.3026, -25.5172]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3048, -25.5165], [-49.3026, -25.5165]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3048, -25.5158], [-49.3026, -25.5158]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3046, -25.5180], [-49.3046, -25.5157]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3036, -25.5180], [-49.3036, -25.5157]]}},
+    {"type": "Feature", "properties": {"highway": "residential"},
+     "geometry": {"type": "LineString", "coordinates": [[-49.3028, -25.5180], [-49.3028, -25.5157]]}}
+  ]
+}
+

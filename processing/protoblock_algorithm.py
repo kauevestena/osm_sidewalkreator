@@ -28,6 +28,7 @@ from qgis.core import (
     QgsProcessingException,
     QgsCoordinateTransform,
     QgsRectangle,
+    QgsProject,
 )  # Added QgsProcessingUtils and logging classes
 from qgis.PyQt.QtCore import QVariant
 import math  # For math.isfinite
@@ -460,15 +461,24 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             feedback.pushWarning(
                 self.tr("No streets after filtering. Output will be empty.")
             )
-            (sink, dest_id) = self.parameterAsSink(
+            (sink_empty, dest_id_empty) = self.parameterAsSink(
                 parameters,
                 self.OUTPUT_PROTOBLOCKS,
                 context,
                 QgsFields(),
                 QgsWkbTypes.Polygon,
-                local_tm_crs,
+                QgsCoordinateReferenceSystem(CRS_LATLON_4326),
             )
-            return {self.OUTPUT_PROTOBLOCKS: dest_id}
+            if sink_empty is None:
+                raise QgsProcessingException(
+                    self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS)
+                )
+            layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id_empty, context)
+            try:
+                QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
+            except Exception:
+                pass
+            return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id_empty}
 
         try:
             feedback.pushInfo(self.tr("Removing unconnected lines..."))
@@ -682,42 +692,31 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         )
         # --- End Final Reprojection ---
 
+        # Write to sink (no fields) and return the layer object from context
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
-            QgsFields(),  # Tests expect no fields on output
+            QgsFields(),  # no fields expected in tests
             QgsWkbTypes.Polygon,
-            crs_epsg4326,  # Sink CRS is now EPSG:4326
+            crs_epsg4326,
         )
-
         if sink is None:
             raise QgsProcessingException(
                 self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS)
             )
-
         if output_layer_epsg4326.featureCount() > 0:
-            total_out_feats = output_layer_epsg4326.featureCount()
-            for i, feat in enumerate(
-                output_layer_epsg4326.getFeatures()
-            ):  # Iterate final layer
-                if feedback.isCanceled():
-                    break
-                # Strip attributes to match empty fields schema
+            for feat in output_layer_epsg4326.getFeatures():
                 f = QgsFeature()
                 f.setGeometry(feat.geometry())
                 sink.addFeature(f, QgsFeatureSink.FastInsert)
-                # Progress can be more fine-grained, this is just for the final write
-                feedback.setProgress(
-                    int(90 + (i + 1) * 10.0 / total_out_feats)
-                )  # Assume this is final 10%
-
-        feedback.pushInfo(
-            self.tr("Protoblock generation complete. Output (EPSG:4326) written.")
-        )
-        # Return the sink destination directly to avoid potential segfaults
-        # from trying to read the file immediately after writing
-        return {self.OUTPUT_PROTOBLOCKS: dest_id}
+        layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id, context)
+        try:
+            QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
+        except Exception:
+            pass
+        feedback.pushInfo(self.tr("Protoblock generation complete. Sink written."))
+        return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
         # Clean up any persistent temporary layers if necessary

@@ -500,9 +500,8 @@ def generate_sidewalk_geometries_and_zones(
             feedback.pushInfo(
                 f"Creating exclusion zone for street with sidewalk='{sidewalk_tag}' or sidewalk:both='{sidewalk_both_tag}', buffer={tag_buffer_dist:.1f}m"
             )
-            geom_exclusion = street_geom.buffer(
-                tag_buffer_dist, 5, Qgis.EndCapStyle.Flat, Qgis.JoinStyle.Miter, 10
-            )
+            # Use basic geometry buffer for compatibility across QGIS versions
+            geom_exclusion = street_geom.buffer(tag_buffer_dist, 5)
         elif (
             sidewalk_tag == "left" or sidewalk_left_tag == "yes"
         ):  # Sidewalk only on left
@@ -562,17 +561,15 @@ def generate_sidewalk_geometries_and_zones(
             or sidewalk_tag == "yes"
             or sidewalk_both_tag == "yes"
         ):  # Sidewalk on both sides
-            geom_sure = street_geom.buffer(
-                tag_buffer_dist, 5, Qgis.EndCapStyle.Flat, Qgis.JoinStyle.Miter, 10
-            )
+            # Use basic geometry buffer for compatibility across QGIS versions
+            geom_sure = street_geom.buffer(tag_buffer_dist, 5)
 
         # Default case: if no specific sidewalk tags imply "yes" on both, assume sure zone covers full buffer
         if (
             geom_sure is None and geom_exclusion is None
         ):  # No 'no' tags, and no explicit 'yes' tags for one side
-            geom_sure = street_geom.buffer(
-                tag_buffer_dist, 5, Qgis.EndCapStyle.Flat, Qgis.JoinStyle.Miter, 10
-            )
+            # Use basic geometry buffer for compatibility across QGIS versions
+            geom_sure = street_geom.buffer(tag_buffer_dist, 5)
 
         if geom_exclusion and not geom_exclusion.isEmpty():
             exclusion_zones_featlist.append(geom_to_feature(geom_exclusion))
