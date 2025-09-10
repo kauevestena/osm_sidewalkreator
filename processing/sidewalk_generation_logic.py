@@ -35,6 +35,7 @@ from ..parameters import (
     widths_fieldname,
     big_buffer_d,  # , sidewalk_tag_value and other specific tags if needed here
     min_area_perimeter_ratio,
+    protoblocks_buffer,
 )
 import math  # For math.sqrt if used in ratio calculations, though not directly in draw_sidewalks core geom logic
 from qgis import processing
@@ -622,85 +623,49 @@ def generate_sidewalk_geometries_and_zones(
     )
 
     # --- Filter sidewalk lines by dissolved_protoblocks_layer (remove disjoint) ---
-    # This was an important step in the original plugin
-    if protoblocks_layer_local_tm and protoblocks_layer_local_tm.featureCount() > 0:
+    # This was an important step in the original plugin and must be strictly applied.
+    try:
+        protos_ok = (
+            protoblocks_layer_local_tm is not None
+            and hasattr(protoblocks_layer_local_tm, "isValid")
+            and protoblocks_layer_local_tm.isValid()
+            and protoblocks_layer_local_tm.featureCount() > 0
+        )
+    except Exception:
+        protos_ok = False
+
+    if protos_ok:
         feedback.pushInfo(
             "Filtering sidewalk lines to keep only those intersecting protoblock areas..."
         )
+        # Dissolve protoblocks to a single geometry and buffer slightly to include edge sidewalks
+        dissolved = dissolve_tosinglegeom(protoblocks_layer_local_tm)
+        buffered = generate_buffer(
+            dissolved, protoblocks_buffer, dissolve=True
+        )  # small positive buffer
+        proto_geom = get_first_feature_or_geom(buffered, True)
 
-        # If there are very few protoblocks relative to sidewalks, consider skipping filtering
-        protoblock_count = protoblocks_layer_local_tm.featureCount()
-        sidewalk_count = whole_sidewalks_lines.featureCount()
-
-        if (
-            protoblock_count < sidewalk_count * 0.3
-        ):  # Less than 30% as many protoblocks as sidewalks
-            feedback.pushInfo(
-                f"Warning: Only {protoblock_count} protoblocks for {sidewalk_count} sidewalks. Protoblock filtering may be too restrictive."
-            )
-
-        dissolved_protoblock_geom = get_first_feature_or_geom(
-            protoblocks_layer_local_tm, True
-        )
-
-        # Add a small buffer to protoblocks to catch sidewalks that run along block edges
-        # This is more realistic since sidewalks are typically at the boundary of blocks
-        buffer_distance = 2.0  # 2 meters buffer to catch edge sidewalks
-        # Temporarily disable buffering due to QGIS version compatibility issues
-        # TODO: Re-enable after resolving buffer method signature
-        feedback.pushInfo("Using protoblocks without buffer (compatibility mode)")
-        buffered_protoblocks = dissolved_protoblock_geom
-
-        feedback.pushInfo(
-            f"Using {buffer_distance}m buffer around protoblocks for sidewalk filtering"
-        )
-
-        # Create a new layer for filtered sidewalks
         filtered_sidewalk_lines = QgsVectorLayer(
             f"LineString?crs={current_crs.authid()}",
             "filtered_sidewalk_lines_algo",
             "memory",
         )
-        filtered_sidewalk_lines_dp = filtered_sidewalk_lines.dataProvider()
-        filtered_sidewalk_lines_dp.addAttributes(
-            whole_sidewalks_lines.fields()
-        )  # Keep fields if any
+        filtered_dp = filtered_sidewalk_lines.dataProvider()
+        filtered_dp.addAttributes(whole_sidewalks_lines.fields())
         filtered_sidewalk_lines.updateFields()
 
-        kept_sidewalks = []
-        rejected_count = 0
-        for sw_feat in whole_sidewalks_lines.getFeatures():
+        kept = []
+        for sw in whole_sidewalks_lines.getFeatures():
             if feedback.isCanceled():
                 return None, None, None, None
-            # Use buffered protoblocks for intersection test
-            if not sw_feat.geometry().disjoint(buffered_protoblocks):
-                kept_sidewalks.append(QgsFeature(sw_feat))
-            else:
-                rejected_count += 1
-
-        if kept_sidewalks:
-            filtered_sidewalk_lines_dp.addFeatures(kept_sidewalks)
-
-        # If filtering removed too many sidewalks, warn the user
-        kept_count = filtered_sidewalk_lines.featureCount()
-        rejection_rate = rejected_count / max(sidewalk_count, 1)
-
-        if rejection_rate > 0.5:  # More than 50% rejected (was 80%)
-            feedback.pushWarning(
-                f"Protoblock filtering too aggressive ({rejection_rate:.1%} rejection rate). Using all sidewalks instead."
-            )
-            # Use all sidewalks instead of the filtered ones
-            # whole_sidewalks_lines remains unchanged (keeps all original sidewalks)
-        else:
-            if kept_count < sidewalk_count * 0.1:  # Less than 10% kept
-                feedback.pushWarning(
-                    f"Protoblock filtering removed {rejected_count}/{sidewalk_count} sidewalks. Consider reviewing protoblock generation or disabling filtering."
-                )
-
-            feedback.pushInfo(
-                f"Sidewalk lines filtered by protoblocks: {kept_count} features remain, {rejected_count} rejected."
-            )
-            whole_sidewalks_lines = filtered_sidewalk_lines  # Replace with filtered
+            if not sw.geometry().disjoint(proto_geom):
+                kept.append(QgsFeature(sw))
+        if kept:
+            filtered_dp.addFeatures(kept)
+        feedback.pushInfo(
+            f"Sidewalk lines filtered by protoblocks: {filtered_sidewalk_lines.featureCount()} features remain (from {whole_sidewalks_lines.featureCount()})."
+        )
+        whole_sidewalks_lines = filtered_sidewalk_lines
     else:
         feedback.pushWarning(
             "No dissolved protoblocks layer provided or it's empty; skipping filtering of sidewalks by protoblocks."

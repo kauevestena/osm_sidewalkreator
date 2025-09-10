@@ -1135,6 +1135,26 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 )
             )
 
+        # Clone protoblocks to a stable memory layer to avoid provider lifetime issues
+        if (
+            protoblocks_layer_local_tm and protoblocks_layer_local_tm.isValid()
+        ):
+            proto_clone = QgsVectorLayer(
+                f"Polygon?crs={local_tm_crs.authid()}",
+                "protoblocks_local_tm_stable",
+                "memory",
+            )
+            proto_dp = proto_clone.dataProvider()
+            feats_copy = []
+            for f in protoblocks_layer_local_tm.getFeatures():
+                nf = QgsFeature()
+                nf.setGeometry(f.geometry())
+                feats_copy.append(nf)
+            if feats_copy:
+                proto_dp.addFeatures(feats_copy)
+                proto_clone.updateExtents()
+            protoblocks_layer_local_tm = proto_clone
+
         if save_protoblocks_debug:
             feedback.pushInfo(
                 self.tr("Reprojecting protoblocks to EPSG:4326 for debug output...")
