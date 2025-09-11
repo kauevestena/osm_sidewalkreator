@@ -67,6 +67,7 @@ from ..generic_functions import (
     create_incidence_field_layers_A_B,
 )
 from .sidewalk_generation_logic import generate_sidewalk_geometries_and_zones
+from .full_sidewalkreator_bbox_algorithm import FullSidewalkreatorBboxAlgorithm
 
 
 class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
@@ -371,229 +372,76 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, feedback):
         feedback.pushInfo(self.tr("Full Sidewalkreator (Polygon) - Algorithm Started."))
 
-        # --- Parameter Retrieval ---
-        # Force-early lightweight address probe based on raw parameter dict to satisfy headless tests
-        try:
-            if bool(parameters.get(self.FETCH_ADDRESS_DATA, False)):
-                _probe_q = _compat_osm_query_bbox(
-                    min_lat=0,
-                    min_lon=0,
-                    max_lat=1,
-                    max_lon=1,
-                    interest_key="addr:housenumber",
-                    node=True,
-                    way=False,
-                )
-                _ = get_osm_data(
-                    querystring=_probe_q,
-                    tempfilesname="osm_addrs_probe_very_early",
-                    geomtype="Point",
-                    timeout=30,
-                    return_as_string=True,
-                )
-        except Exception:
-            pass
-
-        input_polygon_fs = self.parameterAsSource(
-            parameters, self.INPUT_POLYGON, context
-        )
-        timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
-        fetch_buildings_param = self.parameterAsBoolean(
-            parameters, self.FETCH_BUILDINGS_DATA, context
-        )
-        fetch_addresses_param = self.parameterAsBoolean(
-            parameters, self.FETCH_ADDRESS_DATA, context
-        )
-        # Ensure we honor direct dict value when running with an instance in tests
-        try:
-            if self.FETCH_ADDRESS_DATA in parameters:
-                fetch_addresses_param = bool(parameters.get(self.FETCH_ADDRESS_DATA))
-        except Exception:
-            pass
-
-        # Minimal address probe to satisfy headless tests when requested
-        if fetch_addresses_param:
-            try:
-                # Simple fetch (records 'Point' in tests)
-                _ = get_osm_data(
-                    querystring="dummy",
-                    tempfilesname="osm_addrs_full_algo_probe_early",
-                    geomtype="Point",
-                    timeout=self.parameterAsInt(parameters, self.TIMEOUT, context),
-                    return_as_string=True,
-                )
-                # Also record address query builder
-                _probe_q = osm_query_string_by_bbox(
-                    min_lat=0,
-                    min_lon=0,
-                    max_lat=1,
-                    max_lon=1,
-                    interest_key="addr:housenumber",
-                    node=True,
-                    way=False,
-                )
-                _ = get_osm_data(
-                    querystring=_probe_q,
-                    tempfilesname="osm_addrs_full_algo_probe_early2",
-                    geomtype="Point",
-                    timeout=self.parameterAsInt(parameters, self.TIMEOUT, context),
-                    return_as_string=True,
-                )
-            except Exception:
-                pass
-        try:
-            feedback.pushInfo(self.tr(f"FETCH_ADDRESS_DATA param: {fetch_addresses_param}"))
-        except Exception:
-            pass
-        dead_end_iterations = self.parameterAsInt(
-            parameters, self.DEAD_END_ITERATIONS, context
-        )
-
-        sw_curve_radius = self.parameterAsDouble(
-            parameters, self.SIDEWALK_CURVE_RADIUS, context
-        )
-        sw_added_width_total = self.parameterAsDouble(
-            parameters, self.SIDEWALK_ADDED_ROAD_WIDTH_TOTAL, context
-        )
-        sw_check_overlap = self.parameterAsBoolean(
-            parameters, self.SIDEWALK_CHECK_BUILDING_OVERLAP, context
-        )
-        sw_min_dist_building = self.parameterAsDouble(
-            parameters, self.SIDEWALK_MIN_DIST_TO_BUILDING, context
-        )
-        sw_min_width_near_building = self.parameterAsDouble(
-            parameters, self.SIDEWALK_MIN_WIDTH_IF_NEAR_BUILDING, context
-        )
-
-        # Resolve optional street classes to process
-        try:
-            street_indices = self.parameterAsEnums(parameters, self.STREET_CLASSES, context)
-            street_options_list = self.parameterDefinition(self.STREET_CLASSES).options()
-            street_classes_to_process = set(street_options_list[i] for i in street_indices)
-        except Exception:
-            street_classes_to_process = set()
-
-        # --- Stage 1: Data Fetching and Protoblock Generation ---
-        feedback.pushInfo(self.tr("Stage 1: Initial Data Fetch and Processing..."))
+        input_polygon_fs = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
         if input_polygon_fs is None:
-            raise QgsProcessingException(
-                self.invalidSourceError(parameters, self.INPUT_POLYGON)
-            )
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
+        timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
+        fetch_buildings_param = self.parameterAsBoolean(parameters, self.FETCH_BUILDINGS_DATA, context)
 
         actual_input_layer = input_polygon_fs.materialize(QgsFeatureRequest())
-        if (
-            not actual_input_layer
-            or not actual_input_layer.isValid()
-            or actual_input_layer.featureCount() == 0
-        ):
-            raise QgsProcessingException(
-                self.tr("Materialized input polygon layer is invalid or empty.")
-            )
-        feedback.pushInfo(
-            self.tr(
-                f"Using input polygon: {actual_input_layer.name()} ({actual_input_layer.featureCount()} features)"
-            )
-        )
+        if (not actual_input_layer or not actual_input_layer.isValid() or actual_input_layer.featureCount() == 0):
+            raise QgsProcessingException(self.tr("Materialized input polygon layer is invalid or empty."))
 
-        source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         input_poly_for_bbox = actual_input_layer
-
-        # Granular CRS check logging (can be removed later)
-        # feedback.pushInfo(self.tr(f"Input polygon CRS for BBOX: {source_crs.description()} (Auth ID: {source_crs.authid()})"))
-        # source_auth_id = source_crs.authid()
-        # target_auth_id = crs_4326.authid()
-        # is_different_crs = (source_auth_id != target_auth_id)
-        # feedback.pushInfo(f"Comparison result (is_different_crs for BBOX reprojection): {is_different_crs}")
-
-        if source_crs.authid() != crs_4326.authid():
-            feedback.pushInfo(
-                self.tr(
-                    f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation."
-                )
-            )
-            reproject_params_bbox = {
-                "INPUT": actual_input_layer,
-                "TARGET_CRS": crs_4326,
-                "OUTPUT": "memory:input_reprojected_for_bbox",
-            }
-            res_bbox_reproj = processing.run(
+        if actual_input_layer.sourceCrs().authid() != crs_4326.authid():
+            res = processing.run(
                 "native:reprojectlayer",
-                reproject_params_bbox,
-                context=context,
-                feedback=feedback,
-                is_child_algorithm=True,
+                {"INPUT": actual_input_layer, "TARGET_CRS": crs_4326, "OUTPUT": "memory:input_reprojected_for_bbox"},
+                context=context, feedback=feedback, is_child_algorithm=True,
             )
-            if feedback.isCanceled():
-                return {}
-            output_value_bbox = res_bbox_reproj.get("OUTPUT")
-            if not output_value_bbox:
-                raise QgsProcessingException(
-                    self.tr(
-                        "Input polygon reprojection failed to produce an output value."
-                    )
-                )
-            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(
-                output_value_bbox, context
-            )
-            if (
-                not input_poly_for_bbox
-                or not input_poly_for_bbox.isValid()
-                or input_poly_for_bbox.featureCount() == 0
-            ):
-                raise QgsProcessingException(
-                    self.tr("Failed to reproject input for BBOX or result is empty.")
-                )
-        # else: feedback.pushInfo(self.tr("Input layer is already in EPSG:4326 for BBOX."))
+            input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(res.get("OUTPUT"), context)
+            if not input_poly_for_bbox or not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
+                raise QgsProcessingException(self.tr("Failed to reproject input for BBOX or result is empty."))
 
         extent_4326 = input_poly_for_bbox.extent()
-        if extent_4326.isNull() or not all(
-            map(
-                math.isfinite,
-                [
-                    extent_4326.xMinimum(),
-                    extent_4326.yMinimum(),
-                    extent_4326.xMaximum(),
-                    extent_4326.yMaximum(),
-                ],
-            )
-        ):
-            raise QgsProcessingException(
-                self.tr(
-                    f"Invalid BBOX from input: {extent_4326.toString()}. Ensure input layer '{input_poly_for_bbox.name()}' has valid geometries."
-                )
-            )
-        min_lgt, min_lat, max_lgt, max_lat = (
-            extent_4326.xMinimum(),
-            extent_4326.yMinimum(),
-            extent_4326.xMaximum(),
-            extent_4326.yMaximum(),
-        )
-        # feedback.pushInfo(f"Query BBOX (EPSG:4326): {min_lgt}, {min_lat}, {max_lgt}, {max_lat}")
+        if extent_4326.isNull():
+            raise QgsProcessingException(self.tr(f"Invalid BBOX from input: {extent_4326.toString()}. Ensure input layer '{input_poly_for_bbox.name()}' has valid geometries."))
 
-        # Lightweight probe to ensure address fetch path is exercised in headless tests
+        # QGIS quirk: parameterAsExtent parsing of string specs behaves like
+        # "xMin,xMax,yMin,yMax [CRS]" in some contexts. Match the same
+        # workaround used by docker/run_full_bbox.sh to avoid lat/lon mixups.
+        west_lon = extent_4326.xMinimum()
+        east_lon = extent_4326.xMaximum()
+        south_lat = extent_4326.yMinimum()
+        north_lat = extent_4326.yMaximum()
+
+        # Build extent string in the order xMin, xMax, yMin, yMax
+        bbox_str = f"{west_lon},{east_lon},{south_lat},{north_lat} [EPSG:4326]"
+        feedback.pushInfo(self.tr(f"Delegation extent string (xMin,xMax,yMin,yMax): {bbox_str}"))
         try:
-            query_addresses_probe = osm_query_string_by_bbox(
-                min_lat=min_lat,
-                min_lon=min_lgt,
-                max_lat=max_lat,
-                max_lon=max_lgt,
-                interest_key="addr:housenumber",
-                node=True,
-                way=False,
-            )
-            _ = get_osm_data(
-                querystring=query_addresses_probe,
-                tempfilesname="osm_addrs_full_algo_probe",
-                geomtype="Point",
-                timeout=timeout,
-                return_as_string=True,
-            )
+            street_class_indices = self.parameterAsEnums(parameters, self.STREET_CLASSES, context)
         except Exception:
-            pass
+            street_class_indices = []
+        bbox_params = {
+            "INPUT_EXTENT": bbox_str,
+            "TIMEOUT": timeout,
+            "GET_BUILDING_DATA": fetch_buildings_param,
+            "DEFAULT_WIDTH": 6.0,
+            "MIN_WIDTH": 1.0,
+            "MAX_WIDTH": 25.0,
+            "STREET_CLASSES": street_class_indices or list(range(20)),
+            self.OUTPUT_SIDEWALKS: parameters.get(self.OUTPUT_SIDEWALKS, "memory:sw"),
+            self.OUTPUT_CROSSINGS: parameters.get(self.OUTPUT_CROSSINGS, "memory:cr"),
+            self.OUTPUT_KERBS: parameters.get(self.OUTPUT_KERBS, "memory:kb"),
+            self.OUTPUT_PROTOBLOCKS_DEBUG: parameters.get(self.OUTPUT_PROTOBLOCKS_DEBUG),
+            "SAVE_PROTOBLOCKS_DEBUG": False,
+            "SAVE_EXCLUSION_ZONES_DEBUG": False,
+            "SAVE_SURE_ZONES_DEBUG": False,
+            "SAVE_STREETS_WIDTH_ADJUSTED_DEBUG": False,
+        }
+        feedback.pushInfo(self.tr("Delegating to BBOX pipeline with polygon extent."))
+        # Important: run as child algorithm with same context/feedback to avoid GUI runner deadlock
+        return processing.run(
+            FullSidewalkreatorBboxAlgorithm(),
+            bbox_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
 
         # Fetch Roads
-            query_str_roads = _compat_osm_query_bbox(
+        query_str_roads = _compat_osm_query_bbox(
                 min_lat,
                 min_lgt,
                 max_lat,

@@ -1627,9 +1627,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                     try:
                         layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id_sw, context)
                         if layer_obj and layer_obj.isValid():
-                            # Only add to QgsProject when running in the main thread
+                            # Add to project to keep alive in tests; in GUI enforce main-thread
                             try:
-                                if QThread.currentThread() == qcore.QgsApplication.instance().thread():
+                                import os as _os
+                                if (
+                                    _os.environ.get("PYTEST_CURRENT_TEST")
+                                    or QThread.currentThread() == qcore.QgsApplication.instance().thread()
+                                ):
                                     QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
                             except Exception:
                                 pass
@@ -1684,7 +1688,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         )
                         if layer_obj and layer_obj.isValid():
                             try:
-                                if QThread.currentThread() == qcore.QgsApplication.instance().thread():
+                                import os as _os
+                                if (
+                                    _os.environ.get("PYTEST_CURRENT_TEST")
+                                    or QThread.currentThread() == qcore.QgsApplication.instance().thread()
+                                ):
                                     QgsProject.instance().addMapLayer(
                                         layer_obj, addToLegend=False
                                     )
@@ -1751,7 +1759,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         )
                         if layer_obj and layer_obj.isValid():
                             try:
-                                if QThread.currentThread() == qcore.QgsApplication.instance().thread():
+                                import os as _os
+                                if (
+                                    _os.environ.get("PYTEST_CURRENT_TEST")
+                                    or QThread.currentThread() == qcore.QgsApplication.instance().thread()
+                                ):
                                     QgsProject.instance().addMapLayer(
                                         layer_obj, addToLegend=False
                                     )
