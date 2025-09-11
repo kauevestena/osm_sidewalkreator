@@ -85,11 +85,11 @@ west_lon, east_lon = min_lon, max_lon
 south_lat, north_lat = min_lat, max_lat
 extent=f"{west_lon},{east_lon},{south_lat},{north_lat} [{input_crs}]"
 params={
-  "EXTENT": extent,
-  "TIMEOUT": 60,
-  "OUTPUT_PROTOBLOCKS": "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_bbox.geojson"
+  ProtoblockBboxAlgorithm.EXTENT: extent,
+  ProtoblockBboxAlgorithm.TIMEOUT: 60,
+  ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS: "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_bbox.geojson"
 }
-result = processing.run("sidewalkreator_algorithms_provider:generateprotoblocksfromextent", params)
+result = processing.run(ProtoblockBboxAlgorithm(), params)
 print("Processing completed successfully!")
 print(f"Output: {result}")
 PY'

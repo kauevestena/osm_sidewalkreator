@@ -36,6 +36,7 @@ import os
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
+from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
 from ..generic_functions import (
     reproject_layer_localTM,
     cliplayer_v2,
@@ -322,6 +323,28 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                     f"Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and was properly reprojected to EPSG:4326."
                 )
             )
+
+        # Delegate to BBOX algorithm using the polygon extent, to match the bbox pipeline behavior
+        west_lon = extent_4326.xMinimum()
+        east_lon = extent_4326.xMaximum()
+        south_lat = extent_4326.yMinimum()
+        north_lat = extent_4326.yMaximum()
+        bbox_str = f"{west_lon},{east_lon},{south_lat},{north_lat} [EPSG:4326]"
+        feedback.pushInfo(self.tr(f"Delegating to Protoblocks BBOX pipeline with extent: {bbox_str}"))
+
+        bbox_params = {
+            ProtoblockBboxAlgorithm.EXTENT: bbox_str,
+            ProtoblockBboxAlgorithm.TIMEOUT: self.parameterAsInt(parameters, self.TIMEOUT, context),
+            self.OUTPUT_PROTOBLOCKS: parameters.get(self.OUTPUT_PROTOBLOCKS, "memory:protoblocks"),
+        }
+        from qgis import processing as qproc
+        return qproc.run(
+            ProtoblockBboxAlgorithm(),
+            bbox_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
 
         min_lgt, min_lat = extent_4326.xMinimum(), extent_4326.yMinimum()
         max_lgt, max_lat = extent_4326.xMaximum(), extent_4326.yMaximum()

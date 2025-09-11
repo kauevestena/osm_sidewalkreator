@@ -53,7 +53,7 @@ QgsApplication.processingRegistry().addProvider(ProtoblockProvider())
 from osm_sidewalkreator.processing.protoblock_algorithm import ProtoblockAlgorithm
 from qgis import processing
 
-input_polygon = os.environ.get("INPUT_POLYGON", "/plugins/osm_sidewalkreator/assets/test_data/polygon.geojson")
+input_polygon = "/plugins/osm_sidewalkreator/assets/test_data/polygon.geojson"
 input_crs = os.environ.get("INPUT_CRS", "EPSG:4326")
 
 print(f"Processing polygon: {input_polygon}")
@@ -65,7 +65,7 @@ params = {
   "TIMEOUT": 60,
   "OUTPUT_PROTOBLOCKS": "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_polygon.geojson"
 }
-result = processing.run("sidewalkreator_algorithms_provider:generateprotoblocksfromosm", params)
+result = processing.run(ProtoblockAlgorithm(), params)
 print("Processing completed successfully!")
 print(f"Output: {result}")
 PY'
