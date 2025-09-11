@@ -53,7 +53,7 @@ def delete_filelist_that_exists(filepathlist):
 
 def join_to_a_outfolder(filename, foldername="temporary"):
     outfolder = os.path.join(basepath, foldername)
-
+    os.makedirs(outfolder, exist_ok=True)
     return os.path.join(outfolder, filename)
 
 
@@ -143,20 +143,52 @@ def get_osm_data(
     while True:
         # TODO: ensure sucess
         #   (the try statement is an improvement already)
+        # print(f"[osm_fetch DEBUG] Value of 'timeout' before requests.get: {timeout}, type: {type(timeout)}") # REMOVED DEBUG PRINT
         try:
             response = requests.get(
                 overpass_url, params={"data": querystring}, timeout=timeout
             )
 
             if response.status_code == 200:
+                print(f"Request to {overpass_url} successful (status 200).")
                 break
-        except:
-            print("request not sucessful, retrying in 5 seconds...")
-            time.sleep(5)
-            overpass_url = next(circular_iterator)
-            print("retrying with server", overpass_url)
+            else:
+                print(
+                    f"Request to {overpass_url} failed with status: {response.status_code}, Response: {response.text[:500]}"
+                )  # Log more of response
 
-    # TODO check the response, beyond terminal printing
+        except requests.exceptions.Timeout as e_timeout:
+            print(f"TIMEOUT during request to {overpass_url}: {e_timeout}")
+        except requests.exceptions.ConnectionError as e_conn_err:
+            print(f"CONNECTION ERROR during request to {overpass_url}: {e_conn_err}")
+        except requests.exceptions.RequestException as e_req:
+            print(f"Request to {overpass_url} failed with RequestException: {e_req}")
+        except Exception as e_generic:
+            print(
+                f"Request to {overpass_url} failed with generic Exception: {e_generic}"
+            )
+
+        # If not successful, try next server after a delay
+        print(
+            f"Request to {overpass_url} not successful, retrying in 5 seconds..."
+        )  # Clarified message
+        time.sleep(5)
+        overpass_url = next(
+            circular_iterator
+        )  # This was outside the try-except, should be part of the loop logic for retrying
+        print("Retrying with server:", overpass_url)  # Clarified message
+
+    # Check if the loop completed due to success or exhaustion of retries (though current loop is infinite until success)
+    # This part of the code is reached ONLY if 'break' was hit (i.e. status_code == 200)
+    # If all servers failed indefinitely, this part wouldn't be reached with the current while True / break structure.
+    # A counter for retries might be good to eventually give up.
+
+    if response.status_code != 200:
+        print(
+            f"Failed to fetch data from all Overpass servers. Last attempt was to {overpass_url} with status {response.status_code}."
+        )
+        return None  # Explicitly return None if all retries failed (if we add a retry limit)
+
     if print_response:
         print(response)
 

@@ -1,6 +1,6 @@
 # SidewalKreator Algorithm Description
 
-This document describes the step-by-step algorithm executed by the OSM SidewalKreator QGIS plugin. The process is initiated through a user interface, and the core logic is divided into several distinct stages, each triggered by a user action in the plugin dialog.
+This document describes the step-by-step algorithm executed by the OSM SidewalKreator QGIS plugin (GUI) and how the same logic is mirrored in the headless QGIS Processing algorithms under `processing/`.
 
 ## Step 1: Data Fetching (`call_get_osm_data`)
 
@@ -31,7 +31,7 @@ Once the data is fetched, this step processes it to make it suitable for generat
 5.  **Intersection Calculation**: The precise locations of all road intersections are calculated and stored as a point layer.
 6.  **Width Assignment**: The width specified by the user in the UI table (or a default value) is assigned as an attribute to each road segment.
 
-## Step 3: Sidewalk Generation (`draw_sidewalks`)
+## Step 3: Sidewalk Generation (`draw_sidewalks` / Processing)
 
 This is the core step where the actual sidewalk geometries are created.
 
@@ -45,8 +45,10 @@ This is the core step where the actual sidewalk geometries are created.
     *   The algorithm then computes the geometric "difference" between this large buffer and the road network buffer.
     *   The result of the difference operation is a layer containing the polygons that fall *outside* the road network. The largest of these polygons (the area surrounding the entire map extent) is discarded, leaving only the internal polygons, which are the sidewalks.
 4.  **Polygon to Line Conversion**: The sidewalk polygons are converted into line geometries, representing the edges of the sidewalks.
-5.  **Exclusion/Sure Zones**: The plugin handles `sidewalk=no/left/right/both` tags by creating "exclusion zones" (from `sidewalk=no`, etc.) and "sure zones" (from `sidewalk=yes/both`, etc.). The exclusion zone polygons are subtracted from the generated sidewalk layer.
+5.  **Exclusion/Sure Zones**: The plugin handles `sidewalk=no/left/right/both` tags by creating "exclusion zones" (from `sidewalk=no`, etc.) and "sure zones" (from `sidewalk=yes/both`, etc.). The exclusion zone polygons are subtracted from the generated sidewalk layer. This is implemented headlessly in `processing/sidewalk_generation_logic.py`.
 6.  **Attribute Calculation**: Area, perimeter, and shape ratios are calculated for the sidewalk polygons for potential quality analysis.
+7.  **Protoblock Filtering**: Sidewalk lines are filtered to those intersecting dissolved protoblocks to remove disjoint segments. Processing algorithms do this automatically.
+8.  **Pre-existing Sidewalk Filtering**: To avoid drawing where sidewalks already exist in OSM, protoblocks already “filled” with `footway=sidewalk` are removed before generation. Coverage is estimated by incident sidewalk length and compared against `cutoff_percent_protoblock` (see `parameters.py`). Implemented in both `full_sidewalkreator_polygon_algorithm.py` and `full_sidewalkreator_bbox_algorithm.py`.
 
 ## Step 4: Crossing Generation (`draw_crossings`)
 
@@ -83,3 +85,9 @@ The final step prepares and exports all the generated data.
 4.  **Auxiliary Files**: Additional data generated during the process, such as the input polygon, protoblocks, and road intersection points, are saved in an auxiliary folder for reference.
 5.  **Changeset Comment**: A text file is generated containing a recommended changeset comment for when the user uploads the data to OpenStreetMap.
 6.  **Parameters Dump**: The state of all user-configurable options in the plugin dialog is saved to a JSON file, allowing the user to easily replicate a previous run.
+
+## Notes for Processing Algorithms
+
+- Primary outputs (e.g., sidewalks) are returned as in-memory layers in EPSG:4326, suitable for headless workflows and tests.
+- Exclusion/sure zones, protoblock filtering, and the pre-existing sidewalk filter are implemented to match the GUI behavior as closely as possible.
+- When building data is unavailable, overlap-aware width adjustment is skipped and sensible defaults are applied.

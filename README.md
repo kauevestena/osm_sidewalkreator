@@ -40,6 +40,7 @@ The summary of what the plugin does is what follows:
   - Download and prepare the data (highways and optionally buildings) for a polygon of interest;
   - Provide some tools for highway selection and sidewalk parametrization;
   - Effectively draw the sidewalks
+  - Remove unrealistically thin sidewalk polygons using an area/perimeter ratio check
   - Draw the crossings (as sidewalks are required to be integrated to other highways in order to do routing) and kerb-crossing points (where the access ramp information may be filled)
   - Split sidewalk geometries into segments (including the option to not split at all), since in Brazil, and some other places, is very common that in front of each house there's a completely different sidewalk in comparison to the adjacent neighbors 😥.
   - Export the generated sidewalks, crossings and kerb points to a JOSM ready format, where all the importing into OSM shall be done.
@@ -48,29 +49,112 @@ It is mostly intended for Acessibility Mapping.
 
 Though the data was generated thinking on the usage for OSM, one may use it for pedestrian network analysis out-of-the-box, or even for other purposes inside or outside QGIS.
 
-## Known Issues:
+## Running tests with Docker
 
-The only dependency (osm2geojson) have shapely as dependency, but sadly it doesn't come bundled with QGIS, 
-so you can install it manually with:
+The project provides a Docker setup so tests can be executed inside a containerized QGIS environment.
 
-    <qgis_python_path> -m pip install shapely
+### Install Docker
 
-### For Flatpak QGIS:
+Install the Docker Engine to run the full test suite. On Debian or Ubuntu systems:
 
-1) Open the flatpak shell for the qgis package:
+```bash
+sudo apt-get update && sudo apt-get install -y docker.io
+```
 
+For other platforms, see the [Docker installation guide](https://docs.docker.com/engine/install/).
 
-    flatpak run --command=sh org.qgis.qgis
-   
-3) Within the shell, type:
+### Build the image
 
+```bash
+docker build -f docker/Dockerfile -t my-org/qgis-test:latest .
+```
 
-    curl https://bootstrap.pypa.io/pip/pip.pyz -o pip.pyz
-   
-5) Install shapely:
+### Run the tests
 
+Mount the current project directory into the container and execute the test suite:
 
-    python3 pip.pyz install shapely
+```bash
+./scripts/run_qgis_tests.sh
+# or to test a packaged release
+./scripts/run_qgis_tests.sh --use-release
+```
 
-In a future release, from [this branch]([https://eurogeojournal.eu/index.php/egj/article/view/553](https://github.com/kauevestena/osm_sidewalkreator/tree/remove_dependencies)) this dependency shall be removed.
+To run tests against the generated release zip, pass the `--use-release` flag:
 
+```bash
+./scripts/run_qgis_tests.sh --use-release
+```
+
+This helper script is equivalent to running the image directly:
+
+```bash
+docker run --rm -v "$(pwd)":/app my-org/qgis-test:latest
+```
+
+Both approaches install Python dependencies from `docker/requirements.txt` and run `pytest` within the QGIS image.
+
+### Run processing algorithms
+
+The `scripts/run_qgis_processing.sh` helper invokes QGIS Processing algorithms
+from this plugin inside the same containerized environment. It mirrors the
+`--use-release` flag of the test script so algorithms can be executed from the
+source tree or a built release ZIP.
+
+> **Note**
+> Algorithms that accept a bounding box require the extent coordinates to be
+> in EPSG:4326. Supplying extents outside valid latitude/longitude bounds or
+> using another CRS will result in a helpful error asking for EPSG:4326
+> coordinates or an explicit CRS.
+
+Run an algorithm against the source tree:
+
+```bash
+./scripts/run_qgis_processing.sh generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
+```
+
+Or run it using a release build:
+
+```bash
+./scripts/run_qgis_processing.sh --use-release generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
+```
+
+## Running tests without Docker
+
+You can run the subset of tests that do not require QGIS directly on your machine:
+
+```bash
+pip install -r docker/requirements.txt
+pytest -m "not qgis"
+```
+
+The development requirements include the GDAL Python bindings used by the
+`osm_fetch` module. If your platform does not ship pre-built wheels you may
+need to install system GDAL libraries (e.g. `libgdal-dev`) before running the
+command above. When using `scripts/run_qgis_tests.sh` on Debian-based systems,
+these packages are installed automatically if missing. The `not qgis` marker
+skips tests that need a QGIS environment, providing a quicker feedback loop.
+
+### Regenerating test data
+
+The unit tests use a small OSM extract stored at `test/data/curitiba_sample.osm`. Regenerate it with:
+
+```bash
+curl -L "https://overpass-api.de/api/map?bbox=-49.248337,-25.491146,-49.239228,-25.486957" -o test/data/curitiba_sample.osm
+```
+
+## Creating a release package
+
+The script `release/release_zip.py` bundles the plugin into a ZIP archive for distribution. By default it packages the current repository and writes `osm_sidewalkreator.zip` under `~/sidewalkreator_release`:
+
+```bash
+python release/release_zip.py
+```
+
+You can customize the plugin source, output directory and excluded files:
+
+```bash
+python release/release_zip.py --plugin-dir /path/to/plugin \
+  --output-dir /tmp/build --exclude tests docs "*.pyc"
+```
+
+The `--exclude` option accepts multiple patterns either separated by spaces or by repeating the flag.

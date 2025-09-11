@@ -1,0 +1,14 @@
+name: Task 1
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run QGIS tests against release
+        run: ./scripts/run_qgis_tests.sh --use-release
+

@@ -37,3 +37,20 @@ def classFactory(iface):  # pylint: disable=invalid-name
     # Return an instance of the main plugin class.
     # Provider registration is now handled within sidewalkreator.initGui()
     return sidewalkreator(iface)
+
+def _build_plugin_paths(profile_path):
+    """Backwards-compat helper for tests: compute plugin directories.
+
+    This duplicate keeps imports side-effect free during test collection.
+    The canonical implementation lives in osm_sidewalkreator.py.
+    """
+    import os
+
+    profile_path = os.path.normpath(profile_path)
+    basepath = os.path.join(
+        profile_path, "python", "plugins", "osm_sidewalkreator"
+    )
+    temps_path = os.path.join(basepath, "temporary")
+    reports_path = os.path.join(basepath, "reports")
+    assets_path = os.path.join(basepath, "assets")
+    return basepath, temps_path, reports_path, assets_path

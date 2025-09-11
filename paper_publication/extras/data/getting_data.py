@@ -1,17 +1,17 @@
 from importlib.resources import path
-#adding plugin 
+#adding plugin
 
 import sys, os
 from pathlib import Path
 
-# thx https://stackoverflow.com/a/595315/4436950 
+# thx https://stackoverflow.com/a/595315/4436950
 path_add = Path(__file__).parents[3]
 print(path_add)
 
 sys.path.append(str(path_add))
 # print(sys.path)
 
-dirpath = Path(__file__).parents[0] 
+dirpath = Path(__file__).parents[0]
 print(dirpath)
 
 
@@ -31,10 +31,3 @@ for key in queries_dict:
     outpath = dirpath / f'{key}.geojson'
 
     get_osm_data(queries_dict[key]['query'],'',geomtype=queries_dict[key]['geomtype'],geojson_outpath=outpath)
-
-
-
-
-
-
-

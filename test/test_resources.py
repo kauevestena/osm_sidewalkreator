@@ -8,14 +8,18 @@
 
 """
 
-__author__ = 'kauemv2@gmail.com'
-__date__ = '2021-09-29'
-__copyright__ = 'Copyright 2021, Kaue de Moraes Vestena'
+__author__ = "kauemv2@gmail.com"
+__date__ = "2021-09-29"
+__copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
+import pytest
 
+pytest.importorskip("qgis")
 from qgis.PyQt.QtGui import QIcon
 
+
+pytestmark = pytest.mark.qgis
 
 
 class sidewalkreatorDialogTest(unittest.TestCase):
@@ -31,14 +35,12 @@ class sidewalkreatorDialogTest(unittest.TestCase):
 
     def test_icon_png(self):
         """Test we can click OK."""
-        path = ':/plugins/sidewalkreator/icon.png'
+        path = ":/plugins/sidewalkreator/icon.png"
         icon = QIcon(path)
         self.assertFalse(icon.isNull())
+
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(sidewalkreatorResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-
-
-

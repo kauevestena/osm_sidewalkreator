@@ -1,101 +1,192 @@
 # -*- coding: utf-8 -*-
 
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
-                       QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink,
-                       QgsProcessingContext, QgsFeatureSink,
-                       QgsProcessingParameterEnum, QgsProcessingMultiStepFeedback,
-                       QgsVectorLayer, QgsProcessingUtils) # Added QgsProcessingUtils
-from qgis.core import (QgsProcessingParameterNumber, QgsCoordinateReferenceSystem,
-                       QgsProject, QgsFeatureRequest, QgsFields, QgsField, QgsFeature, edit)
+from qgis.PyQt.QtGui import QIcon
+from qgis.core import (
+    QgsProcessing,
+    QgsProcessingAlgorithm,
+    QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterFeatureSink,
+    QgsProcessingParameterCrs,
+    QgsProcessingContext,
+    QgsFeatureSink,
+    QgsProcessingParameterEnum,
+    QgsProcessingMultiStepFeedback,
+    QgsVectorLayer,
+    QgsProcessingUtils,
+    QgsMessageLog,
+    Qgis,
+    QgsProcessingParameterNumber,
+    QgsCoordinateReferenceSystem,
+    QgsProject,
+    QgsFeatureRequest,
+    QgsFields,
+    QgsField,
+    QgsFeature,
+    edit,
+    QgsWkbTypes,
+    QgsProcessingException,
+    QgsCoordinateTransform,
+    QgsRectangle,
+    QgsProject,
+)  # Added QgsProcessingUtils and logging classes
 from qgis.PyQt.QtCore import QVariant
-import math # For math.isfinite
+import math  # For math.isfinite
+import os
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
-from ..generic_functions import (reproject_layer_localTM, cliplayer_v2,
-                                remove_unconnected_lines_v2, polygonize_lines) # Using polygonize_lines wrapper for now
+from .protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
+from ..generic_functions import (
+    reproject_layer_localTM,
+    cliplayer_v2,
+    remove_unconnected_lines_v2,
+    polygonize_lines,
+)  # Using polygonize_lines wrapper for now
 from ..parameters import default_widths, highway_tag, CRS_LATLON_4326
+
 
 class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     """
     Generates protoblocks by fetching OSM street data within an input polygon,
     processing it, and then polygonizing the street network.
     """
-    INPUT_POLYGON = 'INPUT_POLYGON'
-    TIMEOUT = 'TIMEOUT'
-    OUTPUT_PROTOBLOCKS = 'OUTPUT_PROTOBLOCKS'
+
+    INPUT_POLYGON = "INPUT_POLYGON"
+    INPUT_CRS = "INPUT_CRS"
+    TIMEOUT = "TIMEOUT"
+    OUTPUT_PROTOBLOCKS = "OUTPUT_PROTOBLOCKS"
 
     def tr(self, string):
-        return QCoreApplication.translate('Processing', string)
+        return QCoreApplication.translate("Processing", string)
 
     def createInstance(self):
-        # print("[SidewalKreator] Attempting to create instance of ProtoblockAlgorithm") # Removed
         try:
-            instance = ProtoblockAlgorithm()
-            # print("[SidewalKreator] Successfully created instance of ProtoblockAlgorithm") # Removed
-            return instance
+            print("[ProtoblockAlgorithm] createInstance() called")
+            return ProtoblockAlgorithm()
         except Exception as e:
-            # print(f"[SidewalKreator] Error in ProtoblockAlgorithm createInstance or __init__: {e}") # Removed
-            # It's better to let QGIS handle the display of critical errors if instantiation fails.
-            # Re-raising is good. Logging to QGIS message bar or log panel is also an option for critical plugin errors.
-            # For now, just re-raise.
-            # import traceback # Not needed if not printing exc here
-            # traceback.print_exc() # Not needed if not printing exc here
+            try:
+                QgsMessageLog.logMessage(
+                    f"ProtoblockAlgorithm createInstance failed: {e}",
+                    "SidewalKreator",
+                    Qgis.Critical,
+                )
+                import traceback
+
+                traceback.print_exc()
+            except Exception:
+                pass
             raise
 
     def name(self):
-        return 'generateprotoblocksfromosm'
+        return "generateprotoblocksfromosm"
 
     def displayName(self):
-        return self.tr('Generate Protoblocks from OSM Data in Polygon')
+        return self.tr("Generate Protoblocks from OSM Data in Polygon")
 
     # Removed group(self) and groupId(self) to place algorithm directly under provider
 
     def shortHelpString(self):
-        return self.tr("Generates protoblocks by fetching and processing OSM street data within the extent of an input polygon layer.")
+        return self.tr(
+            "Fetches OSM street data for an input polygon area, processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. "
+            "Input can be in any CRS (specify via Input CRS parameter or it will use the layer's CRS). Output is always in EPSG:4326."
+        )
+
+    def icon(self):
+        plugin_dir = os.path.dirname(os.path.dirname(__file__))
+        icon_path = os.path.join(plugin_dir, "icon.png")
+        return QIcon(icon_path) if os.path.exists(icon_path) else QIcon()
 
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT_POLYGON,
-                self.tr('Input Area Polygon Layer'),
-                [QgsProcessing.TypeVectorPolygon]
+                self.tr("Input Area Polygon Layer"),
+                [QgsProcessing.TypeVectorPolygon],
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                self.INPUT_CRS,
+                self.tr("Input Coordinate Reference System"),
+                defaultValue=CRS_LATLON_4326,
+                optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TIMEOUT,
-                self.tr('OSM Download Timeout (seconds)'),
+                self.tr("OSM Download Timeout (seconds)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=60,
                 minValue=10,
-                maxValue=300
+                maxValue=300,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT_PROTOBLOCKS,
-                self.tr('Output Protoblocks')
+                self.OUTPUT_PROTOBLOCKS, self.tr("Output Protoblocks (EPSG:4326)")
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        feedback.pushInfo(self.tr("Algorithm started: Generate Protoblocks from OSM Data in Polygon")) # General start message
+        feedback.pushInfo(
+            self.tr("Algorithm started: Generate Protoblocks from OSM Data in Polygon")
+        )  # General start message
 
-        input_polygon_feature_source = self.parameterAsSource(parameters, self.INPUT_POLYGON, context)
+        input_polygon_feature_source = self.parameterAsSource(
+            parameters, self.INPUT_POLYGON, context
+        )
         if input_polygon_feature_source is None:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_POLYGON))
+            raise QgsProcessingException(
+                self.invalidSourceError(parameters, self.INPUT_POLYGON)
+            )
 
-        actual_input_layer = input_polygon_feature_source.materialize(QgsFeatureRequest())
+        # Get input CRS parameter (with fallback to source CRS if not specified)
+        input_crs_param = self.parameterAsCrs(parameters, self.INPUT_CRS, context)
+        source_crs = input_polygon_feature_source.sourceCrs()
+
+        # Use the parameter CRS if specified, otherwise use source CRS
+        if input_crs_param and input_crs_param.isValid():
+            effective_input_crs = input_crs_param
+            feedback.pushInfo(
+                f"Using specified input CRS: {effective_input_crs.authid()}"
+            )
+        else:
+            effective_input_crs = source_crs
+            feedback.pushInfo(
+                f"Using source CRS from input layer: {effective_input_crs.authid()}"
+            )
+
+        feedback.pushInfo(f"Input polygon source CRS: {source_crs.authid()}")
+
+        actual_input_layer = input_polygon_feature_source.materialize(
+            QgsFeatureRequest()
+        )
         if actual_input_layer is None:
-            raise QgsProcessingException(self.tr("Failed to materialize input polygon layer."))
+            raise QgsProcessingException(
+                self.tr("Failed to materialize input polygon layer.")
+            )
 
         if not actual_input_layer.isValid() or actual_input_layer.featureCount() == 0:
-            raise QgsProcessingException(self.tr("Materialized input polygon layer is invalid or empty. Cannot proceed."))
+            raise QgsProcessingException(
+                self.tr(
+                    "Materialized input polygon layer is invalid or empty. Cannot proceed."
+                )
+            )
 
-        feedback.pushInfo(self.tr(f"Using input polygon layer: {actual_input_layer.name()} ({actual_input_layer.featureCount()} features)"))
+        # Update the materialized layer CRS if different from effective input CRS
+        if effective_input_crs != source_crs:
+            feedback.pushInfo(
+                f"Updating materialized layer CRS from {source_crs.authid()} to {effective_input_crs.authid()}"
+            )
+            actual_input_layer.setCrs(effective_input_crs)
+
+        feedback.pushInfo(
+            self.tr(
+                f"Using input polygon layer: {actual_input_layer.name()} ({actual_input_layer.featureCount()} features)"
+            )
+        )
 
         timeout = self.parameterAsInt(parameters, self.TIMEOUT, context)
         # feedback.pushInfo(f"Timeout: {timeout} seconds") # Might be too verbose for normal operation
@@ -103,90 +194,256 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(self.tr("Calculating BBOX for OSM query..."))
 
         # Ensure input_poly_for_bbox is in EPSG:4326
-        source_crs = actual_input_layer.sourceCrs()
         crs_4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
 
         input_poly_for_bbox = actual_input_layer
-        if source_crs.authid() != crs_4326.authid(): # Compare authids for robustness
-            feedback.pushInfo(f"Reprojecting input layer from {source_crs.authid()} to EPSG:4326 for BBOX calculation.")
+        if (
+            effective_input_crs.authid() != crs_4326.authid()
+        ):  # Compare authids for robustness
+            feedback.pushInfo(
+                f"Reprojecting input layer from {effective_input_crs.authid()} to EPSG:4326 for BBOX calculation."
+            )
             reproject_params = {
-                'INPUT': actual_input_layer,
-                'TARGET_CRS': crs_4326,
-                'OUTPUT': 'memory:input_reprojected_for_bbox'
+                "INPUT": actual_input_layer,
+                "TARGET_CRS": crs_4326,
+                "OUTPUT": "memory:input_reprojected_for_bbox",
             }
-            sub_feedback_reproject = QgsProcessingMultiStepFeedback(1, feedback) # Child feedback
+            sub_feedback_reproject = QgsProcessingMultiStepFeedback(
+                1, feedback
+            )  # Child feedback
             sub_feedback_reproject.setCurrentStep(0)
-            reproject_result = processing.run("native:reprojectlayer", reproject_params, context=context, feedback=sub_feedback_reproject, is_child_algorithm=True)
-            if sub_feedback_reproject.isCanceled(): return {}
 
-            input_poly_for_bbox = QgsVectorLayer(reproject_result['OUTPUT'], "input_reprojected_for_bbox_layer", "memory")
-            if not input_poly_for_bbox.isValid() or input_poly_for_bbox.featureCount() == 0:
-                raise QgsProcessingException(self.tr("Failed to reproject, or reprojected input layer is empty."))
+            try:
+                reproject_result = processing.run(
+                    "native:reprojectlayer",
+                    reproject_params,
+                    context=context,
+                    feedback=sub_feedback_reproject,
+                    is_child_algorithm=True,
+                )
+                feedback.pushInfo(f"Results: {reproject_result}")
+
+                if sub_feedback_reproject.isCanceled():
+                    return {}
+
+                if not reproject_result or "OUTPUT" not in reproject_result:
+                    raise QgsProcessingException(
+                        self.tr("Reprojection did not return expected output.")
+                    )
+
+                # Try to get the output layer
+                output_path = reproject_result["OUTPUT"]
+                feedback.pushInfo(f"Reprojection output path: {output_path}")
+
+                # Use QgsProcessingUtils to get the layer properly
+                input_poly_for_bbox = QgsProcessingUtils.mapLayerFromString(
+                    output_path, context
+                )
+
+                if input_poly_for_bbox is None:
+                    # Fallback to creating layer directly
+                    feedback.pushInfo("Falling back to direct layer creation")
+                    input_poly_for_bbox = QgsVectorLayer(
+                        output_path,
+                        "input_reprojected_for_bbox_layer",
+                        "memory" if "memory:" in output_path else "ogr",
+                    )
+
+                if input_poly_for_bbox is None or not input_poly_for_bbox.isValid():
+                    raise QgsProcessingException(
+                        self.tr(
+                            f"Failed to create layer from reprojection output: {output_path}"
+                        )
+                    )
+
+                if input_poly_for_bbox.featureCount() == 0:
+                    raise QgsProcessingException(
+                        self.tr(
+                            f"Reprojected layer is empty. Layer path: {output_path}"
+                        )
+                    )
+
+                feedback.pushInfo(
+                    f"Successfully reprojected to EPSG:4326. Features: {input_poly_for_bbox.featureCount()}"
+                )
+
+            except Exception as e:
+                raise QgsProcessingException(
+                    self.tr(f"Reprojection failed with error: {str(e)}")
+                )
         else:
             feedback.pushInfo("Input layer is already in EPSG:4326.")
 
         # Calculate BBOX from the (potentially reprojected) layer
         extent_4326 = input_poly_for_bbox.extent()
-        if extent_4326.isNull() or not all(map(math.isfinite, [extent_4326.xMinimum(), extent_4326.yMinimum(), extent_4326.xMaximum(), extent_4326.yMaximum()])):
-            raise QgsProcessingException(self.tr(f"Cannot determine a valid bounding box. Extent: {extent_4326.toString()}. Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and is not empty."))
+
+        # Debug: log the extent details
+        feedback.pushInfo(f"Layer extent: {extent_4326.toString()}")
+        feedback.pushInfo(f"Extent isNull: {extent_4326.isNull()}")
+        feedback.pushInfo(
+            f"Extent bounds: xMin={extent_4326.xMinimum()}, yMin={extent_4326.yMinimum()}, xMax={extent_4326.xMaximum()}, yMax={extent_4326.yMaximum()}"
+        )
+
+        # Also check individual feature geometries for debugging
+        feature_count = 0
+        for feature in input_poly_for_bbox.getFeatures():
+            geom = feature.geometry()
+            if geom and not geom.isEmpty():
+                geom_bbox = geom.boundingBox()
+                feedback.pushInfo(
+                    f"Feature {feature_count} geometry bbox: {geom_bbox.toString()}"
+                )
+                feature_count += 1
+                if feature_count >= 3:  # Limit debug output
+                    break
+
+        # Validate extent coordinates are within reasonable geographic bounds
+        if (
+            extent_4326.isNull()
+            or not all(
+                map(
+                    math.isfinite,
+                    [
+                        extent_4326.xMinimum(),
+                        extent_4326.yMinimum(),
+                        extent_4326.xMaximum(),
+                        extent_4326.yMaximum(),
+                    ],
+                )
+            )
+            or extent_4326.xMinimum() < -180
+            or extent_4326.xMaximum() > 180
+            or extent_4326.yMinimum() < -90
+            or extent_4326.yMaximum() > 90
+        ):
+            raise QgsProcessingException(
+                self.tr(
+                    f"Invalid bounding box coordinates. Extent: {extent_4326.toString()}. "
+                    f"Coordinates must be in valid lat/lon range (-180 to 180 for longitude, -90 to 90 for latitude). "
+                    f"Ensure the input layer '{input_poly_for_bbox.name()}' contains valid geometries and was properly reprojected to EPSG:4326."
+                )
+            )
+
+        # Delegate to BBOX algorithm using the polygon extent, to match the bbox pipeline behavior
+        west_lon = extent_4326.xMinimum()
+        east_lon = extent_4326.xMaximum()
+        south_lat = extent_4326.yMinimum()
+        north_lat = extent_4326.yMaximum()
+        bbox_str = f"{west_lon},{east_lon},{south_lat},{north_lat} [EPSG:4326]"
+        feedback.pushInfo(self.tr(f"Delegating to Protoblocks BBOX pipeline with extent: {bbox_str}"))
+
+        bbox_params = {
+            ProtoblockBboxAlgorithm.EXTENT: bbox_str,
+            ProtoblockBboxAlgorithm.TIMEOUT: self.parameterAsInt(parameters, self.TIMEOUT, context),
+            self.OUTPUT_PROTOBLOCKS: parameters.get(self.OUTPUT_PROTOBLOCKS, "memory:protoblocks"),
+        }
+        from qgis import processing as qproc
+        return qproc.run(
+            ProtoblockBboxAlgorithm(),
+            bbox_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
 
         min_lgt, min_lat = extent_4326.xMinimum(), extent_4326.yMinimum()
         max_lgt, max_lat = extent_4326.xMaximum(), extent_4326.yMaximum()
-        feedback.pushInfo(f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}")
+        feedback.pushInfo(
+            f"Calculated BBOX (EPSG:4326): MinLon={min_lgt}, MinLat={min_lat}, MaxLon={max_lgt}, MaxLat={max_lat}"
+        )
 
         # Generate OSM Query String
-        query_str = osm_query_string_by_bbox(min_lat, min_lgt, max_lat, max_lgt,
-                                             interest_key=highway_tag, way=True, node=False, relation=False)
+        query_str = osm_query_string_by_bbox(
+            min_lat,
+            min_lgt,
+            max_lat,
+            max_lgt,
+            interest_key=highway_tag,
+            way=True,
+            node=False,
+            relation=False,
+        )
         # feedback.pushInfo(f"Generated OSM Query (first 100 chars): {query_str[:100]}...") # Can be verbose
 
         feedback.pushInfo(self.tr("Fetching OSM street data..."))
-        osm_geojson_str = get_osm_data(query_str, "osm_streets_data_algo",
-                                       geomtype="LineString", timeout=timeout,
-                                       return_as_string=True)
+        osm_geojson_path = get_osm_data(
+            query_str,
+            "osm_streets_data_algo",
+            geomtype="LineString",
+            timeout=timeout,
+            return_as_string=False,
+        )
 
-        if osm_geojson_str is None:
-            raise QgsProcessingException(self.tr("Failed to download or parse OSM data (returned None)."))
+        if osm_geojson_path is None:
+            raise QgsProcessingException(
+                self.tr("Failed to download or parse OSM data (returned None).")
+            )
 
-        osm_data_layer_4326 = QgsVectorLayer(osm_geojson_str, "osm_streets_dl_4326_algo", "ogr")
+        osm_data_layer_4326 = QgsVectorLayer(
+            osm_geojson_path, "osm_streets_dl_4326_algo", "ogr"
+        )
         if not osm_data_layer_4326.isValid():
-            # Attempt to get more details if the string was non-empty but layer is invalid
-            details = ""
-            if osm_geojson_str: # Check if string is not empty
-                details = f" GeoJSON string started with: {osm_geojson_str[:200]}"
-            raise QgsProcessingException(self.tr(f"Downloaded OSM data did not form a valid vector layer.{details}"))
+            raise QgsProcessingException(
+                self.tr("Downloaded OSM data did not form a valid vector layer.")
+            )
 
-        feedback.pushInfo(self.tr(f"OSM data fetched: {osm_data_layer_4326.featureCount()} ways."))
+        feedback.pushInfo(
+            self.tr(f"OSM data fetched: {osm_data_layer_4326.featureCount()} ways.")
+        )
 
         feedback.pushInfo(self.tr("Clipping and reprojecting OSM data..."))
-        clipped_osm_data_4326_path = 'memory:clipped_osm_data_4326_algo'
+        clipped_osm_data_4326_path = "memory:clipped_osm_data_4326_algo"
         # Use input_poly_for_bbox for clipping (it's the original input polygon, possibly reprojected to 4326)
-        clipped_osm_layer_4326 = cliplayer_v2(osm_data_layer_4326, input_poly_for_bbox, clipped_osm_data_4326_path)
+        clipped_osm_layer_4326 = cliplayer_v2(
+            osm_data_layer_4326, input_poly_for_bbox, clipped_osm_data_4326_path
+        )
 
         if not clipped_osm_layer_4326.isValid():
             raise QgsProcessingException(self.tr("Clipping of OSM data failed."))
 
-        feedback.pushInfo(self.tr(f"OSM data clipped: {clipped_osm_layer_4326.featureCount()} ways remain."))
+        feedback.pushInfo(
+            self.tr(
+                f"OSM data clipped: {clipped_osm_layer_4326.featureCount()} ways remain."
+            )
+        )
 
         if clipped_osm_layer_4326.featureCount() == 0:
-            feedback.pushWarning(self.tr("No OSM ways after clipping. Output will be empty."))
-            (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS, context, QgsFields(), QgsWkbTypes.Polygon, local_tm_crs if 'local_tm_crs' in locals() else crs_4326)
+            feedback.pushWarning(
+                self.tr("No OSM ways after clipping. Output will be empty.")
+            )
+            (sink, dest_id) = self.parameterAsSink(
+                parameters,
+                self.OUTPUT_PROTOBLOCKS,
+                context,
+                QgsFields(),
+                QgsWkbTypes.Polygon,
+                local_tm_crs if "local_tm_crs" in locals() else crs_4326,
+            )
             return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
         clipped_reproj_layer, local_tm_crs = reproject_layer_localTM(
             clipped_osm_layer_4326,
             outputpath=None,
             layername="clipped_osm_local_tm_algo",
-            lgt_0=extent_4326.center().x()
+            lgt_0=extent_4326.center().x(),
         )
         if not clipped_reproj_layer.isValid():
-            raise QgsProcessingException(self.tr("Failed to reproject clipped OSM data."))
+            raise QgsProcessingException(
+                self.tr("Failed to reproject clipped OSM data.")
+            )
 
-        feedback.pushInfo(self.tr(f"Data reprojected to local TM ({local_tm_crs.authid()}): {clipped_reproj_layer.featureCount()} ways."))
+        feedback.pushInfo(
+            self.tr(
+                f"Data reprojected to local TM ({local_tm_crs.authid()}): {clipped_reproj_layer.featureCount()} ways."
+            )
+        )
 
         feedback.pushInfo(self.tr("Cleaning street network..."))
         filtered_streets_layer = QgsVectorLayer(
             f"LineString?crs={local_tm_crs.authid()}",
-            "filtered_streets_local_tm_algo", "memory")
+            "filtered_streets_local_tm_algo",
+            "memory",
+        )
         filtered_streets_dp = filtered_streets_layer.dataProvider()
         if clipped_reproj_layer.fields().count() > 0:
             filtered_streets_dp.addAttributes(clipped_reproj_layer.fields())
@@ -197,12 +454,17 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         features_to_add_to_filtered = []
         highway_field_idx = clipped_reproj_layer.fields().lookupField(highway_tag)
         if highway_field_idx == -1:
-            raise QgsProcessingException(self.tr(f"'{highway_tag}' not found in reprojected OSM data."))
+            raise QgsProcessingException(
+                self.tr(f"'{highway_tag}' not found in reprojected OSM data.")
+            )
 
         for f_in in clipped_reproj_layer.getFeatures():
-            if feedback.isCanceled(): return {}
+            if feedback.isCanceled():
+                return {}
             highway_type_attr = f_in.attribute(highway_field_idx)
-            highway_type_str = str(highway_type_attr).lower() if highway_type_attr is not None else ""
+            highway_type_str = (
+                str(highway_type_attr).lower() if highway_type_attr is not None else ""
+            )
             width = default_widths.get(highway_type_str, 0.0)
             if width >= 0.5:
                 new_feat = QgsFeature(filtered_streets_layer.fields())
@@ -212,42 +474,88 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
 
         if features_to_add_to_filtered:
             filtered_streets_dp.addFeatures(features_to_add_to_filtered)
-        feedback.pushInfo(self.tr(f"Streets filtered by type/width: {filtered_streets_layer.featureCount()} ways remain."))
+        feedback.pushInfo(
+            self.tr(
+                f"Streets filtered by type/width: {filtered_streets_layer.featureCount()} ways remain."
+            )
+        )
 
         if filtered_streets_layer.featureCount() == 0:
-            feedback.pushWarning(self.tr("No streets after filtering. Output will be empty."))
-            (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT_PROTOBLOCKS, context, QgsFields(), QgsWkbTypes.Polygon, local_tm_crs)
-            return {self.OUTPUT_PROTOBLOCKS: dest_id}
+            feedback.pushWarning(
+                self.tr("No streets after filtering. Output will be empty.")
+            )
+            (sink_empty, dest_id_empty) = self.parameterAsSink(
+                parameters,
+                self.OUTPUT_PROTOBLOCKS,
+                context,
+                QgsFields(),
+                QgsWkbTypes.Polygon,
+                QgsCoordinateReferenceSystem(CRS_LATLON_4326),
+            )
+            if sink_empty is None:
+                raise QgsProcessingException(
+                    self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS)
+                )
+            layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id_empty, context)
+            try:
+                QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
+            except Exception:
+                pass
+            return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id_empty}
 
         try:
             feedback.pushInfo(self.tr("Removing unconnected lines..."))
             remove_unconnected_lines_v2(filtered_streets_layer)
-            feedback.pushInfo(self.tr(f"After removing unconnected lines: {filtered_streets_layer.featureCount()} ways remain."))
+            feedback.pushInfo(
+                self.tr(
+                    f"After removing unconnected lines: {filtered_streets_layer.featureCount()} ways remain."
+                )
+            )
         except Exception as e:
             feedback.pushWarning(self.tr(f"Could not remove unconnected lines: {e}."))
 
         feedback.pushInfo(self.tr("Polygonizing street network..."))
         protoblocks_layer = polygonize_lines(
             filtered_streets_layer,
-            outputlayer='memory:protoblocks_temp_algo',
-            keepfields=False)
+            outputlayer="memory:protoblocks_temp_algo",
+            keepfields=False,
+        )
 
         if not protoblocks_layer or not protoblocks_layer.isValid():
-            raise QgsProcessingException(self.tr("Polygonization failed or returned an invalid layer."))
+            raise QgsProcessingException(
+                self.tr("Polygonization failed or returned an invalid layer.")
+            )
 
         # Ensure protoblocks_layer has the correct CRS (local_tm_crs)
         # The polygonize_lines wrapper should handle this, but an explicit set here is safer.
-        if not protoblocks_layer.crs().isValid() or protoblocks_layer.crs().authid() != local_tm_crs.authid():
-            feedback.pushInfo(f"Warning: Protoblocks layer CRS ({protoblocks_layer.crs().authid()}) differs from expected local TM CRS ({local_tm_crs.authid()}). Forcing correct CRS.")
+        if (
+            not protoblocks_layer.crs().isValid()
+            or protoblocks_layer.crs().authid() != local_tm_crs.authid()
+        ):
+            feedback.pushInfo(
+                f"Warning: Protoblocks layer CRS ({protoblocks_layer.crs().authid()}) differs from expected local TM CRS ({local_tm_crs.authid()}). Forcing correct CRS."
+            )
             protoblocks_layer.setCrs(local_tm_crs)
 
-        if not protoblocks_layer or not protoblocks_layer.isValid(): # protoblocks_layer is from polygonize_lines
-            raise QgsProcessingException(self.tr("Polygonization failed or returned an invalid layer."))
+        if (
+            not protoblocks_layer or not protoblocks_layer.isValid()
+        ):  # protoblocks_layer is from polygonize_lines
+            raise QgsProcessingException(
+                self.tr("Polygonization failed or returned an invalid layer.")
+            )
 
-        feedback.pushInfo(self.tr(f"Initial polygonization created {protoblocks_layer.featureCount()} features. Initial CRS: {protoblocks_layer.crs().authid()} - {protoblocks_layer.crs().description()}"))
+        feedback.pushInfo(
+            self.tr(
+                f"Initial polygonization created {protoblocks_layer.featureCount()} features. Initial CRS: {protoblocks_layer.crs().authid()} - {protoblocks_layer.crs().description()}"
+            )
+        )
 
         # --- Re-clone to a new layer with explicitly defined CRS ---
-        feedback.pushInfo(self.tr(f"Re-cloning features to a new layer with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"))
+        feedback.pushInfo(
+            self.tr(
+                f"Re-cloning features to a new layer with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"
+            )
+        )
 
         # Define the URI for the new memory layer with the correct CRS
         # Note: local_tm_crs.authid() will be empty for a custom CRS. Using WKT or Proj string might be more robust if available.
@@ -259,8 +567,10 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         # For now, WKT is safest if a direct CRS object isn't accepted in URI for memory layers.
         # Actually, QgsVectorLayer can take QgsCoordinateReferenceSystem object directly in constructor, but not via URI string alone easily for custom CRSs.
         # The best way to create a memory layer with a specific custom CRS is:
-        clean_protoblocks_layer = QgsVectorLayer("Polygon", "protoblocks_clean_algo", "memory")
-        clean_protoblocks_layer.setCrs(local_tm_crs) # Set the CRS object directly
+        clean_protoblocks_layer = QgsVectorLayer(
+            "Polygon", "protoblocks_clean_algo", "memory"
+        )
+        clean_protoblocks_layer.setCrs(local_tm_crs)  # Set the CRS object directly
 
         # Define fields (should be none if keepfields=False in polygonize_lines)
         # If polygonize_lines's keepfields=False was effective, protoblocks_layer.fields() would be empty or minimal.
@@ -272,15 +582,26 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         if protoblocks_layer.featureCount() > 0:
             temp_feats_for_clean_layer = []
             for feat_original in protoblocks_layer.getFeatures():
-                if feedback.isCanceled(): return {}
-                new_feat_clean = QgsFeature(clean_protoblocks_layer.fields()) # Fields for the clean layer
-                new_feat_clean.setGeometry(feat_original.geometry()) # Geometries are numerically in local_tm_crs
+                if feedback.isCanceled():
+                    return {}
+                new_feat_clean = QgsFeature(
+                    clean_protoblocks_layer.fields()
+                )  # Fields for the clean layer
+                new_feat_clean.setGeometry(
+                    feat_original.geometry()
+                )  # Geometries are numerically in local_tm_crs
                 # No attributes to copy if keepfields=False was effective
                 temp_feats_for_clean_layer.append(new_feat_clean)
 
-            clean_protoblocks_layer.dataProvider().addFeatures(temp_feats_for_clean_layer)
+            clean_protoblocks_layer.dataProvider().addFeatures(
+                temp_feats_for_clean_layer
+            )
 
-        feedback.pushInfo(self.tr(f"Re-cloned to clean_protoblocks_layer: {clean_protoblocks_layer.featureCount()} features. Clean layer CRS: {clean_protoblocks_layer.crs().authid()} - {clean_protoblocks_layer.crs().description()}"))
+        feedback.pushInfo(
+            self.tr(
+                f"Re-cloned to clean_protoblocks_layer: {clean_protoblocks_layer.featureCount()} features. Clean layer CRS: {clean_protoblocks_layer.crs().authid()} - {clean_protoblocks_layer.crs().description()}"
+            )
+        )
 
         # Use this clean_protoblocks_layer for geometry inspection and for the sink
         protoblocks_layer_for_sink = clean_protoblocks_layer
@@ -288,111 +609,137 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
 
         # --- Geometry Inspection Loop (on clean_protoblocks_layer) ---
         if protoblocks_layer_for_sink.featureCount() > 0:
-            feedback.pushInfo(self.tr("Inspecting first few (re-cloned) protoblock geometries..."))
+            feedback.pushInfo(
+                self.tr("Inspecting first few (re-cloned) protoblock geometries...")
+            )
             # ... (geometry inspection loop as before, but using protoblocks_layer_for_sink) ...
             count = 0
             for feat in protoblocks_layer_for_sink.getFeatures():
-                if count >= 5: break
+                if count >= 5:
+                    break
                 geom_info = f"  Feature {feat.id()}: "
-                if not feat.hasGeometry(): geom_info += "Has NO geometry."
+                if not feat.hasGeometry():
+                    geom_info += "Has NO geometry."
                 else:
                     geom = feat.geometry()
                     geom_info += f"hasGeometry=True, isNull={geom.isNull()}, isEmpty={geom.isEmpty()}, wkbType={QgsWkbTypes.displayString(geom.wkbType())}"
                     if not geom.isNull() and not geom.isEmpty():
-                        try: geom_info += f", area={geom.area()}"
-                        except Exception as e_area: geom_info += f", area_calc_error='{e_area}'"
+                        try:
+                            geom_info += f", area={geom.area()}"
+                        except Exception as e_area:
+                            geom_info += f", area_calc_error='{e_area}'"
                 feedback.pushInfo(geom_info)
                 count += 1
         # --- End Geometry Inspection Loop ---
 
         if protoblocks_layer_for_sink.featureCount() == 0:
-            feedback.pushWarning(self.tr("No protoblocks after polygonization and re-cloning. Output will be an empty layer."))
+            feedback.pushWarning(
+                self.tr(
+                    "No protoblocks after polygonization and re-cloning. Output will be an empty layer."
+                )
+            )
 
         # Prepare the final output sink
-        feedback.pushInfo(self.tr(f"Preparing final sink with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}")) # This log refers to the CRS before final reprojection
+        feedback.pushInfo(
+            self.tr(
+                f"Preparing final sink with CRS: {local_tm_crs.authid()} - {local_tm_crs.description()}"
+            )
+        )  # This log refers to the CRS before final reprojection
 
         # --- Final Reprojection to EPSG:4326 ---
         feedback.pushInfo(self.tr("Reprojecting final protoblocks to EPSG:4326..."))
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
 
         reproject_params_final = {
-            'INPUT': protoblocks_layer_for_sink, # This is clean_protoblocks_layer in local_tm_crs
-            'TARGET_CRS': crs_epsg4326,
-            'OUTPUT': 'memory:protoblocks_final_epsg4326_algo'
+            "INPUT": protoblocks_layer_for_sink,  # This is clean_protoblocks_layer in local_tm_crs
+            "TARGET_CRS": crs_epsg4326,
+            "OUTPUT": "memory:protoblocks_final_epsg4326_algo",
         }
         sub_feedback_reproj_final = QgsProcessingMultiStepFeedback(1, feedback)
         sub_feedback_reproj_final.setCurrentStep(0)
-        reproject_final_result = processing.run("native:reprojectlayer",
-                                                reproject_params_final,
-                                                context=context,
-                                                feedback=sub_feedback_reproj_final,
-                                                is_child_algorithm=True)
-        if sub_feedback_reproj_final.isCanceled(): return {}
+        reproject_final_result = processing.run(
+            "native:reprojectlayer",
+            reproject_params_final,
+            context=context,
+            feedback=sub_feedback_reproj_final,
+            is_child_algorithm=True,
+        )
+        if sub_feedback_reproj_final.isCanceled():
+            return {}
 
         # Get the output from native:reprojectlayer
         # It should be a QgsVectorLayer object if 'OUTPUT' was 'memory:...'
         # and the algorithm is well-behaved with memory outputs.
-        reprojected_output_value = reproject_final_result.get('OUTPUT')
+        reprojected_output_value = reproject_final_result.get("OUTPUT")
+        output_layer_epsg4326 = None
 
-        if not isinstance(reprojected_output_value, QgsVectorLayer):
-            # If it's a string (path or ID), try to load it
-            # This case might occur if TEMPORARY_OUTPUT was used instead of 'memory:' string,
-            # or if the alg behaves differently. For 'memory:...' it's often the object itself.
-            feedback.pushInfo(self.tr(f"Reprojection output was not a QgsVectorLayer, but: {type(reprojected_output_value)}. Attempting to load if it's a path/ID: {reprojected_output_value}"))
-            # We expect 'memory:protoblocks_final_epsg4326_algo' to yield a QgsVectorLayer directly.
-            # If it's a string ID like 'memory_xxxx', QgsProcessingUtils.mapLayerFromString would be needed,
-            # but that's not easily available here without 'context' which is tricky.
-            # For now, assume if it's not a QgsVectorLayer, it's an error for 'memory:' output.
-            if isinstance(reprojected_output_value, str):
-                # Use QgsProcessingUtils.mapLayerFromString to get the layer object
-                output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(reprojected_output_value, context)
-                if output_layer_epsg4326:
-                    # Optionally set a more friendly name for this in-memory instance if needed
-                    output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
-            else:
-                # This case should ideally not be hit if native:reprojectlayer with 'memory:' output
-                # consistently returns a string ID. If it returns the object, the 'else' below handles it.
-                raise QgsProcessingException(self.tr(f"Unexpected output type from final reprojection: {type(reprojected_output_value)} when expecting a string ID."))
-        else: # it is already a QgsVectorLayer object
+        if isinstance(reprojected_output_value, QgsVectorLayer):
             output_layer_epsg4326 = reprojected_output_value
-            # output_layer_epsg4326.setName("protoblocks_epsg4326") # Optional
+        elif reprojected_output_value is not None:
+            feedback.pushInfo(
+                self.tr(
+                    f"Reprojection output was of type {type(reprojected_output_value)}; attempting to load via QgsProcessingUtils.mapLayerFromString"
+                )
+            )
+            output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(
+                str(reprojected_output_value), context
+            )
+            if output_layer_epsg4326:
+                output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
 
-        if not output_layer_epsg4326 or not output_layer_epsg4326.isValid(): # Check if None or invalid
-            raise QgsProcessingException(self.tr("Failed to obtain a valid layer after final reprojection to EPSG:4326."))
+        if (
+            not output_layer_epsg4326 or not output_layer_epsg4326.isValid()
+        ):  # Check if None or invalid
+            raise QgsProcessingException(
+                self.tr(
+                    "Failed to obtain a valid layer after final reprojection to EPSG:4326."
+                )
+            )
 
         # Ensure CRS is correctly EPSG:4326 after reprojection
         # native:reprojectlayer should handle setting the CRS correctly on its output.
         # If it's not EPSG:4326 at this point, something is more fundamentally wrong with the reprojection.
         if output_layer_epsg4326.crs().authid() != crs_epsg4326.authid():
-            feedback.pushWarning(self.tr(f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}. This is unexpected after native:reprojectlayer."))
+            feedback.pushWarning(
+                self.tr(
+                    f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}. This is unexpected after native:reprojectlayer."
+                )
+            )
             # Forcing it might be an option, but native:reprojectlayer should do this.
             # output_layer_epsg4326.setCrs(crs_epsg4326)
 
-        feedback.pushInfo(self.tr(f"Final protoblocks reprojected to EPSG:4326. Features: {output_layer_epsg4326.featureCount()}, CRS: {output_layer_epsg4326.crs().authid()}"))
+        feedback.pushInfo(
+            self.tr(
+                f"Final protoblocks reprojected to EPSG:4326. Features: {output_layer_epsg4326.featureCount()}, CRS: {output_layer_epsg4326.crs().authid()}"
+            )
+        )
         # --- End Final Reprojection ---
 
+        # Write to sink (no fields) and return the layer object from context
         (sink, dest_id) = self.parameterAsSink(
             parameters,
             self.OUTPUT_PROTOBLOCKS,
             context,
-            output_layer_epsg4326.fields(), # Use fields from the final EPSG:4326 layer
+            QgsFields(),  # no fields expected in tests
             QgsWkbTypes.Polygon,
-            crs_epsg4326 # Sink CRS is now EPSG:4326
+            crs_epsg4326,
         )
-
         if sink is None:
-            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS))
-
+            raise QgsProcessingException(
+                self.invalidSinkError(parameters, self.OUTPUT_PROTOBLOCKS)
+            )
         if output_layer_epsg4326.featureCount() > 0:
-            total_out_feats = output_layer_epsg4326.featureCount()
-            for i, feat in enumerate(output_layer_epsg4326.getFeatures()): # Iterate final layer
-                if feedback.isCanceled(): break
-                sink.addFeature(feat, QgsFeatureSink.FastInsert)
-                # Progress can be more fine-grained, this is just for the final write
-                feedback.setProgress(int(90 + (i + 1) * 10.0 / total_out_feats)) # Assume this is final 10%
-
-        feedback.pushInfo(self.tr("Protoblock generation complete. Output (EPSG:4326) written."))
-        return {self.OUTPUT_PROTOBLOCKS: dest_id}
+            for feat in output_layer_epsg4326.getFeatures():
+                f = QgsFeature()
+                f.setGeometry(feat.geometry())
+                sink.addFeature(f, QgsFeatureSink.FastInsert)
+        layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id, context)
+        try:
+            QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
+        except Exception:
+            pass
+        feedback.pushInfo(self.tr("Protoblock generation complete. Sink written."))
+        return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id}
 
     def postProcessAlgorithm(self, context, feedback):
         # Clean up any persistent temporary layers if necessary
@@ -400,5 +747,13 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         # e.g., for layers like 'input_polygon_4326_path' if they were file-based.
         return {}
 
-from qgis import processing
-from qgis.core import QgsWkbTypes, QgsProcessingException, QgsCoordinateTransform, QgsRectangle
+
+try:
+    from qgis import processing
+except ImportError as e:
+    QgsMessageLog.logMessage(
+        f"Failed to import processing module: {e}",
+        "SidewalKreator",
+        Qgis.Critical,
+    )
+    raise

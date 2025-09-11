@@ -59,6 +59,9 @@ perc_to_interpolate = 0.4
 # distance to add to each side, as we are creating sidewalk axis, not kerbs
 d_to_add_to_each_side = 1  # 1m
 
+# Default timeout for network requests in seconds
+DEFAULT_TIMEOUT_SECONDS = 60
+
 
 # for values that must be ignored one must use "0" as value
 default_widths = {
@@ -104,6 +107,9 @@ default_widths = {
 # for case(s) of an unexpected value:
 fallback_default_width = 6.0
 
+# a maximum width for a sidewalk, in meters:
+MAX_SIDEWALK_WIDTH_METERS = 25.0
+
 # ASSETS:
 # names of the assets filenames:
 sidewalks_stylefilename = "sidewalkstyles.qml"
@@ -138,6 +144,9 @@ protoblocks_buffer = 0.5  # 50 cm
 
 # value to exclude "tiny segments"
 tiny_segments_tol = 0.1
+
+# minimum area/perimeter ratio to consider a sidewalk polygon valid
+min_area_perimeter_ratio = 0.02
 
 # (draw_crossings context) increment in meters if the length of the crossing is bigger than the max len
 increment_inward = 0.5

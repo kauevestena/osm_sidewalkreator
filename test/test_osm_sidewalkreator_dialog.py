@@ -8,18 +8,28 @@
 
 """
 
-__author__ = 'kauemv2@gmail.com'
-__date__ = '2021-09-29'
-__copyright__ = 'Copyright 2021, Kaue de Moraes Vestena'
+__author__ = "kauemv2@gmail.com"
+__date__ = "2021-09-29"
+__copyright__ = "Copyright 2021, Kaue de Moraes Vestena"
 
 import unittest
+import os
+import pytest
 
-from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
+pytest.importorskip("qgis")
+from qgis.PyQt.QtWidgets import QDialogButtonBox, QDialog
 
 from osm_sidewalkreator_dialog import sidewalkreatorDialog
 
 from utilities import get_qgis_app
+
 QGIS_APP = get_qgis_app()
+
+pytestmark = pytest.mark.qgis
+
+# Skip in headless/offscreen environments to avoid Qt segfaults
+if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+    pytest.skip("Skipping dialog test in headless environment", allow_module_level=True)
 
 
 class sidewalkreatorDialogTest(unittest.TestCase):
@@ -50,8 +60,8 @@ class sidewalkreatorDialogTest(unittest.TestCase):
         result = self.dialog.result()
         self.assertEqual(result, QDialog.Rejected)
 
+
 if __name__ == "__main__":
     suite = unittest.makeSuite(sidewalkreatorDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-

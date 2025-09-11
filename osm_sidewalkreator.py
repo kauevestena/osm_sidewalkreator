@@ -25,7 +25,7 @@ Plugin designated to create the Geometries of Sidewalks (separated from streets)
 """
 
 # import os.path
-import os, requests, codecs, time
+import os, codecs, time
 
 # from os import environ
 
@@ -50,6 +50,7 @@ from qgis.core import (
     QgsGeometryUtils,
     QgsFeatureRequest,
     Qgis,
+    QgsMessageLog,
     NULL,
     QgsStatisticalSummary,
 )
@@ -69,7 +70,7 @@ from .resources import *
 # Import the code for the dialog
 from .osm_sidewalkreator_dialog import sidewalkreatorDialog
 
-import traceback # For improved error logging
+import traceback  # For improved error logging
 
 
 # for third-party libraries installation
@@ -103,15 +104,22 @@ import math
 from .generic_functions import *
 from .parameters import *
 
+
+def _build_plugin_paths(profile_path):
+    """Return commonly used plugin directories based on the profile path."""
+    profile_path = os.path.normpath(profile_path)
+    basepath = os.path.join(
+        profile_path, "python", "plugins", "osm_sidewalkreator"
+    )
+    temps_path = os.path.join(basepath, "temporary")
+    reports_path = os.path.join(basepath, "reports")
+    assets_path = os.path.join(basepath, "assets")
+    return basepath, temps_path, reports_path, assets_path
+
+
+
 profilepath = QgsApplication.qgisSettingsDirPath()
-base_pluginpath_p2 = "python/plugins/osm_sidewalkreator"
-basepath = os.path.join(profilepath, base_pluginpath_p2)
-temps_path = os.path.join(basepath, "temporary")
-
-print(basepath)
-reports_path = os.path.join(basepath, "reports")
-
-assets_path = os.path.join(basepath, "assets")
+basepath, temps_path, reports_path, assets_path = _build_plugin_paths(profilepath)
 
 
 # this two are here because of the dependency structure
@@ -199,7 +207,7 @@ class sidewalkreator:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
-        self.processing_provider = None # Initialize processing provider attribute
+        self.processing_provider = None  # Initialize processing provider attribute
 
         ###############################################
         ####    My code on __init__
@@ -320,7 +328,9 @@ class sidewalkreator:
         # Moved from root __init__.py's classFactory to here
         try:
             from .processing.protoblock_provider import ProtoblockProvider
-            from processing.core.Processing import Processing # QGIS's own Processing framework
+            from processing.core.Processing import (
+                Processing,
+            )  # QGIS's own Processing framework
 
             # print("[SidewalKreator Main] Attempting to initialize Processing framework and register provider in initGui.") # Removed
             Processing.initialize()
@@ -331,19 +341,26 @@ class sidewalkreator:
             # This handles if 'processing' itself is not found, or ProtoblockProvider import fails.
             self.iface.messageBar().pushMessage(
                 self.tr("Warning"),
-                self.tr("Processing framework or provider components not available. SidewalKreator Processing tools will not be loaded."),
-                level=Qgis.Warning, duration=10) # Used self.tr for message
+                self.tr(
+                    "Processing framework or provider components not available. SidewalKreator Processing tools will not be loaded."
+                ),
+                level=Qgis.Warning,
+                duration=10,
+            )  # Used self.tr for message
             # print("[SidewalKreator Main] ImportError during provider registration in initGui.") # Removed
-            traceback.print_exc() # Keep traceback for this important error
+            traceback.print_exc()  # Keep traceback for this important error
         except Exception as e:
             # import sys # sys.exc_info() is less common now, traceback.format_exc() is better
             self.iface.messageBar().pushMessage(
                 self.tr("Error"),
-                self.tr(f"Could not register SidewalKreator Processing provider: {e}"), # Simplified message
-                level=Qgis.Critical, duration=10)
+                self.tr(
+                    f"Could not register SidewalKreator Processing provider: {e}"
+                ),  # Simplified message
+                level=Qgis.Critical,
+                duration=10,
+            )
             # print(f"[SidewalKreator Main] Exception during provider registration in initGui: {e}") # Removed
-            traceback.print_exc() # Keep traceback for this important error
-
+            traceback.print_exc()  # Keep traceback for this important error
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -355,18 +372,23 @@ class sidewalkreator:
         # Unregister Processing Provider
         if self.processing_provider:
             try:
-                QgsApplication.processingRegistry().removeProvider(self.processing_provider)
+                QgsApplication.processingRegistry().removeProvider(
+                    self.processing_provider
+                )
                 # print("[SidewalKreator Main] Successfully unregistered ProtoblockProvider in unload.") # Removed
             except Exception as e:
                 # print(f"[SidewalKreator Main] Error unregistering ProtoblockProvider in unload: {e}") # Removed
                 # Log to QGIS message bar if unregistering fails
                 self.iface.messageBar().pushMessage(
                     self.tr("Warning"),
-                    self.tr(f"Error unregistering SidewalKreator Processing provider: {e}"),
-                    level=Qgis.Warning, duration=5)
-                traceback.print_exc() # Keep traceback for this
+                    self.tr(
+                        f"Error unregistering SidewalKreator Processing provider: {e}"
+                    ),
+                    level=Qgis.Warning,
+                    duration=5,
+                )
+                traceback.print_exc()  # Keep traceback for this
         self.processing_provider = None
-
 
     def run(self):
         """Run method that performs all the real work"""
@@ -632,7 +654,7 @@ class sidewalkreator:
         self.dlg.higway_values_table.setEnabled(False)
 
         # removing undesired tag values:
-        ids_to_delete_in_clipped_layer = set() # Use a set to avoid duplicate IDs
+        ids_to_delete_in_clipped_layer = set()  # Use a set to avoid duplicate IDs
         values_for_deletion_criteria = set()
 
         for value in self.unique_highway_values:
@@ -642,7 +664,9 @@ class sidewalkreator:
                 already_existing_sidewalks_list = select_feats_by_attr(
                     self.clipped_reproj_datalayer, "footway", "sidewalk"
                 )
-                if already_existing_sidewalks_list: # only create layer if features exist
+                if (
+                    already_existing_sidewalks_list
+                ):  # only create layer if features exist
                     self.already_existing_sidewalks_layer = layer_from_featlist(
                         already_existing_sidewalks_list,
                         "already_existing_sidewalks",
@@ -650,13 +674,17 @@ class sidewalkreator:
                         CRS=self.custom_localTM_crs,
                     )
                 else:
-                    self.already_existing_sidewalks_layer = None # Ensure it's None if no features
+                    self.already_existing_sidewalks_layer = (
+                        None  # Ensure it's None if no features
+                    )
 
                 # for crossings:
                 already_existing_crossings_list = select_feats_by_attr(
                     self.clipped_reproj_datalayer, "footway", "crossing"
                 )
-                if already_existing_crossings_list: # only create layer if features exist
+                if (
+                    already_existing_crossings_list
+                ):  # only create layer if features exist
                     self.already_existing_crossings_layer = layer_from_featlist(
                         already_existing_crossings_list,
                         "already_existing_crossings",
@@ -664,10 +692,10 @@ class sidewalkreator:
                         CRS=self.custom_localTM_crs,
                     )
                 else:
-                    self.already_existing_crossings_layer = None # Ensure it's None
+                    self.already_existing_crossings_layer = None  # Ensure it's None
 
             # Accumulate values that meet the deletion criteria (width < 0.5)
-            if highway_valuestable_dict.get(value, float('inf')) < 0.5:
+            if highway_valuestable_dict.get(value, float("inf")) < 0.5:
                 values_for_deletion_criteria.add(value)
 
         # Now, iterate once through the layer to collect IDs for deletion
@@ -678,12 +706,16 @@ class sidewalkreator:
                     if feature.attribute(field_idx) in values_for_deletion_criteria:
                         ids_to_delete_in_clipped_layer.add(feature.id())
             else:
-                print(f"Warning: '{highway_tag}' not found in layer '{self.clipped_reproj_datalayer.name()}' for deletion criteria.")
+                print(
+                    f"Warning: '{highway_tag}' not found in layer '{self.clipped_reproj_datalayer.name()}' for deletion criteria."
+                )
 
         # Perform the actual deletion in a single batch
         if ids_to_delete_in_clipped_layer:
             with edit(self.clipped_reproj_datalayer):
-                self.clipped_reproj_datalayer.deleteFeatures(list(ids_to_delete_in_clipped_layer))
+                self.clipped_reproj_datalayer.deleteFeatures(
+                    list(ids_to_delete_in_clipped_layer)
+                )
 
         # self.add_layer_canvas(self.already_existing_sidewalks_layer) # Conditional add if layer exists
         # self.add_layer_canvas(self.already_existing_crossings_layer) # Conditional add
@@ -1175,10 +1207,13 @@ class sidewalkreator:
             self.dissolved_sidewalks, True
         )
         # Prepare geometry for faster intersection tests if supported
-        if self.dissolved_sidewalks_geom and hasattr(self.dissolved_sidewalks_geom, 'prepareGeometry'):
+        if self.dissolved_sidewalks_geom and hasattr(
+            self.dissolved_sidewalks_geom, "prepareGeometry"
+        ):
             if not self.dissolved_sidewalks_geom.prepareGeometry():
-                print("Warning: Failed to prepare geometry for dissolved_sidewalks_geom.")
-
+                print(
+                    "Warning: Failed to prepare geometry for dissolved_sidewalks_geom."
+                )
 
         # analyzing if the endpoits of splitted lines are elegible for
         #   iterating again each street segment:
@@ -3961,7 +3996,9 @@ class sidewalkreator:
 
                 # Use a small buffer around the tiny feature for candidate search
                 # The buffer distance can be fine-tuned, e.g., snap_disjointed_tol
-                search_rect = tiny_feature_geom.buffer(0.1, 5).boundingBox() # Small buffer for touch candidates
+                search_rect = tiny_feature_geom.buffer(
+                    0.1, 5
+                ).boundingBox()  # Small buffer for touch candidates
                 candidate_ids = adj_lines_index.intersects(search_rect)
 
                 for adj_feat_id in candidate_ids:
@@ -3989,9 +4026,11 @@ class sidewalkreator:
                     try:
                         feat2 = next(feat2_iterator)
                     except StopIteration:
-                        continue # Should not happen if index is in sync
+                        continue  # Should not happen if index is in sync
 
-                    if feat2.id() in already_used_adj: # Double check, id() is more robust if FIDs are complex
+                    if (
+                        feat2.id() in already_used_adj
+                    ):  # Double check, id() is more robust if FIDs are complex
                         continue
 
                     if tiny_feature_geom.touches(feat2.geometry()):
@@ -4012,9 +4051,13 @@ class sidewalkreator:
                             # feat2 itself is from extracted_adj_lines, which is a subset of self.whole_sidewalks
                             # So, feat2[orig_id_fieldname] is the ID in self.whole_sidewalks to delete
                             id_to_delete_in_whole_sidewalks = feat2[orig_id_fieldname]
-                            self.whole_sidewalks.deleteFeature(id_to_delete_in_whole_sidewalks)
+                            self.whole_sidewalks.deleteFeature(
+                                id_to_delete_in_whole_sidewalks
+                            )
 
-                            already_used_adj.append(feat2.id()) # Keep track of used features from extracted_adj_lines
+                            already_used_adj.append(
+                                feat2.id()
+                            )  # Keep track of used features from extracted_adj_lines
                             # also mark the one that was merged from tiny_feats_dict as used in a way, or remove from tiny_feats_dict?
                             # The outer loop iterates feat_id from tiny_feats_dict. If it's merged, it's effectively processed.
                             break  # Move to the next tiny_feature (next feat_id)

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: ./run_protoblocks_bbox.sh [--min_lon=F --min_lat=F --max_lon=F --max_lat=F] [-o FILE] [--crs=EPSG:code]
+# Examples:
+#   ./run_protoblocks_bbox.sh
+#   ./run_protoblocks_bbox.sh --min_lon=-49.3 --min_lat=-25.5 --max_lon=-49.29 --max_lat=-25.45 -o outputs/proto.geojson
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT_DIR="${ROOT_DIR}/assets/test_outputs"
+mkdir -p "${OUT_DIR}"
+
+OUTPUT_PATH="${OUT_DIR}/protoblocks_bbox.geojson"
+INPUT_CRS="EPSG:4326"
+
+MIN_LON=""; MIN_LAT=""; MAX_LON=""; MAX_LAT=""; BBOX_ARG=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --min_lon=*) MIN_LON="${arg#*=}" ;;
+    --min_lat=*) MIN_LAT="${arg#*=}" ;;
+    --max_lon=*) MAX_LON="${arg#*=}" ;;
+    --max_lat=*) MAX_LAT="${arg#*=}" ;;
+    --bbox=*) BBOX_ARG="${arg#*=}" ;;
+    --crs=*) INPUT_CRS="${arg#*=}" ;;
+    -o|--output) shift; OUTPUT_PATH="${1:-}"; shift || true ;;
+    --output=*) OUTPUT_PATH="${arg#*=}" ;;
+    -h|--help)
+      cat <<EOF
+Usage: $0 [--min_lon=F --min_lat=F --max_lon=F --max_lat=F] [-o FILE] [--crs=EPSG:code]
+EOF
+      exit 0 ;;
+  esac
+done
+
+if [[ -n "$BBOX_ARG" ]] && [[ -z "$MIN_LON$MIN_LAT$MAX_LON$MAX_LAT" ]]; then
+  IFS=',' read -r MIN_LON MIN_LAT MAX_LON MAX_LAT <<< "$BBOX_ARG"
+fi
+
+if [[ -z "$MIN_LON$MIN_LAT$MAX_LON$MAX_LAT" ]]; then
+  if command -v jq >/dev/null 2>&1; then
+    MIN_LON=$(jq -r .min_lon "${ROOT_DIR}/assets/test_data/bbox.json")
+    MIN_LAT=$(jq -r .min_lat "${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LON=$(jq -r .max_lon "${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LAT=$(jq -r .max_lat "${ROOT_DIR}/assets/test_data/bbox.json")
+  else
+    MIN_LON=$(python3 - <<PY
+import json,sys
+d=json.load(open(sys.argv[1]));print(d['min_lon'])
+PY
+"${ROOT_DIR}/assets/test_data/bbox.json")
+    MIN_LAT=$(python3 - <<PY
+import json,sys
+d=json.load(open(sys.argv[1]));print(d['min_lat'])
+PY
+"${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LON=$(python3 - <<PY
+import json,sys
+d=json.load(open(sys.argv[1]));print(d['max_lon'])
+PY
+"${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LAT=$(python3 - <<PY
+import json,sys
+d=json.load(open(sys.argv[1]));print(d['max_lat'])
+PY
+"${ROOT_DIR}/assets/test_data/bbox.json")
+  fi
+fi
+
+export MIN_LON MIN_LAT MAX_LON MAX_LAT INPUT_CRS OUTPUT_PATH
+
+echo "Running protoblocks (bbox):"
+echo "  BBOX:   ${MIN_LON},${MIN_LAT},${MAX_LON},${MAX_LAT}"
+echo "  CRS:    ${INPUT_CRS}"
+echo "  Output: ${OUTPUT_PATH}"
+
+docker run --rm \
+  -e MIN_LON -e MIN_LAT -e MAX_LON -e MAX_LAT -e INPUT_CRS -e OUTPUT_PATH \
+  -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
+  -w / \
+  qgis/qgis:latest bash -lc '
+set -euo pipefail
+mkdir -p /tmp/runtime-qgis && chmod 700 /tmp/runtime-qgis
+export XDG_RUNTIME_DIR=/tmp/runtime-qgis
+export QGIS_PREFIX_PATH=/usr
+export QGIS_PLUGINPATH=/usr/lib/qgis/plugins
+export PYTHONPATH=/usr/share/qgis/python:/usr/share/qgis/python/plugins:/plugins
+export QT_QPA_PLATFORM=offscreen
+python3 - <<PY
+import os
+from qgis.core import QgsApplication
+QgsApplication.setPrefixPath("/usr", True)
+app=QgsApplication([], False); app.initQgis()
+from qgis.analysis import QgsNativeAlgorithms
+QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
+from osm_sidewalkreator.processing.protoblock_provider import ProtoblockProvider
+QgsApplication.processingRegistry().addProvider(ProtoblockProvider())
+from osm_sidewalkreator.processing.protoblock_bbox_algorithm import ProtoblockBboxAlgorithm
+from qgis import processing
+
+min_lon=float(os.environ["MIN_LON"]); min_lat=float(os.environ["MIN_LAT"]) 
+max_lon=float(os.environ["MAX_LON"]); max_lat=float(os.environ["MAX_LAT"]) 
+input_crs = os.environ.get("INPUT_CRS", "EPSG:4326")
+outp = os.environ.get("OUTPUT_PATH", "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_bbox.geojson")
+if not outp.startswith("/"):
+    outp = f"/plugins/osm_sidewalkreator/{outp}"
+import os as _os
+_os.makedirs(_os.path.dirname(outp), exist_ok=True)
+
+# Build extent string in order xMin, xMax, yMin, yMax (QGIS parsing quirk workaround)
+west_lon, east_lon = min_lon, max_lon
+south_lat, north_lat = min_lat, max_lat
+extent=f"{west_lon},{east_lon},{south_lat},{north_lat} [{input_crs}]"
+params={
+  ProtoblockBboxAlgorithm.EXTENT: extent,
+  ProtoblockBboxAlgorithm.TIMEOUT: 60,
+  ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS: outp,
+}
+result = processing.run(ProtoblockBboxAlgorithm(), params)
+print("Processing completed successfully!")
+print(f"Output sink: {result.get(ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS)}")
+PY'
+
+echo "Wrote: ${OUTPUT_PATH}"
