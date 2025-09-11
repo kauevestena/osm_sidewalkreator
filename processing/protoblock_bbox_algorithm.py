@@ -21,7 +21,8 @@ from qgis.core import (
     QgsField,
     QgsCoordinateTransform,
     QgsProcessingParameterExtent,
-)  # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform
+    QgsSpatialIndex,
+)  # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform, Added QgsSpatialIndex
 import math
 import os
 
