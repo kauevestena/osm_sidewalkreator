@@ -1,56 +1,81 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./run_protoblocks_bbox.sh [input_crs]
+# Usage: ./run_protoblocks_bbox.sh [--min_lon=F --min_lat=F --max_lon=F --max_lat=F] [-o FILE] [--crs=EPSG:code]
 # Examples:
-#   ./run_protoblocks_bbox.sh                # Uses bbox.json coordinates with EPSG:4326
-#   ./run_protoblocks_bbox.sh EPSG:3857      # Uses bbox.json coordinates with EPSG:3857
+#   ./run_protoblocks_bbox.sh
+#   ./run_protoblocks_bbox.sh --min_lon=-49.3 --min_lat=-25.5 --max_lon=-49.29 --max_lat=-25.45 -o outputs/proto.geojson
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${ROOT_DIR}/assets/test_outputs"
-
-# Set input CRS with default
-INPUT_CRS="${1:-EPSG:4326}"
-
 mkdir -p "${OUT_DIR}"
 
-echo "Running protoblocks generation from bbox with:"
-echo "  Input CRS: $INPUT_CRS"
-echo "  Output directory: $OUT_DIR"
+OUTPUT_PATH="${OUT_DIR}/protoblocks_bbox.geojson"
+INPUT_CRS="EPSG:4326"
 
-if command -v jq >/dev/null 2>&1; then
-  MIN_LON=$(jq -r .min_lon "${ROOT_DIR}/assets/test_data/bbox.json")
-  MIN_LAT=$(jq -r .min_lat "${ROOT_DIR}/assets/test_data/bbox.json")
-  MAX_LON=$(jq -r .max_lon "${ROOT_DIR}/assets/test_data/bbox.json")
-  MAX_LAT=$(jq -r .max_lat "${ROOT_DIR}/assets/test_data/bbox.json")
-else
-  echo "jq not found; using defaults from bbox.json"
-  MIN_LON=$(python3 - <<PY
+MIN_LON=""; MIN_LAT=""; MAX_LON=""; MAX_LAT=""; BBOX_ARG=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --min_lon=*) MIN_LON="${arg#*=}" ;;
+    --min_lat=*) MIN_LAT="${arg#*=}" ;;
+    --max_lon=*) MAX_LON="${arg#*=}" ;;
+    --max_lat=*) MAX_LAT="${arg#*=}" ;;
+    --bbox=*) BBOX_ARG="${arg#*=}" ;;
+    --crs=*) INPUT_CRS="${arg#*=}" ;;
+    -o|--output) shift; OUTPUT_PATH="${1:-}"; shift || true ;;
+    --output=*) OUTPUT_PATH="${arg#*=}" ;;
+    -h|--help)
+      cat <<EOF
+Usage: $0 [--min_lon=F --min_lat=F --max_lon=F --max_lat=F] [-o FILE] [--crs=EPSG:code]
+EOF
+      exit 0 ;;
+  esac
+done
+
+if [[ -n "$BBOX_ARG" ]] && [[ -z "$MIN_LON$MIN_LAT$MAX_LON$MAX_LAT" ]]; then
+  IFS=',' read -r MIN_LON MIN_LAT MAX_LON MAX_LAT <<< "$BBOX_ARG"
+fi
+
+if [[ -z "$MIN_LON$MIN_LAT$MAX_LON$MAX_LAT" ]]; then
+  if command -v jq >/dev/null 2>&1; then
+    MIN_LON=$(jq -r .min_lon "${ROOT_DIR}/assets/test_data/bbox.json")
+    MIN_LAT=$(jq -r .min_lat "${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LON=$(jq -r .max_lon "${ROOT_DIR}/assets/test_data/bbox.json")
+    MAX_LAT=$(jq -r .max_lat "${ROOT_DIR}/assets/test_data/bbox.json")
+  else
+    MIN_LON=$(python3 - <<PY
 import json,sys
 d=json.load(open(sys.argv[1]));print(d['min_lon'])
 PY
 "${ROOT_DIR}/assets/test_data/bbox.json")
-  MIN_LAT=$(python3 - <<PY
+    MIN_LAT=$(python3 - <<PY
 import json,sys
 d=json.load(open(sys.argv[1]));print(d['min_lat'])
 PY
 "${ROOT_DIR}/assets/test_data/bbox.json")
-  MAX_LON=$(python3 - <<PY
+    MAX_LON=$(python3 - <<PY
 import json,sys
 d=json.load(open(sys.argv[1]));print(d['max_lon'])
 PY
 "${ROOT_DIR}/assets/test_data/bbox.json")
-  MAX_LAT=$(python3 - <<PY
+    MAX_LAT=$(python3 - <<PY
 import json,sys
 d=json.load(open(sys.argv[1]));print(d['max_lat'])
 PY
 "${ROOT_DIR}/assets/test_data/bbox.json")
+  fi
 fi
 
-export MIN_LON MIN_LAT MAX_LON MAX_LAT INPUT_CRS
+export MIN_LON MIN_LAT MAX_LON MAX_LAT INPUT_CRS OUTPUT_PATH
+
+echo "Running protoblocks (bbox):"
+echo "  BBOX:   ${MIN_LON},${MIN_LAT},${MAX_LON},${MAX_LAT}"
+echo "  CRS:    ${INPUT_CRS}"
+echo "  Output: ${OUTPUT_PATH}"
 
 docker run --rm \
-  -e MIN_LON -e MIN_LAT -e MAX_LON -e MAX_LAT -e INPUT_CRS \
+  -e MIN_LON -e MIN_LAT -e MAX_LON -e MAX_LAT -e INPUT_CRS -e OUTPUT_PATH \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -w / \
   qgis/qgis:latest bash -lc '
@@ -76,23 +101,24 @@ from qgis import processing
 min_lon=float(os.environ["MIN_LON"]); min_lat=float(os.environ["MIN_LAT"]) 
 max_lon=float(os.environ["MAX_LON"]); max_lat=float(os.environ["MAX_LAT"]) 
 input_crs = os.environ.get("INPUT_CRS", "EPSG:4326")
+outp = os.environ.get("OUTPUT_PATH", "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_bbox.geojson")
+if not outp.startswith("/"):
+    outp = f"/plugins/osm_sidewalkreator/{outp}"
+import os as _os
+_os.makedirs(_os.path.dirname(outp), exist_ok=True)
 
-print(f"Processing bbox: {min_lon},{min_lat},{max_lon},{max_lat}")
-print(f"Input CRS: {input_crs}")
-
-# Use same format as run_full_bbox.sh to work around QGIS coordinate swapping
+# Build extent string in order xMin, xMax, yMin, yMax (QGIS parsing quirk workaround)
 west_lon, east_lon = min_lon, max_lon
 south_lat, north_lat = min_lat, max_lat
 extent=f"{west_lon},{east_lon},{south_lat},{north_lat} [{input_crs}]"
 params={
   ProtoblockBboxAlgorithm.EXTENT: extent,
   ProtoblockBboxAlgorithm.TIMEOUT: 60,
-  ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS: "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_bbox.geojson"
+  ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS: outp,
 }
 result = processing.run(ProtoblockBboxAlgorithm(), params)
 print("Processing completed successfully!")
-print(f"Output: {result}")
+print(f"Output sink: {result.get(ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS)}")
 PY'
 
-echo "Wrote: ${OUT_DIR}/protoblocks_bbox.geojson"
-echo "Command completed successfully with CRS: $INPUT_CRS"
+echo "Wrote: ${OUTPUT_PATH}"

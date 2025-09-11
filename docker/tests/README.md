@@ -11,6 +11,13 @@ This folder contains various test scripts for the OSM SidewalKreator Docker func
 - **`test_protoblock_with_provider_fixed.sh`** - Fixed version of the provider registration test
 - **`run_full_protoblock_test.sh`** - Comprehensive test that runs the full protoblock algorithm with CRS support
 
+### Smoke Tests (Convenience Runners)
+
+- **`smoke_protoblocks_polygon.sh`** - Calls `run_protoblocks_polygon.sh` with repo asset; verifies output exists
+- **`smoke_full_polygon.sh`** - Calls `run_full_polygon.sh` with repo asset; verifies sidewalks output exists
+- **`smoke_protoblocks_bbox.sh`** - Calls `run_protoblocks_bbox.sh` using `bbox.json`; verifies output exists
+- **`smoke_full_bbox.sh`** - Calls `run_full_bbox.sh` using `bbox.json`; verifies sidewalks output exists
+
 ### Utility Scripts
 
 - **`convert_coords.py`** - Python script to convert coordinates between EPSG:4326 and EPSG:3857 using GDAL
@@ -18,13 +25,18 @@ This folder contains various test scripts for the OSM SidewalKreator Docker func
 
 ## Usage
 
-All test scripts should be run from the `docker/` directory:
+All test scripts should be run from the `docker/` directory. To quickly validate headless runners using repo assets, you can also call the convenience scripts with explicit arguments:
 
 ```bash
 cd docker/
 ./tests/test_protoblock_direct.sh
 ./tests/test_protoblock_with_provider_fixed.sh
-./tests/run_full_protoblock_test.sh
+
+# Convenience runners (use repo assets via flags)
+./run_protoblocks_polygon.sh -i assets/test_data/polygon.geojson -o assets/test_outputs/protoblocks_polygon.geojson
+./run_full_polygon.sh -i assets/test_data/polygon.geojson -o assets/test_outputs/sidewalks_polygon.geojson
+./run_protoblocks_bbox.sh --bbox=-49.3,-25.5,-49.29,-25.45 -o assets/test_outputs/protoblocks_bbox.geojson
+./run_full_bbox.sh --bbox=-49.3,-25.5,-49.29,-25.45 -o assets/test_outputs/sidewalks_bbox.geojson
 ```
 
 The `run_full_protoblock_test.sh` script is the most comprehensive and tests:

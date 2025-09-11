@@ -15,6 +15,7 @@ OPTIONS:
   --bbox=LON,LAT,LON,LAT  Bounding box as min_lon,min_lat,max_lon,max_lat
   --buildings             Include building data (default)
   --no-buildings          Skip building data
+  --output, -o FILE       Output sidewalks file (OGR-supported path)
   --help, -h              Show this help message
 
 COORDINATE PRIORITY:
@@ -43,6 +44,7 @@ MIN_LON_ARG=""
 MIN_LAT_ARG=""
 MAX_LON_ARG=""
 MAX_LAT_ARG=""
+OUTPUT_PATH="${OUT_DIR}/sidewalks_bbox.geojson"
 
 for arg in "$@"; do
   case "$arg" in
@@ -54,6 +56,8 @@ for arg in "$@"; do
     --max_lat=*) MAX_LAT_ARG="${arg#*=}" ;;
     --no-buildings) GET_BUILDINGS_ARG="0" ;;
     --buildings) GET_BUILDINGS_ARG="1" ;;
+    -o|--output) shift; OUTPUT_PATH="${1:-}"; shift || true ;;
+    --output=*) OUTPUT_PATH="${arg#*=}" ;;
   esac
 done
 
@@ -112,6 +116,7 @@ docker run --rm \
   -e MIN_LON -e MIN_LAT -e MAX_LON -e MAX_LAT \
   -e GET_BUILDINGS=${GET_BUILDINGS_ARG:-1} \
   -e STREET_CLASSES=${CLASSES_ARG:-10} \
+  -e OUTPUT_PATH="${OUTPUT_PATH}" \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -w / \
   qgis/qgis:latest bash -lc '
@@ -156,15 +161,20 @@ print(f"DOCKER DEBUG: Input coordinates - min_lon:{min_lon}, min_lat:{min_lat}, 
 print(f"DOCKER DEBUG: Normalized bounds - west:{west_lon}, south:{south_lat}, east:{east_lon}, north:{north_lat}")
 print(f"DOCKER DEBUG: QGIS workaround extent: {extent}")
 import sys; sys.stdout.flush()  # Force output to be visible
+outp = os.environ.get("OUTPUT_PATH", "/plugins/osm_sidewalkreator/assets/test_outputs/sidewalks_bbox.geojson")
+if not outp.startswith("/"):
+    outp = f"/plugins/osm_sidewalkreator/{outp}"
+import os as _os
+_os.makedirs(_os.path.dirname(outp), exist_ok=True)
 params={
   "INPUT_EXTENT": extent,
   "TIMEOUT": 90,
   "GET_BUILDING_DATA": os.getenv("GET_BUILDINGS", "1") in ("1","true","TRUE","yes","YES"),
   "STREET_CLASSES": street_classes,
-  "OUTPUT_SIDEWALKS": "/plugins/osm_sidewalkreator/assets/test_outputs/sidewalks_bbox.geojson"
+  "OUTPUT_SIDEWALKS": outp
 }
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorBboxAlgorithm(), params))
 PY'
 
-echo "Wrote: ${OUT_DIR}/sidewalks_bbox.geojson"
+echo "Wrote: ${OUTPUT_PATH}"
