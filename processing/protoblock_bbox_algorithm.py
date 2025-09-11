@@ -372,12 +372,90 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                 )
             return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
+        # --- Sidewalk Analysis ---
+        feedback.pushInfo(self.tr("Analyzing sidewalks for protoblocks..."))
+
+        # Create a spatial index for the street layer for faster queries
+        street_index = QgsSpatialIndex(filtered_streets_layer.getFeatures())
+
+        # Create a new layer for protoblocks with sidewalk info
+        output_fields = QgsFields()
+        output_fields.append(QgsField("existing_sidewalks", QVariant.Bool))
+        output_fields.append(QgsField("existing_sidewalks_length", QVariant.Double))
+
+        protoblocks_with_sidewalks = QgsVectorLayer(
+            f"Polygon?crs={local_tm_crs.authid()}",
+            "protoblocks_with_sidewalks_info",
+            "memory",
+        )
+        protoblocks_with_sidewalks_dp = protoblocks_with_sidewalks.dataProvider()
+        protoblocks_with_sidewalks_dp.addAttributes(output_fields)
+        protoblocks_with_sidewalks.updateFields()
+
+        # Get field indices for sidewalk tags
+        sidewalk_field_idx = filtered_streets_layer.fields().lookupField("sidewalk")
+        sidewalk_left_field_idx = filtered_streets_layer.fields().lookupField(
+            "sidewalk:left"
+        )
+        sidewalk_right_field_idx = filtered_streets_layer.fields().lookupField(
+            "sidewalk:right"
+        )
+        sidewalk_both_field_idx = filtered_streets_layer.fields().lookupField(
+            "sidewalk:both"
+        )
+
+        protoblock_features = []
+        for protoblock_feat in protoblocks_in_local_tm.getFeatures():
+            if feedback.isCanceled():
+                return {}
+
+            protoblock_geom = protoblock_feat.geometry()
+            intersecting_street_ids = street_index.intersects(protoblock_geom.boundingBox())
+
+            has_sidewalk = False
+            sidewalk_length = 0.0
+
+            if intersecting_street_ids:
+                request = QgsFeatureRequest().setFilterFids(intersecting_street_ids)
+                for street_feat in filtered_streets_layer.getFeatures(request):
+                    if protoblock_geom.intersects(street_feat.geometry()):
+
+                        # Check for sidewalk tags
+                        sidewalk_tag = street_feat.attribute(sidewalk_field_idx) if sidewalk_field_idx != -1 else None
+                        sidewalk_left_tag = street_feat.attribute(sidewalk_left_field_idx) if sidewalk_left_field_idx != -1 else None
+                        sidewalk_right_tag = street_feat.attribute(sidewalk_right_field_idx) if sidewalk_right_field_idx != -1 else None
+                        sidewalk_both_tag = street_feat.attribute(sidewalk_both_field_idx) if sidewalk_both_field_idx != -1 else None
+
+                        # Conditions to consider a sidewalk present
+                        is_sw_present = (
+                            sidewalk_tag in ("yes", "both", "left", "right") or
+                            sidewalk_left_tag == "yes" or
+                            sidewalk_right_tag == "yes" or
+                            sidewalk_both_tag == "yes"
+                        )
+
+                        if is_sw_present:
+                            has_sidewalk = True
+                            sidewalk_length += street_feat.geometry().length()
+
+            new_feat = QgsFeature(output_fields)
+            new_feat.setGeometry(protoblock_geom)
+            new_feat.setAttributes([has_sidewalk, sidewalk_length])
+            protoblock_features.append(new_feat)
+
+        protoblocks_with_sidewalks_dp.addFeatures(protoblock_features)
+        feedback.pushInfo(
+            self.tr(
+                f"Sidewalk analysis complete. {protoblocks_with_sidewalks.featureCount()} protoblocks processed."
+            )
+        )
+
         # --- Final Reprojection to EPSG:4326 ---
         feedback.pushInfo(self.tr("Reprojecting final protoblocks to EPSG:4326..."))
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
 
         reproject_params_final = {
-            "INPUT": protoblocks_in_local_tm,
+            "INPUT": protoblocks_with_sidewalks,
             "TARGET_CRS": crs_epsg4326,
             "OUTPUT": "memory:protoblocks_final_epsg4326_bbox_algo",
         }
