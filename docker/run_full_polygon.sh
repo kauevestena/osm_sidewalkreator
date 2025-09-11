@@ -7,34 +7,61 @@ mkdir -p "${OUT_DIR}"
 
 INPUT_POLYGON="${ROOT_DIR}/assets/test_data/polygon.geojson"
 SIDEWALKS_OUT="${OUT_DIR}/sidewalks_polygon.geojson"
-# By default, keep auxiliary outputs in memory to avoid file I/O issues
-CROSSINGS_OUT="memory:"
-KERBS_OUT="memory:"
+# Auxiliary outputs; may be derived from sidewalks output when user sets -o
+CROSSINGS_OUT_DEFAULT="memory:"
+KERBS_OUT_DEFAULT="memory:"
+CROSSINGS_OUT="$CROSSINGS_OUT_DEFAULT"
+KERBS_OUT="$KERBS_OUT_DEFAULT"
 
 # CLI overrides
 CLASSES_ARG=""
 GET_BUILDINGS_ARG=""
 FETCH_ADDR_ARG=""
+USER_SET_OUT=0
+CROSSINGS_SET=0
+KERBS_SET=0
+ONLY_SIDEWALKS=0
 for arg in "$@"; do
   case "$arg" in
     -i|--input) shift; INPUT_POLYGON="${1:-}"; shift || true ;;
     --input=*) INPUT_POLYGON="${arg#*=}" ;;
-    -o|--output) shift; SIDEWALKS_OUT="${1:-}"; shift || true ;;
-    --output=*) SIDEWALKS_OUT="${arg#*=}" ;;
-    --crossings-output=*) CROSSINGS_OUT="${arg#*=}" ;;
-    --kerbs-output=*) KERBS_OUT="${arg#*=}" ;;
+    -o|--output) shift; SIDEWALKS_OUT="${1:-}"; USER_SET_OUT=1; shift || true ;;
+    --output=*) SIDEWALKS_OUT="${arg#*=}"; USER_SET_OUT=1 ;;
+    --crossings-output=*) CROSSINGS_OUT="${arg#*=}"; CROSSINGS_SET=1 ;;
+    --kerbs-output=*) KERBS_OUT="${arg#*=}"; KERBS_SET=1 ;;
     --classes=*) CLASSES_ARG="${arg#*=}" ;;
     --no-buildings) GET_BUILDINGS_ARG="0" ;;
     --buildings) GET_BUILDINGS_ARG="1" ;;
     --no-addresses) FETCH_ADDR_ARG="0" ;;
     --addresses) FETCH_ADDR_ARG="1" ;;
+    --only_sidewalks|--only-sidewalks) ONLY_SIDEWALKS=1 ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [-i FILE] [-o FILE] [--classes=...] [--no-buildings|--buildings] [--no-addresses|--addresses] [--crossings-output=FILE] [--kerbs-output=FILE]
+Usage: $0 [-i FILE] [-o FILE] [--classes=...] [--no-buildings|--buildings] [--no-addresses|--addresses] [--crossings-output=FILE] [--kerbs-output=FILE] [--only_sidewalks]
 EOF
       exit 0 ;;
   esac
 done
+
+# If user requested a sidewalks file and crossings/kerbs weren't explicitly set,
+# derive their filenames by inserting suffixes before the extension.
+if [[ "$USER_SET_OUT" -eq 1 && "$ONLY_SIDEWALKS" -eq 0 ]]; then
+  derive_with_suffix() {
+    local f="$1"; local suf="$2"; local root ext
+    if [[ "$f" == *.* ]]; then
+      root="${f%.*}"; ext="${f##*.}"
+    else
+      root="$f"; ext="geojson"
+    fi
+    echo "${root}_${suf}.${ext}"
+  }
+  if [[ "$CROSSINGS_SET" -eq 0 ]]; then
+    CROSSINGS_OUT="$(derive_with_suffix "$SIDEWALKS_OUT" crossings)"
+  fi
+  if [[ "$KERBS_SET" -eq 0 ]]; then
+    KERBS_OUT="$(derive_with_suffix "$SIDEWALKS_OUT" kerbs)"
+  fi
+fi
 
 if [[ ! -f "$INPUT_POLYGON" ]]; then
   # Try to resolve relative to repo root
@@ -68,8 +95,8 @@ docker run --rm \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -e INPUT_POLYGON="${CONTAINER_INP_REL}" \
   -e OUTPUT_SIDEWALKS="${SIDEWALKS_OUT}" \
-  -e OUTPUT_CROSSINGS="${CROSSINGS_OUT}" \
-  -e OUTPUT_KERBS="${KERBS_OUT}" \
+  -e OUTPUT_CROSSINGS="${CROSSINGS_OUT:-memory:}" \
+  -e OUTPUT_KERBS="${KERBS_OUT:-memory:}" \
   -e GET_BUILDINGS=${GET_BUILDINGS_ARG:-1} \
   -e FETCH_ADDRESSES=${FETCH_ADDR_ARG:-1} \
   -e STREET_CLASSES=${CLASSES_ARG:-10} \

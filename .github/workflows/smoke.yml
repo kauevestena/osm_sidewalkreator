@@ -1,0 +1,63 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QGIS_IMAGE: qgis/qgis:latest
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure scripts are executable
+        run: |
+          chmod +x docker/run_*.sh || true
+          chmod +x docker/tests/*.sh || true
+
+      - name: Install zstd for caching
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Restore cached QGIS image
+        id: cache-qgis
+        uses: actions/cache@v4
+        with:
+          path: qgis-image.tar.zst
+          key: qgis-image-${{ runner.os }}-latest-v1
+
+      - name: Load cached image
+        if: steps.cache-qgis.outputs.cache-hit == 'true'
+        run: unzstd -d qgis-image.tar.zst -c | docker load
+
+      - name: Pull and cache QGIS image
+        if: steps.cache-qgis.outputs.cache-hit != 'true'
+        run: |
+          docker pull "$QGIS_IMAGE"
+          docker save "$QGIS_IMAGE" | zstd -T0 -19 -o qgis-image.tar.zst
+
+      - name: Protoblocks (polygon)
+        run: bash docker/tests/smoke_protoblocks_polygon.sh
+
+      - name: Protoblocks (bbox)
+        run: bash docker/tests/smoke_protoblocks_bbox.sh
+
+      - name: Full (polygon)
+        run: bash docker/tests/smoke_full_polygon.sh
+
+      - name: Full (bbox)
+        run: bash docker/tests/smoke_full_bbox.sh
+
+      - name: Only sidewalks (polygon)
+        run: bash docker/tests/smoke_only_sidewalks_polygon.sh
+
+      - name: Only sidewalks (bbox)
+        run: bash docker/tests/smoke_only_sidewalks_bbox.sh

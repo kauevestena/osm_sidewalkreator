@@ -33,12 +33,21 @@ Run from the repo root (paths are resolved automatically):
 
 - `docker/run_full_bbox.sh`:
   - Coordinate sources (priority): `--min_lon/--min_lat/--max_lon/--max_lat`, then `--bbox=lon,lat,lon,lat`, then `assets/test_data/bbox.json`.
-  - Options: `--classes=10,11,...`, `--buildings`/`--no-buildings`, `-o|--output=FILE`.
+  - Options: `--classes=10,11,...`, `--buildings`/`--no-buildings`.
+  - Outputs:
+    - `-o|--output=FILE` sets the sidewalks file.
+    - If `-o` is provided and `--crossings-output`/`--kerbs-output` are not set, files are auto-derived: `filename_crossings.ext` and `filename_kerbs.ext`.
+    - `--only_sidewalks` keeps crossings/kerbs in memory instead of writing files.
   - Help: `./docker/run_full_bbox.sh --help`.
 
 - `docker/run_full_polygon.sh`:
   - Input: `-i|--input=FILE` (OGR polygon; multiple features are unary-unioned).
-  - Options: `--classes=...`, `--buildings`/`--no-buildings`, `--addresses`/`--no-addresses`, `-o|--output=FILE` (sidewalks), `--crossings-output=FILE`, `--kerbs-output=FILE`.
+  - Options: `--classes=...`, `--buildings`/`--no-buildings`, `--addresses`/`--no-addresses`.
+  - Outputs:
+    - `-o|--output=FILE` sets the sidewalks file.
+    - If `-o` is provided and `--crossings-output`/`--kerbs-output` are not set, files are auto-derived by inserting suffixes before the extension: `filename_crossings.ext` and `filename_kerbs.ext`.
+    - You may still override via `--crossings-output=FILE` / `--kerbs-output=FILE`.
+    - `--only_sidewalks` keeps crossings/kerbs in memory instead of writing files.
 
 - `docker/run_protoblocks_bbox.sh`:
   - BBox from flags or `assets/test_data/bbox.json`.
@@ -48,7 +57,7 @@ Run from the repo root (paths are resolved automatically):
   - Input: `-i|--input=FILE` (OGR polygon; multiple features are unary-unioned). Optional `--crs=EPSG:code` (default `EPSG:4326`).
   - Output: `-o|--output=FILE`.
 
-### Outputs
+### Default Outputs (if no handler was used)
 
 - Full bbox: `assets/test_outputs/sidewalks_bbox.geojson`.
 - Full polygon: `assets/test_outputs/sidewalks_polygon.geojson` by default; crossings/kerbs are kept in memory unless `--crossings-output`/`--kerbs-output` are provided.

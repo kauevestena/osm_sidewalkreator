@@ -16,6 +16,9 @@ OPTIONS:
   --buildings             Include building data (default)
   --no-buildings          Skip building data
   --output, -o FILE       Output sidewalks file (OGR-supported path)
+  --crossings-output=FILE Output crossings file (default: derived from -o or memory)
+  --kerbs-output=FILE     Output kerbs file (default: derived from -o or memory)
+  --only_sidewalks        Do not write crossings/kerbs files (keep in memory)
   --help, -h              Show this help message
 
 COORDINATE PRIORITY:
@@ -45,6 +48,12 @@ MIN_LAT_ARG=""
 MAX_LON_ARG=""
 MAX_LAT_ARG=""
 OUTPUT_PATH="${OUT_DIR}/sidewalks_bbox.geojson"
+CROSSINGS_OUT=""
+KERBS_OUT=""
+USER_SET_OUT=0
+CROSSINGS_SET=0
+KERBS_SET=0
+ONLY_SIDEWALKS=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -56,10 +65,32 @@ for arg in "$@"; do
     --max_lat=*) MAX_LAT_ARG="${arg#*=}" ;;
     --no-buildings) GET_BUILDINGS_ARG="0" ;;
     --buildings) GET_BUILDINGS_ARG="1" ;;
-    -o|--output) shift; OUTPUT_PATH="${1:-}"; shift || true ;;
-    --output=*) OUTPUT_PATH="${arg#*=}" ;;
+    -o|--output) shift; OUTPUT_PATH="${1:-}"; USER_SET_OUT=1; shift || true ;;
+    --output=*) OUTPUT_PATH="${arg#*=}"; USER_SET_OUT=1 ;;
+    --crossings-output=*) CROSSINGS_OUT="${arg#*=}"; CROSSINGS_SET=1 ;;
+    --kerbs-output=*) KERBS_OUT="${arg#*=}"; KERBS_SET=1 ;;
+    --only_sidewalks|--only-sidewalks) ONLY_SIDEWALKS=1 ;;
   esac
 done
+
+# If user requested sidewalks file and did not force only_sidewalks, derive others
+if [[ "$USER_SET_OUT" -eq 1 && "$ONLY_SIDEWALKS" -eq 0 ]]; then
+  derive_with_suffix() {
+    local f="$1"; local suf="$2"; local root ext
+    if [[ "$f" == *.* ]]; then
+      root="${f%.*}"; ext="${f##*.}"
+    else
+      root="$f"; ext="geojson"
+    fi
+    echo "${root}_${suf}.${ext}"
+  }
+  if [[ "$CROSSINGS_SET" -eq 0 ]]; then
+    CROSSINGS_OUT="$(derive_with_suffix "$OUTPUT_PATH" crossings)"
+  fi
+  if [[ "$KERBS_SET" -eq 0 ]]; then
+    KERBS_OUT="$(derive_with_suffix "$OUTPUT_PATH" kerbs)"
+  fi
+fi
 
 # Determine coordinates in order of priority:
 # 1. Individual coordinate arguments (--min_lat, etc.)
@@ -117,6 +148,8 @@ docker run --rm \
   -e GET_BUILDINGS=${GET_BUILDINGS_ARG:-1} \
   -e STREET_CLASSES=${CLASSES_ARG:-10} \
   -e OUTPUT_PATH="${OUTPUT_PATH}" \
+  -e OUTPUT_CROSSINGS="${CROSSINGS_OUT:-memory:}" \
+  -e OUTPUT_KERBS="${KERBS_OUT:-memory:}" \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -w / \
   qgis/qgis:latest bash -lc '
@@ -162,16 +195,30 @@ print(f"DOCKER DEBUG: Normalized bounds - west:{west_lon}, south:{south_lat}, ea
 print(f"DOCKER DEBUG: QGIS workaround extent: {extent}")
 import sys; sys.stdout.flush()  # Force output to be visible
 outp = os.environ.get("OUTPUT_PATH", "/plugins/osm_sidewalkreator/assets/test_outputs/sidewalks_bbox.geojson")
-if not outp.startswith("/"):
-    outp = f"/plugins/osm_sidewalkreator/{outp}"
+cr_out = os.environ.get("OUTPUT_CROSSINGS", "memory:")
+kb_out = os.environ.get("OUTPUT_KERBS", "memory:")
+
+def _normalize_out(p: str) -> str:
+    if p.startswith("/") or p.startswith("memory:"):
+        return p
+    return f"/plugins/osm_sidewalkreator/{p}"
+
+outp = _normalize_out(outp)
+cr_out = _normalize_out(cr_out)
+kb_out = _normalize_out(kb_out)
 import os as _os
-_os.makedirs(_os.path.dirname(outp), exist_ok=True)
+for p in (outp, cr_out, kb_out):
+    if p.startswith("memory:"):
+        continue
+    _os.makedirs(_os.path.dirname(p), exist_ok=True)
 params={
   "INPUT_EXTENT": extent,
   "TIMEOUT": 90,
   "GET_BUILDING_DATA": os.getenv("GET_BUILDINGS", "1") in ("1","true","TRUE","yes","YES"),
   "STREET_CLASSES": street_classes,
-  "OUTPUT_SIDEWALKS": outp
+  "OUTPUT_SIDEWALKS": outp,
+  "OUTPUT_CROSSINGS": cr_out,
+  "OUTPUT_KERBS": kb_out,
 }
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorBboxAlgorithm(), params))
