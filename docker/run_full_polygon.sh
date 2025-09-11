@@ -7,8 +7,9 @@ mkdir -p "${OUT_DIR}"
 
 INPUT_POLYGON="${ROOT_DIR}/assets/test_data/polygon.geojson"
 SIDEWALKS_OUT="${OUT_DIR}/sidewalks_polygon.geojson"
-CROSSINGS_OUT="${OUT_DIR}/crossings_polygon.geojson"
-KERBS_OUT="${OUT_DIR}/kerbs_polygon.geojson"
+# By default, keep auxiliary outputs in memory to avoid file I/O issues
+CROSSINGS_OUT="memory:"
+KERBS_OUT="memory:"
 
 # CLI overrides
 CLASSES_ARG=""
@@ -96,16 +97,21 @@ from qgis import processing
 inp = os.environ["INPUT_POLYGON"]
 inp = inp if inp.startswith("/") else f"/plugins/osm_sidewalkreator/{inp}"
 sw_out = os.environ.get("OUTPUT_SIDEWALKS", "/plugins/osm_sidewalkreator/assets/test_outputs/sidewalks_polygon.geojson")
-cr_out = os.environ.get("OUTPUT_CROSSINGS", "/plugins/osm_sidewalkreator/assets/test_outputs/crossings_polygon.geojson")
-kb_out = os.environ.get("OUTPUT_KERBS", "/plugins/osm_sidewalkreator/assets/test_outputs/kerbs_polygon.geojson")
-if not sw_out.startswith("/"):
-    sw_out = f"/plugins/osm_sidewalkreator/{sw_out}"
-if not cr_out.startswith("/"):
-    cr_out = f"/plugins/osm_sidewalkreator/{cr_out}"
-if not kb_out.startswith("/"):
-    kb_out = f"/plugins/osm_sidewalkreator/{kb_out}"
+cr_out = os.environ.get("OUTPUT_CROSSINGS", "memory:")
+kb_out = os.environ.get("OUTPUT_KERBS", "memory:")
+
+def _normalize_out(p: str) -> str:
+    if p.startswith("/") or p.startswith("memory:"):
+        return p
+    return f"/plugins/osm_sidewalkreator/{p}"
+
+sw_out = _normalize_out(sw_out)
+cr_out = _normalize_out(cr_out)
+kb_out = _normalize_out(kb_out)
 import os as _os
 for p in (sw_out, cr_out, kb_out):
+    if p.startswith("memory:"):
+        continue
     d = _os.path.dirname(p)
     _os.makedirs(d, exist_ok=True)
 

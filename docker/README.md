@@ -51,7 +51,7 @@ Run from the repo root (paths are resolved automatically):
 ### Outputs
 
 - Full bbox: `assets/test_outputs/sidewalks_bbox.geojson`.
-- Full polygon: `assets/test_outputs/sidewalks_polygon.geojson`, `assets/test_outputs/crossings_polygon.geojson`, `assets/test_outputs/kerbs_polygon.geojson`.
+- Full polygon: `assets/test_outputs/sidewalks_polygon.geojson` by default; crossings/kerbs are kept in memory unless `--crossings-output`/`--kerbs-output` are provided.
 - Protoblocks: `assets/test_outputs/protoblocks_bbox.geojson`, `assets/test_outputs/protoblocks_polygon.geojson`.
 
 ### Notes
