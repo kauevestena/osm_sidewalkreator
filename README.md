@@ -1,3 +1,5 @@
+[![Smoke Tests](https://github.com/kauevestena/osm_sidewalkreator/actions/workflows/smoke.yml/badge.svg)](https://github.com/kauevestena/osm_sidewalkreator/actions/workflows/smoke.yml)
+
 # OSM SIDEWALKREATOR
 
 [A Qgis plugin, officialy available at the official Plugin Repository!](https://plugins.qgis.org/plugins/osm_sidewalkreator/)
