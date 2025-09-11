@@ -22,9 +22,12 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsProcessingParameterExtent,
     QgsSpatialIndex,
+    QgsFeatureRequest,
 )  # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform, Added QgsSpatialIndex
 import math
 import os
+
+
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
