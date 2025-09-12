@@ -6,16 +6,13 @@ OUT_DIR="${ROOT_DIR}/assets/test_outputs"
 mkdir -p "${OUT_DIR}"
 
 INPUT_POLYGON="../assets/test_data/polygon_3857.geojson"
-INPUT_CRS="EPSG:3857"
 
 echo "Testing protoblock algorithm with provider registration:"
 echo "  Input polygon: $INPUT_POLYGON"
-echo "  Input CRS: $INPUT_CRS"
 
 docker run --rm \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -e INPUT_POLYGON="${INPUT_POLYGON}" \
-  -e INPUT_CRS="${INPUT_CRS}" \
   -w / \
   qgis/qgis:latest bash -lc '
 set -euo pipefail

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./run_protoblocks_polygon.sh [-i FILE] [-o FILE] [--crs=EPSG:code]
+# Usage: ./run_protoblocks_polygon.sh [-i FILE] [-o FILE]
 # Examples:
-#   ./run_protoblocks_polygon.sh                                          # Uses default polygon.geojson, EPSG:4326
+#   ./run_protoblocks_polygon.sh                                          # Uses default polygon.geojson
 #   ./run_protoblocks_polygon.sh -i assets/test_data/polygon.geojson      # Explicit input
-#   ./run_protoblocks_polygon.sh -i my_poly.gpkg --crs=EPSG:3857          # OGR polygon input with CRS
+#   ./run_protoblocks_polygon.sh -i my_poly.gpkg                          # OGR polygon input (layer CRS must be set)
 #   ./run_protoblocks_polygon.sh -i polygon.shp -o outputs/protob.gpkg    # Custom output path/format
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,7 +13,6 @@ OUT_DIR="${ROOT_DIR}/assets/test_outputs"
 mkdir -p "${OUT_DIR}"
 
 INPUT_POLYGON="${ROOT_DIR}/assets/test_data/polygon.geojson"
-INPUT_CRS="EPSG:4326"
 OUTPUT_PATH="${OUT_DIR}/protoblocks_polygon.geojson"
 
 for arg in "$@"; do
@@ -24,10 +23,9 @@ for arg in "$@"; do
     -o|--output)
       shift; OUTPUT_PATH="${1:-}"; shift || true ;;
     --output=*) OUTPUT_PATH="${arg#*=}" ;;
-    --crs=*) INPUT_CRS="${arg#*=}" ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [-i FILE] [-o FILE] [--crs=EPSG:code]
+Usage: $0 [-i FILE] [-o FILE]
 EOF
       exit 0 ;;
   esac
@@ -61,13 +59,11 @@ fi
 
 echo "Running protoblocks (polygon):"
 echo "  Input:  $CONTAINER_INP_REL"
-echo "  CRS:    $INPUT_CRS"
 echo "  Output: $OUTPUT_PATH"
 
 docker run --rm \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -e INPUT_POLYGON="${CONTAINER_INP_REL}" \
-  -e INPUT_CRS="${INPUT_CRS}" \
   -e OUTPUT_PATH="${OUTPUT_PATH}" \
   -w / \
   qgis/qgis:latest bash -lc '
@@ -92,7 +88,6 @@ from qgis import processing
 
 inp = os.environ["INPUT_POLYGON"]
 inp = inp if inp.startswith("/") else f"/plugins/osm_sidewalkreator/{inp}"
-crs = os.environ.get("INPUT_CRS", "EPSG:4326")
 outp = os.environ.get("OUTPUT_PATH", "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_polygon.geojson")
 if not outp.startswith("/"):
     outp = f"/plugins/osm_sidewalkreator/{outp}"
@@ -112,7 +107,6 @@ union_layer = res["OUTPUT"] if res and res.get("OUTPUT") else layer
 
 params = {
   ProtoblockAlgorithm.INPUT_POLYGON: union_layer,
-  ProtoblockAlgorithm.INPUT_CRS: crs,
   ProtoblockAlgorithm.TIMEOUT: 60,
   ProtoblockAlgorithm.OUTPUT_PROTOBLOCKS: outp,
 }

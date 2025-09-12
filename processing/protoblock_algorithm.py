@@ -7,7 +7,6 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFeatureSink,
-    QgsProcessingParameterCrs,
     QgsProcessingContext,
     QgsFeatureSink,
     QgsProcessingParameterEnum,
@@ -53,7 +52,6 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     """
 
     INPUT_POLYGON = "INPUT_POLYGON"
-    INPUT_CRS = "INPUT_CRS"
     TIMEOUT = "TIMEOUT"
     OUTPUT_PROTOBLOCKS = "OUTPUT_PROTOBLOCKS"
 
@@ -89,7 +87,7 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self):
         return self.tr(
             "Fetches OSM street data for an input polygon area, processes it (filters by type, removes dangles), and polygonizes the network to create protoblocks. "
-            "Input can be in any CRS (specify via Input CRS parameter or it will use the layer's CRS). Output is always in EPSG:4326."
+            "Input must have a valid layer CRS, which will be used automatically. Output is always in EPSG:4326."
         )
 
     def icon(self):
@@ -103,14 +101,6 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 self.INPUT_POLYGON,
                 self.tr("Input Area Polygon Layer"),
                 [QgsProcessing.TypeVectorPolygon],
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterCrs(
-                self.INPUT_CRS,
-                self.tr("Input Coordinate Reference System"),
-                defaultValue=CRS_LATLON_4326,
-                optional=True,
             )
         )
         self.addParameter(
@@ -142,21 +132,18 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 self.invalidSourceError(parameters, self.INPUT_POLYGON)
             )
 
-        # Get input CRS parameter (with fallback to source CRS if not specified)
-        input_crs_param = self.parameterAsCrs(parameters, self.INPUT_CRS, context)
+        # Use the source CRS from the input layer
         source_crs = input_polygon_feature_source.sourceCrs()
-
-        # Use the parameter CRS if specified, otherwise use source CRS
-        if input_crs_param and input_crs_param.isValid():
-            effective_input_crs = input_crs_param
-            feedback.pushInfo(
-                f"Using specified input CRS: {effective_input_crs.authid()}"
+        if not source_crs or not source_crs.isValid():
+            raise QgsProcessingException(
+                self.tr(
+                    "Input layer has no valid CRS. Please define a CRS on the layer and try again."
+                )
             )
-        else:
-            effective_input_crs = source_crs
-            feedback.pushInfo(
-                f"Using source CRS from input layer: {effective_input_crs.authid()}"
-            )
+        effective_input_crs = source_crs
+        feedback.pushInfo(
+            f"Using source CRS from input layer: {effective_input_crs.authid()}"
+        )
 
         feedback.pushInfo(f"Input polygon source CRS: {source_crs.authid()}")
 
@@ -175,11 +162,8 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 )
             )
 
-        # Update the materialized layer CRS if different from effective input CRS
-        if effective_input_crs != source_crs:
-            feedback.pushInfo(
-                f"Updating materialized layer CRS from {source_crs.authid()} to {effective_input_crs.authid()}"
-            )
+        # Ensure the materialized layer has the same CRS as the source
+        if actual_input_layer.crs().authid() != effective_input_crs.authid():
             actual_input_layer.setCrs(effective_input_crs)
 
         feedback.pushInfo(

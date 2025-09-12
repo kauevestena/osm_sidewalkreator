@@ -6,17 +6,14 @@ OUT_DIR="${ROOT_DIR}/assets/test_outputs"
 mkdir -p "${OUT_DIR}"
 
 INPUT_POLYGON="../assets/test_data/polygon_3857_proper.geojson"
-INPUT_CRS="EPSG:3857"
 
 echo "Running full protoblock test with CRS support:"
 echo "  Input polygon: $INPUT_POLYGON"
-echo "  Input CRS: $INPUT_CRS"
 echo ""
 
 docker run --rm \
   -v "${ROOT_DIR}:/plugins/osm_sidewalkreator" \
   -e INPUT_POLYGON="${INPUT_POLYGON}" \
-  -e INPUT_CRS="${INPUT_CRS}" \
   -w / \
   qgis/qgis:latest bash -lc '
 set -euo pipefail
@@ -94,10 +91,8 @@ print("\n=== Algorithm Tests Passed ===")
 print("=== Running Algorithm ===")
 
 input_polygon = os.environ.get("INPUT_POLYGON", "/plugins/osm_sidewalkreator/assets/test_data/polygon_3857.geojson")
-input_crs = os.environ.get("INPUT_CRS", "EPSG:3857")
 
 print(f"Input polygon: {input_polygon}")
-print(f"Input CRS: {input_crs}")
 
 # Check if input file exists
 abs_input = f"/plugins/osm_sidewalkreator/assets/test_data/polygon_3857_proper.geojson"
@@ -108,7 +103,6 @@ print(f"✓ Input file exists: {abs_input}")
 
 params = {
     "INPUT_POLYGON": abs_input,
-    "INPUT_CRS": input_crs,
     "TIMEOUT": 60,
     "OUTPUT_PROTOBLOCKS": "/plugins/osm_sidewalkreator/assets/test_outputs/protoblocks_3857_test.geojson"
 }
