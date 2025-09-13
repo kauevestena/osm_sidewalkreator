@@ -37,8 +37,15 @@ from ..generic_functions import (
     cliplayer_v2,  # cliplayer might not be needed
     remove_unconnected_lines_v2,
     polygonize_lines,
+    layer_from_featlist,
+    create_incidence_field_layers_A_B,
 )
-from ..parameters import default_widths, highway_tag, CRS_LATLON_4326
+from ..parameters import (
+    default_widths,
+    highway_tag,
+    CRS_LATLON_4326,
+    cutoff_percent_protoblock,
+)
 
 
 class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
@@ -376,17 +383,49 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                 )
             return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
-        # --- Sidewalk Analysis ---
-        feedback.pushInfo(self.tr("Analyzing sidewalks for protoblocks..."))
+        # --- Sidewalk Analysis (match full pipeline semantics) ---
+        feedback.pushInfo(self.tr("Analyzing pre-existing sidewalks (footway=sidewalk) per protoblock..."))
 
-        # Create a spatial index for the street layer for faster queries
-        street_index = QgsSpatialIndex(filtered_streets_layer.getFeatures())
+        # Build a layer of existing sidewalks mapped as separate ways: highway=footway AND footway=sidewalk
+        existing_sidewalk_feats = []
+        hwy_idx = reproj_layer.fields().lookupField(highway_tag)
+        footway_idx = reproj_layer.fields().lookupField("footway")
+        if hwy_idx != -1 and footway_idx != -1:
+            for f in reproj_layer.getFeatures():
+                try:
+                    if str(f.attribute(hwy_idx)).lower() == "footway" and str(f.attribute(footway_idx)).lower() == "sidewalk":
+                        existing_sidewalk_feats.append(f)
+                except Exception:
+                    continue
 
-        # Create a new layer for protoblocks with sidewalk info
+        if existing_sidewalk_feats:
+            existing_sw_layer = layer_from_featlist(
+                existing_sidewalk_feats,
+                "existing_sidewalks_local_tm",
+                "LineString",
+                CRS=local_tm_crs,
+            )
+            # Sum existing sidewalk length within each protoblock
+            _ = create_incidence_field_layers_A_B(
+                protoblocks_in_local_tm,
+                existing_sw_layer,
+                fieldname="inc_sidewalk_len",
+                total_length_instead=True,
+            )
+        else:
+            feedback.pushInfo(self.tr("No separate sidewalks (footway=sidewalk) detected in AOI."))
+            # Add field with 0 length to simplify downstream
+            _ = create_incidence_field_layers_A_B(
+                protoblocks_in_local_tm,
+                layer_from_featlist([], "empty_sidewalks", "LineString", CRS=local_tm_crs),
+                fieldname="inc_sidewalk_len",
+                total_length_instead=True,
+            )
+
+        # Prepare output protoblocks-with-sidewalk info layer
         output_fields = QgsFields()
         output_fields.append(QgsField("existing_sidewalks", QVariant.Bool))
         output_fields.append(QgsField("existing_sidewalks_length", QVariant.Double))
-
         protoblocks_with_sidewalks = QgsVectorLayer(
             "Polygon", "protoblocks_with_sidewalks_info", "memory"
         )
@@ -395,63 +434,27 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         protoblocks_with_sidewalks_dp.addAttributes(output_fields)
         protoblocks_with_sidewalks.updateFields()
 
-        # Get field indices for sidewalk tags
-        sidewalk_field_idx = filtered_streets_layer.fields().lookupField("sidewalk")
-        sidewalk_left_field_idx = filtered_streets_layer.fields().lookupField(
-            "sidewalk:left"
-        )
-        sidewalk_right_field_idx = filtered_streets_layer.fields().lookupField(
-            "sidewalk:right"
-        )
-        sidewalk_both_field_idx = filtered_streets_layer.fields().lookupField(
-            "sidewalk:both"
-        )
-
-        protoblock_features = []
-        for protoblock_feat in protoblocks_in_local_tm.getFeatures():
+        features_out = []
+        for pb in protoblocks_in_local_tm.getFeatures():
             if feedback.isCanceled():
                 return {}
+            area = pb.geometry().area() if pb.hasGeometry() else 0.0
+            try:
+                inc_len = float(pb["inc_sidewalk_len"] or 0.0)
+            except Exception:
+                inc_len = 0.0
+            ratio = 0.0
+            if area > 0 and inc_len > 0:
+                ratio = (((inc_len / 4.0) ** 2) / area) * 100.0
+            has_existing = ratio > cutoff_percent_protoblock
+            nf = QgsFeature(output_fields)
+            nf.setGeometry(pb.geometry())
+            nf.setAttributes([has_existing, inc_len])
+            features_out.append(nf)
 
-            protoblock_geom = protoblock_feat.geometry()
-            intersecting_street_ids = street_index.intersects(protoblock_geom.boundingBox())
-
-            has_sidewalk = False
-            sidewalk_length = 0.0
-
-            if intersecting_street_ids:
-                request = QgsFeatureRequest().setFilterFids(intersecting_street_ids)
-                for street_feat in filtered_streets_layer.getFeatures(request):
-                    if protoblock_geom.intersects(street_feat.geometry()):
-
-                        # Check for sidewalk tags
-                        sidewalk_tag = street_feat.attribute(sidewalk_field_idx) if sidewalk_field_idx != -1 else None
-                        sidewalk_left_tag = street_feat.attribute(sidewalk_left_field_idx) if sidewalk_left_field_idx != -1 else None
-                        sidewalk_right_tag = street_feat.attribute(sidewalk_right_field_idx) if sidewalk_right_field_idx != -1 else None
-                        sidewalk_both_tag = street_feat.attribute(sidewalk_both_field_idx) if sidewalk_both_field_idx != -1 else None
-
-                        # Conditions to consider a sidewalk present
-                        is_sw_present = (
-                            sidewalk_tag in ("yes", "both", "left", "right") or
-                            sidewalk_left_tag == "yes" or
-                            sidewalk_right_tag == "yes" or
-                            sidewalk_both_tag == "yes"
-                        )
-
-                        if is_sw_present:
-                            has_sidewalk = True
-                            sidewalk_length += street_feat.geometry().length()
-
-            new_feat = QgsFeature(output_fields)
-            new_feat.setGeometry(protoblock_geom)
-            new_feat.setAttributes([has_sidewalk, sidewalk_length])
-            protoblock_features.append(new_feat)
-
-        protoblocks_with_sidewalks_dp.addFeatures(protoblock_features)
-        feedback.pushInfo(
-            self.tr(
-                f"Sidewalk analysis complete. {protoblocks_with_sidewalks.featureCount()} protoblocks processed."
-            )
-        )
+        if features_out:
+            protoblocks_with_sidewalks_dp.addFeatures(features_out)
+        feedback.pushInfo(self.tr("Sidewalk analysis complete."))
 
         # --- Final Reprojection to EPSG:4326 ---
         feedback.pushInfo(self.tr("Reprojecting final protoblocks to EPSG:4326..."))
