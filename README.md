@@ -1,162 +1,141 @@
 [![Smoke Tests](https://github.com/kauevestena/osm_sidewalkreator/actions/workflows/smoke.yml/badge.svg)](https://github.com/kauevestena/osm_sidewalkreator/actions/workflows/smoke.yml)
 
-# OSM SIDEWALKREATOR
+# OSM Sidewalkreator
 
-[A Qgis plugin, officialy available at the official Plugin Repository!](https://plugins.qgis.org/plugins/osm_sidewalkreator/)
+A QGIS plugin to automatically generate sidewalk networks from OpenStreetMap streets. Available in the official QGIS Plugin Repository: https://plugins.qgis.org/plugins/osm_sidewalkreator/
 
+<img src="assets/logos/sidewalkreator_logo.png" alt="OSM Sidewalkreator" width="400">
 
-<img src="assets/logos/sidewalkreator_logo.png" alt="Image" width="400">
+## Overview
 
+- Generate sidewalk lines, crossings, and kerb points from OSM roads.
+- Use interactively in QGIS or headlessly via Processing/CLI.
+- Package releases and run tests locally or in Docker.
+- Requires QGIS 3.44+.
 
-## Scientific Publication is now Available!!
+## What’s New
 
-[Since 12/12/2023, in the European Journal of Geography:](https://eurogeojournal.eu/index.php/egj/article/view/553)
+Recent updates introduce a Processing provider and headless tooling that make it easier to automate and test the full pipeline:
 
-> de Moraes Vestena, Kauê, Silvana Philippi Camboim, and Daniel Rodrigues dos Santos. 2023. “OSM Sidewalkreator: A QGIS Plugin for an Automated Drawing of Sidewalk Networks for OpenStreetMap”. European Journal of Geography 14 (4):66-84. https://doi.org/10.48088/ejg.k.ves.14.4.066.084.
+- Processing provider: four algorithms under the “SidewalKreator” toolbox group
+  - `generateprotoblocksfromosm` — protoblocks from polygon input
+  - `generateprotoblocksfrombbox` — protoblocks from BBOX extent
+  - `fullsidewalkreatorfrompolygon` — full pipeline from polygon (sidewalks, crossings, kerbs)
+  - `osm_sidewalkreator_full_bbox` — full pipeline from BBOX extent
+- Headless runners in `docker/` for bbox/polygon inputs (no local QGIS install required)
+- CI-friendly QGIS tests via `scripts/run_qgis_tests.sh` and quick local tests via `pytest -m 'not qgis'`
+- Release packaging with `release/release_zip.py`
 
-The experiments for the publication were carried out in a separate repository: https://github.com/kauevestena/sidewalk_analysis
+## Features
 
-## Article on OSM Wiki:
+- Sidewalk generation from OSM highways with configurable widths and classes
+- Optional building/address data fetch for improved geometry and segment splits
+- Crossing line creation and kerb point extraction at intersections
+- Export to JOSM‑ready GeoJSON for OSM editing
 
-Please check it at: https://wiki.openstreetmap.org/wiki/OSM_SidewalKreator 
+## Quick Start (QGIS)
 
-The wiki will speak about the workflow in a deep level of detail (still in progress).
+1. Install the plugin: search for “OSM SidewalKreator” in QGIS Plugin Manager
+2. Prepare AOI: add a polygon layer for your area of interest
+3. Run: open Processing > SidewalKreator, pick a polygon or BBOX, choose outputs
+4. Export: view layers and export to your preferred format
 
-## Presented at State of the Map 2022!
-Abstract at the proceedings: https://zenodo.org/record/7004523
+Tutorials:
 
-[Presentation slides](https://rebrand.ly/kauevestena_sotm22) 
+- Basics: https://www.youtube.com/watch?v=jq-K3Ixx0IM
+- First import to JOSM: https://www.youtube.com/watch?v=Apqdb73lNvY
 
-[Recording](https://www.youtube.com/watch?v=B--1ge42UHY)
+## Processing / Headless Usage
 
-## sidewalkreator
-Plugin designated to create the Geometries of Sidewalks (separated from streets) based on OpenStreetMap Streets.
-
-
-[there's a tutorial with the basics on youtube:](https://www.youtube.com/watch?v=jq-K3Ixx0IM)
-
-[and a mute video about the first importing at JOSM](https://www.youtube.com/watch?v=Apqdb73lNvY)
-
-The summary of what the plugin does is what follows:
-
-  - Download and prepare the data (highways and optionally buildings) for a polygon of interest;
-  - Provide some tools for highway selection and sidewalk parametrization;
-  - Effectively draw the sidewalks
-  - Remove unrealistically thin sidewalk polygons using an area/perimeter ratio check
-  - Draw the crossings (as sidewalks are required to be integrated to other highways in order to do routing) and kerb-crossing points (where the access ramp information may be filled)
-  - Split sidewalk geometries into segments (including the option to not split at all), since in Brazil, and some other places, is very common that in front of each house there's a completely different sidewalk in comparison to the adjacent neighbors 😥.
-  - Export the generated sidewalks, crossings and kerb points to a JOSM ready format, where all the importing into OSM shall be done.
-
-It is mostly intended for Acessibility Mapping.
-
-Though the data was generated thinking on the usage for OSM, one may use it for pedestrian network analysis out-of-the-box, or even for other purposes inside or outside QGIS.
-
-## Running tests with Docker
-
-The project provides a Docker setup so tests can be executed inside a containerized QGIS environment.
-
-### Install Docker
-
-Install the Docker Engine to run the full test suite. On Debian or Ubuntu systems:
+Provider id: `sidewalkreator_algorithms_provider`. A helper executes Processing inside Docker so you don’t need a local QGIS:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y docker.io
+# From source tree
+./scripts/run_qgis_processing.sh generateprotoblocksfromosm INPUT=/path/to/polygon.gpkg OUTPUT=/tmp/protoblocks.gpkg
+
+# From a packaged release
+./scripts/run_qgis_processing.sh --use-release generateprotoblocksfromosm INPUT=/path/to/polygon.gpkg OUTPUT=/tmp/protoblocks.gpkg
 ```
 
-For other platforms, see the [Docker installation guide](https://docs.docker.com/engine/install/).
-
-### Build the image
+Examples with full pipeline:
 
 ```bash
-docker build -f docker/Dockerfile -t my-org/qgis-test:latest .
+# Full network from polygon (sidewalks, crossings, kerbs)
+./scripts/run_qgis_processing.sh fullsidewalkreatorfrompolygon \
+  INPUT_POLYGON=/path/to/aoi.gpkg \
+  OUTPUT_SIDEWALKS=/tmp/sidewalks.geojson \
+  OUTPUT_CROSSINGS=/tmp/crossings.geojson \
+  OUTPUT_KERBS=/tmp/kerbs.geojson
+
+# Full network from BBOX extent (EPSG:4326)
+./scripts/run_qgis_processing.sh osm_sidewalkreator_full_bbox \
+  INPUT_EXTENT="-49.3,-25.5,-49.29,-25.45" \
+  OUTPUT_SIDEWALKS=/tmp/sidewalks.geojson
 ```
 
-### Run the tests
+Headless runners (simpler Docker scripts) are also available — see `docker/README.md`:
 
-Mount the current project directory into the container and execute the test suite:
+- `docker/run_full_bbox.sh`, `docker/run_full_polygon.sh`
+- `docker/run_protoblocks_bbox.sh`, `docker/run_protoblocks_polygon.sh`
 
-```bash
-./scripts/run_qgis_tests.sh
-# or to test a packaged release
-./scripts/run_qgis_tests.sh --use-release
-```
+Notes:
 
-To run tests against the generated release zip, pass the `--use-release` flag:
+- BBOX coordinates are in EPSG:4326
+- Scripts create outputs under `assets/test_outputs/` by default (overridable)
 
-```bash
-./scripts/run_qgis_tests.sh --use-release
-```
+## Testing
 
-This helper script is equivalent to running the image directly:
-
-```bash
-docker run --rm -v "$(pwd)":/app my-org/qgis-test:latest
-```
-
-Both approaches install Python dependencies from `docker/requirements.txt` and run `pytest` within the QGIS image.
-
-### Run processing algorithms
-
-The `scripts/run_qgis_processing.sh` helper invokes QGIS Processing algorithms
-from this plugin inside the same containerized environment. It mirrors the
-`--use-release` flag of the test script so algorithms can be executed from the
-source tree or a built release ZIP.
-
-> **Note**
-> Algorithms that accept a bounding box require the extent coordinates to be
-> in EPSG:4326. Supplying extents outside valid latitude/longitude bounds or
-> using another CRS will result in a helpful error asking for EPSG:4326
-> coordinates or an explicit CRS.
-
-Run an algorithm against the source tree:
-
-```bash
-./scripts/run_qgis_processing.sh generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
-```
-
-Or run it using a release build:
-
-```bash
-./scripts/run_qgis_processing.sh --use-release generateprotoblocksfromosm INPUT=/path/to/input.geojson OUTPUT=/tmp/out.gpkg
-```
-
-## Running tests without Docker
-
-You can run the subset of tests that do not require QGIS directly on your machine:
+Quick local tests (no QGIS):
 
 ```bash
 pip install -r docker/requirements.txt
 pytest -m "not qgis"
 ```
 
-The development requirements include the GDAL Python bindings used by the
-`osm_fetch` module. If your platform does not ship pre-built wheels you may
-need to install system GDAL libraries (e.g. `libgdal-dev`) before running the
-command above. When using `scripts/run_qgis_tests.sh` on Debian-based systems,
-these packages are installed automatically if missing. The `not qgis` marker
-skips tests that need a QGIS environment, providing a quicker feedback loop.
+Full test suite in Docker/QGIS:
 
-### Regenerating test data
+```bash
+./scripts/run_qgis_tests.sh
+```
 
-The unit tests use a small OSM extract stored at `test/data/curitiba_sample.osm`. Regenerate it with:
+Optionally build a helper image:
+
+```bash
+docker build -f docker/Dockerfile -t my-org/qgis-test:latest .
+```
+
+Test data lives under `assets/test_data/`. To refresh the small OSM extract used by tests:
 
 ```bash
 curl -L "https://overpass-api.de/api/map?bbox=-49.248337,-25.491146,-49.239228,-25.486957" -o test/data/curitiba_sample.osm
 ```
 
-## Creating a release package
+## Releases
 
-The script `release/release_zip.py` bundles the plugin into a ZIP archive for distribution. By default it packages the current repository and writes `osm_sidewalkreator.zip` under `~/sidewalkreator_release`:
+Create a plugin zip (written under `~/sidewalkreator_release` by default):
 
 ```bash
 python release/release_zip.py
 ```
 
-You can customize the plugin source, output directory and excluded files:
+Customize inputs/outputs/excludes:
 
 ```bash
 python release/release_zip.py --plugin-dir /path/to/plugin \
   --output-dir /tmp/build --exclude tests docs "*.pyc"
 ```
 
-The `--exclude` option accepts multiple patterns either separated by spaces or by repeating the flag.
+## References
+
+- QGIS Plugin page: https://plugins.qgis.org/plugins/osm_sidewalkreator/
+- OSM Wiki: https://wiki.openstreetmap.org/wiki/OSM_SidewalKreator
+- State of the Map 2022: slides https://rebrand.ly/kauevestena_sotm22 • video https://www.youtube.com/watch?v=B--1ge42UHY • abstract https://zenodo.org/record/7004523
+
+## Publication
+
+European Journal of Geography (12/12/2023): https://eurogeojournal.eu/index.php/egj/article/view/553
+
+de Moraes Vestena, Kauê, Silvana Philippi Camboim, and Daniel Rodrigues dos Santos. 2023. “OSM Sidewalkreator: A QGIS Plugin for an Automated Drawing of Sidewalk Networks for OpenStreetMap”. European Journal of Geography 14 (4):66–84. https://doi.org/10.48088/ejg.k.ves.14.4.066.084
+
+Experiments repository: https://github.com/kauevestena/sidewalk_analysis
+
