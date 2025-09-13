@@ -25,7 +25,7 @@ def fetch_street_network_for_bbox(bbox):
     """
     Fetches the street network for a given bounding box using osmnx.
     """
-    tags = {"highway": True, "building": True}
+    tags = {"highway": True, "building": True, "amenity": True, "shop": True}
     gdf = ox.features_from_bbox(bbox, tags)
     return gdf
 
@@ -51,15 +51,16 @@ def polygonize_lines_gdf(gdf):
     print(f"Number of lines to polygonize: {len(lines)}")
     polygons = list(polygonize(lines))
     print(f"Number of polygons found: {len(polygons)}")
-    if not polygons:
-        return gpd.GeoDataFrame(geometry=[], crs=gdf.crs)
-    return gpd.GeoDataFrame(geometry=polygons, crs=gdf.crs)
+
+    gdf_poly = gpd.GeoDataFrame(geometry=polygons)
+    gdf_poly = gdf_poly.set_crs(gdf.crs)
+    return gdf_poly
 
 import ast
 import pandas as pd
 
 from shapely.ops import split
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, Point
 
 def split_lines_at_intersections(gdf):
     """
@@ -141,6 +142,264 @@ def handle_exclusion_zones(sidewalks_gdf, streets_gdf):
 
     exclusion_buffer = exclusion_zones.buffer(exclusion_zones['width'] / 2 + 1)
     return sidewalks_gdf.difference(exclusion_buffer.unary_union)
+
+import networkx as nx
+
+def remove_lines_from_no_block_gdf(gdf):
+    """
+    Removes lines that do not form a block.
+    """
+    G = ox.graph_from_gdfs(gpd.GeoDataFrame(), gdf, graph_attrs={'crs': gdf.crs})
+
+    # remove dead-end streets
+    while True:
+        dead_ends = [node for node, degree in G.degree() if degree == 1]
+        if not dead_ends:
+            break
+        G.remove_nodes_from(dead_ends)
+
+    return ox.graph_to_gdfs(G, nodes=False, edges=True)
+
+def filter_and_buffer_protoblocks_gdf(protoblocks_gdf, sidewalks_gdf, cutoff_percent=50):
+    """
+    Filters and buffers the protoblocks.
+    """
+    if sidewalks_gdf.empty:
+        return protoblocks_gdf.dissolve().buffer(0.1)
+
+    # Spatial join
+    joined_gdf = gpd.sjoin(protoblocks_gdf, sidewalks_gdf, how="inner", predicate="intersects")
+
+    # Calculate sidewalk area per protoblock
+    joined_gdf['sidewalk_area'] = joined_gdf.geometry.area
+    sidewalk_area_per_protoblock = joined_gdf.groupby(joined_gdf.index).sidewalk_area.sum()
+
+    # Calculate protoblock area
+    protoblocks_gdf['protoblock_area'] = protoblocks_gdf.geometry.area
+
+    # Join the two series
+    protoblocks_gdf = protoblocks_gdf.join(sidewalk_area_per_protoblock)
+    protoblocks_gdf['sidewalk_area'] = protoblocks_gdf['sidewalk_area'].fillna(0)
+
+    # Calculate ratio and filter
+    protoblocks_gdf['ratio'] = (protoblocks_gdf['sidewalk_area'] / protoblocks_gdf['protoblock_area']) * 100
+    filtered_protoblocks = protoblocks_gdf[protoblocks_gdf['ratio'] <= cutoff_percent]
+
+    # Dissolve and buffer
+    dissolved_protoblocks = filtered_protoblocks.dissolve()
+    buffered_protoblocks = dissolved_protoblocks.buffer(0.1)
+
+    return buffered_protoblocks
+
+import math
+
+def calculate_crossing_direction(point, lines):
+    """
+    Calculates the direction vector of the crossing.
+    """
+    if len(lines) < 2:
+        return None
+
+    angles = []
+    for i, row in lines.iterrows():
+        line = row.geometry
+        coords = list(line.coords)
+        for i in range(len(coords) - 1):
+            p1 = coords[i]
+            p2 = coords[i+1]
+            if Point(p1).equals(point) or Point(p2).equals(point):
+                angle = math.atan2(p2[1] - p1[1], p2[0] - p1[0])
+                angles.append(angle)
+
+    if len(angles) < 2:
+        return None
+
+    # Find the two angles with the smallest difference
+    min_diff = 2 * math.pi
+    best_pair = (0, 0)
+    for i in range(len(angles)):
+        for j in range(i + 1, len(angles)):
+            diff = abs(angles[i] - angles[j])
+            if diff > math.pi:
+                diff = 2 * math.pi - diff
+            if diff < min_diff:
+                min_diff = diff
+                best_pair = (angles[i], angles[j])
+
+    # The direction of the crossing is the bisection of the angle
+    angle = (best_pair[0] + best_pair[1]) / 2
+
+    return Point(math.cos(angle), math.sin(angle))
+
+def draw_crossings_gdf(streets_gdf):
+    """
+    Generates crossings at the intersections of the street lines.
+    """
+    # Find all intersection points
+    intersections = streets_gdf.sindex.query(streets_gdf.geometry, predicate='intersects')
+
+    eligible_points = []
+    for i in range(len(intersections[0])):
+        idx1 = intersections[0][i]
+        idx2 = intersections[1][i]
+        if idx1 >= idx2:
+            continue
+        line1 = streets_gdf.geometry.iloc[idx1]
+        line2 = streets_gdf.geometry.iloc[idx2]
+        intersection = line1.intersection(line2)
+        if intersection.geom_type == 'Point':
+            eligible_points.append(intersection)
+        elif intersection.geom_type == 'MultiPoint':
+            eligible_points.extend(list(intersection.geoms))
+
+    # Create crossings
+    crossing_lines = []
+    for p in eligible_points:
+        # Get the intersecting lines at the point
+        intersecting_lines = streets_gdf[streets_gdf.geometry.intersects(p)]
+        direction = calculate_crossing_direction(p, intersecting_lines)
+        if direction:
+            line = LineString([(p.x - direction.x, p.y - direction.y), (p.x + direction.x, p.y + direction.y)])
+            crossing_lines.append(line)
+        else:
+            line = LineString([(p.x - 2, p.y - 2), (p.x + 2, p.y + 2)])
+            crossing_lines.append(line)
+
+    gdf = gpd.GeoDataFrame(geometry=crossing_lines)
+    if not gdf.empty:
+        gdf = gdf.set_crs(streets_gdf.crs)
+    return gdf
+
+from scipy.spatial import Voronoi
+
+def split_sidewalks_by_voronoi(sidewalks_gdf, pois_gdf):
+    """
+    Splits the sidewalks by Voronoi polygons created from the POIs.
+    """
+    if pois_gdf.empty:
+        return sidewalks_gdf
+
+    # Create Voronoi polygons
+    points = pois_gdf.geometry.apply(lambda p: (p.x, p.y)).tolist()
+    vor = Voronoi(points)
+
+    # Convert Voronoi polygons to shapely Polygons
+    lines = [
+        LineString(vor.vertices[line])
+        for line in vor.ridge_vertices
+        if -1 not in line
+    ]
+
+    # Create a GeoDataFrame of the Voronoi lines
+    voronoi_lines_gdf = gpd.GeoDataFrame(geometry=lines, crs=sidewalks_gdf.crs)
+
+    # Split the sidewalks by the Voronoi lines
+    new_sidewalks = []
+    for i, row in sidewalks_gdf.iterrows():
+        sidewalk = row.geometry.boundary
+        new_sidewalk_parts = split(sidewalk, voronoi_lines_gdf.unary_union)
+        for part in new_sidewalk_parts.geoms:
+            new_sidewalks.append(part)
+
+    gdf = gpd.GeoDataFrame(geometry=new_sidewalks)
+    gdf = gdf.set_crs(sidewalks_gdf.crs)
+    return gdf
+
+def split_sidewalks_by_protoblock_corners(sidewalks_gdf, protoblocks_gdf):
+    """
+    Splits the sidewalks by the corners of the protoblocks.
+    """
+    if protoblocks_gdf.empty:
+        return sidewalks_gdf
+
+    # Get all protoblock corners
+    corners = []
+    for i, row in protoblocks_gdf.iterrows():
+        protoblock = row.geometry
+        corners.extend(list(protoblock.exterior.coords))
+
+    # Create a single MultiPoint geometry of all the corners
+    splitter = MultiPoint(corners)
+
+    # Split the sidewalks
+    new_sidewalks = []
+    for i, row in sidewalks_gdf.iterrows():
+        sidewalk = row.geometry.boundary
+        new_sidewalk_parts = split(sidewalk, splitter)
+        for part in new_sidewalk_parts.geoms:
+            new_sidewalks.append(part)
+
+    gdf = gpd.GeoDataFrame(geometry=new_sidewalks)
+    gdf = gdf.set_crs(sidewalks_gdf.crs)
+    return gdf
+
+def split_sidewalks_by_max_length(sidewalks_gdf, max_length):
+    """
+    Splits the sidewalks by a maximum length.
+    """
+    new_sidewalks = []
+    for i, row in sidewalks_gdf.iterrows():
+        sidewalk = row.geometry
+        if sidewalk.length > max_length:
+            num_splits = int(sidewalk.length // max_length)
+            splitter_points = [sidewalk.interpolate((i + 1) * max_length) for i in range(num_splits)]
+            new_sidewalk_parts = split(sidewalk, MultiPoint(splitter_points))
+            for part in new_sidewalk_parts.geoms:
+                new_sidewalks.append(part)
+        else:
+            new_sidewalks.append(sidewalk)
+
+    gdf = gpd.GeoDataFrame(geometry=new_sidewalks)
+    gdf = gdf.set_crs(sidewalks_gdf.crs)
+    return gdf
+
+def split_sidewalks_by_num_segments(sidewalks_gdf, num_segments):
+    """
+    Splits the sidewalks into a number of segments.
+    """
+    new_sidewalks = []
+    for i, row in sidewalks_gdf.iterrows():
+        sidewalk = row.geometry
+        segment_length = sidewalk.length / num_segments
+        splitter_points = [sidewalk.interpolate((i + 1) * segment_length) for i in range(num_segments - 1)]
+        new_sidewalk_parts = split(sidewalk, MultiPoint(splitter_points))
+        for part in new_sidewalk_parts.geoms:
+            new_sidewalks.append(part)
+
+    gdf = gpd.GeoDataFrame(geometry=new_sidewalks)
+    gdf = gdf.set_crs(sidewalks_gdf.crs)
+    return gdf
+
+def split_sidewalks_gdf(sidewalks_gdf, intersection_points_gdf, protoblocks_gdf, pois_gdf, max_length=None, num_segments=None):
+    """
+    Splits the sidewalks at the intersection points.
+    """
+    sidewalks_gdf = split_sidewalks_by_protoblock_corners(sidewalks_gdf, protoblocks_gdf)
+    sidewalks_gdf = split_sidewalks_by_voronoi(sidewalks_gdf, pois_gdf)
+
+    if max_length:
+        sidewalks_gdf = split_sidewalks_by_max_length(sidewalks_gdf, max_length)
+
+    if num_segments:
+        sidewalks_gdf = split_sidewalks_by_num_segments(sidewalks_gdf, num_segments)
+
+    if intersection_points_gdf.empty:
+        return sidewalks_gdf
+
+    # Create a single MultiPoint geometry of all intersection points
+    splitter = MultiPoint(intersection_points_gdf.geometry.tolist())
+
+    # Split the sidewalks
+    new_sidewalks = []
+    for i, row in sidewalks_gdf.iterrows():
+        sidewalk = row.geometry.boundary
+        new_sidewalk_parts = split(sidewalk, splitter)
+        for part in new_sidewalk_parts.geoms:
+            new_sidewalks.append(part)
+
+    gdf = gpd.GeoDataFrame(geometry=new_sidewalks)
+    gdf = gdf.set_crs(sidewalks_gdf.crs)
+    return gdf
 
 def calculate_sidewalk_properties(sidewalks_gdf):
     """

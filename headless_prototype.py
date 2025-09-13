@@ -19,6 +19,10 @@ from generic_functions_headless import (
     data_clean_gdf,
     split_lines_at_intersections,
     draw_sidewalks_gdf,
+    remove_lines_from_no_block_gdf,
+    filter_and_buffer_protoblocks_gdf,
+    draw_crossings_gdf,
+    split_sidewalks_gdf,
 )
 from parameters import *
 
@@ -64,9 +68,7 @@ def run_headless(input_polygon_path, output_directory, parameters_path=None):
     clipped_gdf = clip_gdf(osm_gdf, input_gdf)
 
     # 5. Reproject to a local TM
-    # A simple approach is to use a UTM projection based on the centroid of the input polygon
-    lon, lat = input_gdf.unary_union.centroid.x, input_gdf.unary_union.centroid.y
-    utm_crs = f"+proj=utm +zone={int((lon + 180) / 6)} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+    utm_crs = input_gdf.estimate_utm_crs()
     clipped_reproj_gdf = reproject_gdf(clipped_gdf, utm_crs)
 
     print(f"Number of features in clipped_reproj_gdf: {len(clipped_reproj_gdf)}")
@@ -77,31 +79,48 @@ def run_headless(input_polygon_path, output_directory, parameters_path=None):
     lines_gdf = cleaned_gdf[cleaned_gdf.geometry.type == 'LineString'].copy()
     splitted_gdf = split_lines_at_intersections(lines_gdf)
 
-    # 8. Polygonize to create protoblocks
-    protoblocks_gdf = polygonize_lines_gdf(splitted_gdf)
+    # 8. Remove lines that do not form a block
+    cleaned_splitted_gdf = remove_lines_from_no_block_gdf(splitted_gdf)
 
-    # 9. Separate buildings
+    # 9. Polygonize to create protoblocks
+    protoblocks_gdf = polygonize_lines_gdf(cleaned_splitted_gdf)
+
+    # 10. Filter and buffer protoblocks
+    filtered_protoblocks_gdf = filter_and_buffer_protoblocks_gdf(protoblocks_gdf, existing_sidewalks)
+
+    # 11. Separate buildings
     buildings_gdf = osm_gdf[osm_gdf['building'].notna()].copy()
 
-    # 10. Draw sidewalks
-    sidewalks_gdf = draw_sidewalks_gdf(splitted_gdf, buildings_gdf, cleaned_gdf, 2)
+    # 11. Separate POIs
+    pois_gdf = osm_gdf[osm_gdf['amenity'].notna() | osm_gdf['shop'].notna()].copy()
 
-    # 10. Output results
+    # 12. Draw sidewalks
+    sidewalks_gdf = draw_sidewalks_gdf(cleaned_splitted_gdf, buildings_gdf, cleaned_gdf, 2)
+
+    # 13. Draw crossings
+    crossings_gdf = draw_crossings_gdf(splitted_gdf)
+
+    # 14. Split sidewalks
+    intersection_points_gdf = gpd.GeoDataFrame(geometry=crossings_gdf.centroid, crs=crossings_gdf.crs)
+    splitted_sidewalks_gdf = split_sidewalks_gdf(sidewalks_gdf, intersection_points_gdf, protoblocks_gdf, pois_gdf, max_length=params.get("split_max_len"), num_segments=params.get("split_num_segments"))
+
+    # 14. Output results
     output_path = os.path.join(output_directory, "protoblocks_output.geojson")
     if not protoblocks_gdf.empty:
         protoblocks_gdf.to_crs("EPSG:4326").to_file(output_path, driver='GeoJSON')
 
     sidewalks_output_path = os.path.join(output_directory, "sidewalks_output.geojson")
-    if not sidewalks_gdf.empty:
-        sidewalks_gdf.to_crs("EPSG:4326").to_file(sidewalks_output_path, driver='GeoJSON')
+    if not splitted_sidewalks_gdf.empty:
+        splitted_sidewalks_gdf.to_crs("EPSG:4326").to_file(sidewalks_output_path, driver='GeoJSON')
 
-    sidewalks_output_path = os.path.join(output_directory, "existing_sidewalks.geojson")
-    if not existing_sidewalks.empty:
-        existing_sidewalks.to_crs("EPSG:4326").to_file(sidewalks_output_path, driver='GeoJSON')
+    crossings_output_path = os.path.join(output_directory, "crossings_output.geojson")
+    if not crossings_gdf.empty:
+        crossings_gdf.to_crs("EPSG:4326").to_file(crossings_output_path, driver='GeoJSON')
 
-    crossings_output_path = os.path.join(output_directory, "existing_crossings.geojson")
-    if not existing_crossings.empty:
-        existing_crossings.to_crs("EPSG:4326").to_file(crossings_output_path, driver='GeoJSON')
+    kerbs_gdf = gpd.GeoDataFrame() # Placeholder for kerbs
+    kerbs_output_path = os.path.join(output_directory, "kerbs_output.geojson")
+    if not kerbs_gdf.empty:
+        kerbs_gdf.to_crs("EPSG:4326").to_file(kerbs_output_path, driver='GeoJSON')
 
     print(f"Process complete. Output saved to {output_path}")
 
