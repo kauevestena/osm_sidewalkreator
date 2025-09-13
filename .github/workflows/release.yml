@@ -1,0 +1,29 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+
+      - name: Run release script
+        run: python release/release_zip.py --output-dir ./release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release/osm_sidewalkreator.zip
+          tag_name: release-${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
