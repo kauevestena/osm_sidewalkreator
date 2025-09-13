@@ -1,0 +1,4 @@
+geopandas
+osmnx
+pytest
+pytest-cov

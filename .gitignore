@@ -166,4 +166,8 @@ tests.py
 *.gpkg-shm
 *.gpkg-wal
 
-headless/
+debug.geojson
+test/__pycache__/
+
+# OSMNX cache
+cache/
