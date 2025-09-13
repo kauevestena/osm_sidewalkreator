@@ -2,6 +2,15 @@ name: Manual Release
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The git tag for the release (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release_name:
+        description: 'The name of the release'
+        required: true
+        default: 'Release v1.0.0'
 
 jobs:
   release:
@@ -23,7 +32,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ./release/osm_sidewalkreator.zip
-          tag_name: release-${{ github.run_number }}
-          name: Release ${{ github.run_number }}
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.release_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
