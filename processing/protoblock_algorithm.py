@@ -27,6 +27,7 @@ from qgis.core import (
     QgsProcessingException,
     QgsCoordinateTransform,
     QgsRectangle,
+    QgsGeometry,
     QgsProject,
 )  # Added QgsProcessingUtils and logging classes
 from qgis.PyQt.QtCore import QVariant
@@ -424,10 +425,9 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo(self.tr("Cleaning street network..."))
         filtered_streets_layer = QgsVectorLayer(
-            f"LineString?crs={local_tm_crs.authid()}",
-            "filtered_streets_local_tm_algo",
-            "memory",
+            "LineString", "filtered_streets_local_tm_algo", "memory"
         )
+        filtered_streets_layer.setCrs(local_tm_crs)
         filtered_streets_dp = filtered_streets_layer.dataProvider()
         if clipped_reproj_layer.fields().count() > 0:
             filtered_streets_dp.addAttributes(clipped_reproj_layer.fields())
@@ -686,11 +686,52 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         if output_layer_epsg4326.crs().authid() != crs_epsg4326.authid():
             feedback.pushWarning(
                 self.tr(
-                    f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}. This is unexpected after native:reprojectlayer."
+                    f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}."
                 )
             )
-            # Forcing it might be an option, but native:reprojectlayer should do this.
-            # output_layer_epsg4326.setCrs(crs_epsg4326)
+
+        # Validate geographic bounds; if out-of-range, force a manual transform as fallback
+        ext = output_layer_epsg4326.extent()
+        if (
+            ext.isNull()
+            or ext.xMinimum() < -180
+            or ext.xMaximum() > 180
+            or ext.yMinimum() < -90
+            or ext.yMaximum() > 90
+        ):
+            feedback.pushWarning(
+                self.tr(
+                    "Detected coordinates outside valid EPSG:4326 bounds after reprojection. Applying manual transform as fallback."
+                )
+            )
+            try:
+                transformer = QgsCoordinateTransform(
+                    local_tm_crs, crs_epsg4326, context.transformContext()
+                )
+                manual_layer = QgsVectorLayer(
+                    f"Polygon?crs={crs_epsg4326.authid()}",
+                    "protoblocks_epsg4326_manual",
+                    "memory",
+                )
+                manual_dp = manual_layer.dataProvider()
+                manual_dp.addAttributes(output_layer_epsg4326.fields())
+                manual_layer.updateFields()
+                feats = []
+                for f in protoblocks_layer_for_sink.getFeatures():
+                    g = f.geometry()
+                    if not g.isEmpty():
+                        g = QgsGeometry(g)  # copy
+                        g.transform(transformer)
+                    nf = QgsFeature(manual_layer.fields())
+                    nf.setGeometry(g)
+                    nf.setAttributes(f.attributes())
+                    feats.append(nf)
+                if feats:
+                    manual_dp.addFeatures(feats)
+                output_layer_epsg4326 = manual_layer
+                feedback.pushInfo(self.tr("Manual transform to EPSG:4326 completed."))
+            except Exception as e:
+                feedback.pushWarning(self.tr(f"Manual transform failed: {e}"))
 
         feedback.pushInfo(
             self.tr(

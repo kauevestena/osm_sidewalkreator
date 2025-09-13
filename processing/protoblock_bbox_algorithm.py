@@ -16,6 +16,7 @@ from qgis.core import (
     QgsFields,
     QgsFeature,
     QgsRectangle,
+    QgsGeometry,
     QgsWkbTypes,
     QgsProcessingException,
     QgsField,
@@ -258,10 +259,9 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         # --- Clean Street Network ---
         feedback.pushInfo(self.tr("Cleaning street network..."))
         filtered_streets_layer = QgsVectorLayer(
-            f"LineString?crs={local_tm_crs.authid()}",
-            "filtered_streets_local_tm_bbox_algo",
-            "memory",
+            "LineString", "filtered_streets_local_tm_bbox_algo", "memory"
         )
+        filtered_streets_layer.setCrs(local_tm_crs)
         filtered_streets_dp = filtered_streets_layer.dataProvider()
         if reproj_layer.fields().count() > 0:
             filtered_streets_dp.addAttributes(reproj_layer.fields())
@@ -308,7 +308,7 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                 context,
                 QgsFields(),
                 QgsWkbTypes.Polygon,
-                local_tm_crs,
+                QgsCoordinateReferenceSystem(CRS_LATLON_4326),
             )
             return {self.OUTPUT_PROTOBLOCKS: dest_id}
 
@@ -388,10 +388,9 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         output_fields.append(QgsField("existing_sidewalks_length", QVariant.Double))
 
         protoblocks_with_sidewalks = QgsVectorLayer(
-            f"Polygon?crs={local_tm_crs.authid()}",
-            "protoblocks_with_sidewalks_info",
-            "memory",
+            "Polygon", "protoblocks_with_sidewalks_info", "memory"
         )
+        protoblocks_with_sidewalks.setCrs(local_tm_crs)
         protoblocks_with_sidewalks_dp = protoblocks_with_sidewalks.dataProvider()
         protoblocks_with_sidewalks_dp.addAttributes(output_fields)
         protoblocks_with_sidewalks.updateFields()
@@ -475,9 +474,15 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
         if sub_feedback_reproj_final.isCanceled():
             return {}
 
-        output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(
-            reproject_final_result.get("OUTPUT"), context
-        )
+        # Robustly obtain the output layer (can be instance or string)
+        output_value = reproject_final_result.get("OUTPUT")
+        output_layer_epsg4326 = None
+        if isinstance(output_value, QgsVectorLayer):
+            output_layer_epsg4326 = output_value
+        elif output_value is not None:
+            output_layer_epsg4326 = QgsProcessingUtils.mapLayerFromString(
+                str(output_value), context
+            )
         if output_layer_epsg4326:
             output_layer_epsg4326.setName("protoblocks_epsg4326_loaded")
 
@@ -494,6 +499,49 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                     f"CRS of final reprojected layer is {output_layer_epsg4326.crs().authid()} instead of desired {crs_epsg4326.authid()}."
                 )
             )
+
+        # Validate geographic bounds; if out-of-range, force a manual transform as fallback
+        ext = output_layer_epsg4326.extent()
+        if (
+            ext.isNull()
+            or ext.xMinimum() < -180
+            or ext.xMaximum() > 180
+            or ext.yMinimum() < -90
+            or ext.yMaximum() > 90
+        ):
+            feedback.pushWarning(
+                self.tr(
+                    "Detected coordinates outside valid EPSG:4326 bounds after reprojection. Applying manual transform as fallback."
+                )
+            )
+            try:
+                transformer = QgsCoordinateTransform(
+                    protoblocks_with_sidewalks.crs(), crs_epsg4326, context.transformContext()
+                )
+                manual_layer = QgsVectorLayer(
+                    f"Polygon?crs={crs_epsg4326.authid()}",
+                    "protoblocks_epsg4326_manual",
+                    "memory",
+                )
+                manual_dp = manual_layer.dataProvider()
+                manual_dp.addAttributes(output_layer_epsg4326.fields())
+                manual_layer.updateFields()
+                feats = []
+                for f in protoblocks_with_sidewalks.getFeatures():
+                    g = f.geometry()
+                    if not g.isEmpty():
+                        g = QgsGeometry(g)  # copy
+                        g.transform(transformer)
+                    nf = QgsFeature(manual_layer.fields())
+                    nf.setGeometry(g)
+                    nf.setAttributes(f.attributes())
+                    feats.append(nf)
+                if feats:
+                    manual_dp.addFeatures(feats)
+                output_layer_epsg4326 = manual_layer
+                feedback.pushInfo(self.tr("Manual transform to EPSG:4326 completed."))
+            except Exception as e:
+                feedback.pushWarning(self.tr(f"Manual transform failed: {e}"))
 
         feedback.pushInfo(
             self.tr(
