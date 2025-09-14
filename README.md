@@ -11,7 +11,7 @@ A QGIS plugin to automatically generate sidewalk networks from OpenStreetMap str
 - Generate sidewalk lines, crossings, and kerb points from OSM roads.
 - Use interactively in QGIS or headlessly via Processing/CLI.
 - Package releases and run tests locally or in Docker.
-- Requires QGIS 3.44+.
+- Requires QGIS 3.40+.
 
 ## What’s New
 
