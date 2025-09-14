@@ -17,11 +17,12 @@ A QGIS plugin to automatically generate sidewalk networks from OpenStreetMap str
 
 Recent updates introduce a Processing provider and headless tooling that make it easier to automate and test the full pipeline:
 
-- Processing provider: four algorithms under the “SidewalKreator” toolbox group
+- Processing provider: algorithms under the “SidewalKreator” toolbox group
   - `generateprotoblocksfromosm` — protoblocks from polygon input
   - `generateprotoblocksfrombbox` — protoblocks from BBOX extent
   - `fullsidewalkreatorfrompolygon` — full pipeline from polygon (sidewalks, crossings, kerbs)
   - `osm_sidewalkreator_full_bbox` — full pipeline from BBOX extent
+  - `drawmissingcrossingsfrombbox` — NEW: draw missing crossings across shared protoblock edges using OSM crossing data
 - Headless runners in `docker/` for bbox/polygon inputs (no local QGIS install required)
 - CI-friendly QGIS tests via `scripts/run_qgis_tests.sh` and quick local tests via `pytest -m 'not qgis'`
 - Release packaging with `release/release_zip.py`
@@ -138,4 +139,3 @@ European Journal of Geography (12/12/2023): https://eurogeojournal.eu/index.php/
 de Moraes Vestena, Kauê, Silvana Philippi Camboim, and Daniel Rodrigues dos Santos. 2023. “OSM Sidewalkreator: A QGIS Plugin for an Automated Drawing of Sidewalk Networks for OpenStreetMap”. European Journal of Geography 14 (4):66–84. https://doi.org/10.48088/ejg.k.ves.14.4.066.084
 
 Experiments repository: https://github.com/kauevestena/sidewalk_analysis
-

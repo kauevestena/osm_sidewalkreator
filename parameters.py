@@ -153,6 +153,8 @@ increment_inward = 0.5
 # max iterations in the
 max_crossings_iterations = 20
 
+default_distance_inward = 5
+
 # max distance for distance search in knn
 knn_max_dist = 50
 

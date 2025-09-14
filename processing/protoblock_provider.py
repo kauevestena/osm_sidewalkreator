@@ -19,6 +19,9 @@ from .full_sidewalkreator_polygon_algorithm import FullSidewalkreatorPolygonAlgo
 from .full_sidewalkreator_bbox_algorithm import (
     FullSidewalkreatorBboxAlgorithm,
 )  # Added import
+from .draw_missing_crossings_bbox_algorithm import (
+    DrawMissingCrossingsBboxAlgorithm,
+)  # New algorithm
 
 # It's better practice to handle import errors where these are used (e.g. in loadAlgorithms)
 # or ensure the plugin gracefully handles their absence if an import fails.
@@ -118,6 +121,26 @@ class ProtoblockProvider(QgsProcessingProvider):
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Failed to load FullSidewalkreatorBboxAlgorithm: {e}",
+                "SidewalKreator",
+                Qgis.Critical,
+            )
+            traceback.print_exc()
+
+        try:
+            if DrawMissingCrossingsBboxAlgorithm:  # Check if class was successfully imported
+                alg = DrawMissingCrossingsBboxAlgorithm()
+                self.addAlgorithm(alg)
+                try:
+                    QgsMessageLog.logMessage(
+                        f"Loaded algorithm: {alg.id()}",
+                        "SidewalKreator",
+                        Qgis.Info,
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            QgsMessageLog.logMessage(
+                f"Failed to load DrawMissingCrossingsBboxAlgorithm: {e}",
                 "SidewalKreator",
                 Qgis.Critical,
             )

@@ -57,6 +57,11 @@ Run from the repo root (paths are resolved automatically):
   - Input: `-i|--input=FILE` (OGR polygon; multiple features are unary-unioned). Optional `--crs=EPSG:code` (default `EPSG:4326`).
   - Output: `-o|--output=FILE`.
 
+- `docker/run_missing_crossings_bbox.sh`:
+  - BBox from flags or `assets/test_data/bbox.json`.
+  - Runs the new `drawmissingcrossingsfrombbox` algorithm.
+  - Options: `--crossings-output FILE`, `--kerbs-output FILE`, `--len M`, `--kerb-percent P`, `--min-shared-len M`, `--timeout SECONDS`.
+
 ### Default Outputs (if no handler was used)
 
 - Full bbox: `assets/test_outputs/sidewalks_bbox.geojson`.

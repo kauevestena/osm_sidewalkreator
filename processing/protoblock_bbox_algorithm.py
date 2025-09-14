@@ -137,26 +137,46 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # Transform extent to EPSG:4326 if necessary
+        # Transform extent to EPSG:4326 if necessary, with robust detection
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
-        if extent_crs != crs_epsg4326:
-            feedback.pushInfo(
-                self.tr(
-                    f"Transforming input extent from {extent_crs.authid()} to EPSG:4326..."
+        def _looks_like_degrees(rect: QgsRectangle) -> bool:
+            try:
+                return (
+                    -180.0 <= rect.xMinimum() <= 180.0
+                    and -180.0 <= rect.xMaximum() <= 180.0
+                    and -90.0 <= rect.yMinimum() <= 90.0
+                    and -90.0 <= rect.yMaximum() <= 90.0
                 )
-            )
-            transform = QgsCoordinateTransform(
-                extent_crs, crs_epsg4326, context.transformContext()
-            )
-            extent_4326 = transform.transform(
-                extent_param_value
-            )  # extent_4326 is a QgsRectangle
-            if extent_4326.isEmpty():  # Use isEmpty() for QgsRectangle
-                raise QgsProcessingException(
+            except Exception:
+                return False
+
+        if extent_crs != crs_epsg4326:
+            # Some QGIS builds parse extent strings but supply degree-like values while reporting non-4326 CRS.
+            if _looks_like_degrees(extent_param_value):
+                feedback.pushInfo(
                     self.tr(
-                        "Failed to transform extent to EPSG:4326 or transformed extent is empty."
+                        "Detected degree-like extent values despite non-4326 CRS; treating as EPSG:4326 without transformation."
                     )
                 )
+                extent_4326 = extent_param_value
+            else:
+                feedback.pushInfo(
+                    self.tr(
+                        f"Transforming input extent from {extent_crs.authid()} to EPSG:4326..."
+                    )
+                )
+                transform = QgsCoordinateTransform(
+                    extent_crs, crs_epsg4326, context.transformContext()
+                )
+                extent_4326 = transform.transform(
+                    extent_param_value
+                )  # extent_4326 is a QgsRectangle
+                if extent_4326.isEmpty():  # Use isEmpty() for QgsRectangle
+                    raise QgsProcessingException(
+                        self.tr(
+                            "Failed to transform extent to EPSG:4326 or transformed extent is empty."
+                        )
+                    )
         else:
             extent_4326 = extent_param_value
 

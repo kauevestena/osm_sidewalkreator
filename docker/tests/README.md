@@ -18,6 +18,10 @@ This folder contains various test scripts for the OSM SidewalKreator Docker func
 - **`smoke_protoblocks_bbox.sh`** - Calls `run_protoblocks_bbox.sh` using `bbox.json`; verifies output exists
 - **`smoke_full_bbox.sh`** - Calls `run_full_bbox.sh` using `bbox.json`; verifies sidewalks output exists
 
+### Missing Crossings
+
+- **`missing_crossings/smoke_missing_crossings_bbox.sh`** — Runs `docker/run_missing_crossings_bbox.sh` using `bbox.json`; verifies crossings/kerbs outputs exist (may be empty due to dynamic OSM data).
+
 ### Utility Scripts
 
 - **`convert_coords.py`** - Python script to convert coordinates between EPSG:4326 and EPSG:3857 using GDAL
@@ -37,6 +41,10 @@ cd docker/
 ./run_full_polygon.sh -i assets/test_data/polygon.geojson -o assets/test_outputs/sidewalks_polygon.geojson
 ./run_protoblocks_bbox.sh --bbox=-49.3,-25.5,-49.29,-25.45 -o assets/test_outputs/protoblocks_bbox.geojson
 ./run_full_bbox.sh --bbox=-49.3,-25.5,-49.29,-25.45 -o assets/test_outputs/sidewalks_bbox.geojson
+# Missing crossings
+./run_missing_crossings_bbox.sh --bbox=-49.3,-25.5,-49.29,-25.45 \
+  --crossings-output assets/test_outputs/missing_crossings_bbox.geojson \
+  --kerbs-output assets/test_outputs/missing_kerbs_bbox.geojson
 ```
 
 The `run_full_protoblock_test.sh` script is the most comprehensive and tests:
