@@ -60,6 +60,39 @@ This step adds pedestrian crossings at intersections.
     *   The direction of the crossing is determined based on user choice: either perpendicular to the current road segment or parallel to the main intersecting road.
     *   A line is projected from the inner point across the street in the calculated direction until it intersects the sidewalk line on the opposite side.
     *   This process defines the centerline of the crossing. Points along this line are created to represent the kerbs (`barrier=kerb`).
+
+### Kerb Generation Logic (ABCDE Points System)
+
+The crossing generation implements a sophisticated ABCDE points system to create accurate kerb positions:
+
+**Point Definition:**
+- **Point A**: Intersection of crossing line with sidewalk geometry (side I)
+- **Point B**: Kerb position at side I (interpolated along segment A-C)
+- **Point C**: Intersection of crossing line with street geometry (crossing center)
+- **Point D**: Kerb position at side II (interpolated along segment E-C)
+- **Point E**: Intersection of crossing line with sidewalk geometry (side II)
+
+**Iterative Intersection Finding:**
+The algorithm uses the `two_intersections_byvector_with_sidewalks` method to find points A and E:
+
+1. **Vector Projection**: Starting from point C (crossing center), vectors are projected in both directions to find intersections with sidewalk geometries.
+2. **Iterative Scaling**: If no intersection is found, the vector length is doubled (coefficients `coef_sideA` and `coef_sideB` are multiplied by 2) and the search continues.
+3. **Distance Validation**: When intersections are found, the crossing length is validated against the expected street width plus tolerance.
+4. **Adaptive Center Repositioning**: If the crossing is too long, the center point C is moved incrementally inward along the road segment (`increment_inward = 0.5m`) and the process repeats.
+5. **Maximum Iterations**: The process is limited to `max_crossings_iterations = 20` to prevent infinite loops.
+6. **Absolute Length Limit**: Crossings exceeding `abs_max_crossing_len = 100m` are rejected.
+
+**Kerb Position Calculation:**
+Once points A, C, and E are established:
+- Point B is calculated by interpolating `kerb_perc` (default 30%) along the line segment from A to C
+- Point D is calculated by interpolating `kerb_perc` along the line segment from E to C
+- The final crossing geometry is a line connecting points A-B-C-D-E
+
+**Quality Control Parameters:**
+- `perc_tol_crossings = 25%`: Tolerance for crossing length validation
+- `increment_inward = 0.5m`: Distance increment for center point adjustment
+- `max_crossings_iterations = 20`: Maximum attempts to find valid crossing geometry
+
 3.  **Quality Control**: The length of the generated crossing is compared to the expected width of the street. If the crossing is significantly longer than expected (e.g., at a skewed intersection), it is flagged and can be automatically removed by the user.
 
 ## Step 5: Sidewalk Splitting (`sidewalks_splitting`)
@@ -77,7 +110,7 @@ This function subdivides the continuous sidewalk lines into smaller, more practi
 
 The final step prepares and exports all the generated data.
 
-1.  **Data Finalization**: The final layers (sidewalks, crossings, kerbs) are cleaned of any temporary attributes. The kerb layer is regenerated from the final set of crossings to ensure consistency.
+1.  **Data Finalization**: The final layers (sidewalks, crossings, kerbs) are cleaned of any temporary attributes. The kerb layer is regenerated from the final set of crossings to ensure consistency. Specifically, kerb points B and D from each valid crossing are extracted to form the final kerb layer.
 2.  **File Export**:
     *   An output folder is created.
     *   The final sidewalk, crossing, and kerb layers are reprojected back to WGS 84 (EPSG:4326) and saved as separate GeoJSON files.
@@ -91,3 +124,4 @@ The final step prepares and exports all the generated data.
 - Primary outputs (e.g., sidewalks) are returned as in-memory layers in EPSG:4326, suitable for headless workflows and tests.
 - Exclusion/sure zones, protoblock filtering, and the pre-existing sidewalk filter are implemented to match the GUI behavior as closely as possible.
 - When building data is unavailable, overlap-aware width adjustment is skipped and sensible defaults are applied.
+- The ABCDE kerb generation logic is fully preserved in processing algorithms, maintaining the same iterative intersection finding and quality control mechanisms described above.
