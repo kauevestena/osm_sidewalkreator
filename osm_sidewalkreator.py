@@ -591,7 +591,7 @@ class sidewalkreator:
             ),
             (self.dlg.maxlensplit_checkbox, "Max Len.", "Larg. Máx."),
             (self.dlg.segsbynum_checkbox, "In x\nsegments", "Em x\nsegmentos"),
-            (self.dlg.onlyfacades_checkbox, "Only Facades", " Faces Q."),
+            (self.dlg.onlyfacades_checkbox, "Only Facades", "Somente Fachadas"),
             (self.dlg.dontsplit_checkbox, "Don't Split", "Não Dividir"),
             (
                 self.dlg.input_feature_text,
