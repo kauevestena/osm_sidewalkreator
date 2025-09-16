@@ -1822,7 +1822,9 @@ class sidewalkreator:
         self.en_hint = (
             "Hint: you can manually delete sidewalks\nuse the att. table to filter!"
         )
-        self.ptbr_hint = "Você pode del. manualmente calçadas,\nvide a tabela de atributos para filtrar!"
+        self.ptbr_hint = (
+            "Você pode deletar manualmente calçadas.\nVeja a tabela de atributos para filtrar!"
+        )
         self.set_hint_text()
 
         # if no buildings, we can directly generate a simply dissolved-big_buffer
