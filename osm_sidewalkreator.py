@@ -887,7 +887,7 @@ class sidewalkreator:
         # hint texts:
         self.en_hint = "Hint: You Can Set Widths\nmanually for Each Segment..."
         self.ptbr_hint = (
-            "Dica: Você pode Inserir manualmente\numa Largura Para Cada Segmento!"
+            "Dica: você pode inserir manualmente\numa largura para cada segmento!"
         )
         self.set_hint_text()
 
