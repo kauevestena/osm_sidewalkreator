@@ -567,7 +567,7 @@ class sidewalkreator:
                 "Subdividir Calçadas (Geometrias)",
             ),
             (self.dlg.perc_tol_crossings_label, "len.\ntol.", "tol.\ndist."),
-            (self.dlg.perc_draw_kerbs_label, "Kerbs\nat", "Kerb*\nem."),
+            (self.dlg.perc_draw_kerbs_label, "Kerbs\nat", "Guias\nem %"),
             (
                 self.dlg.opt_parallel_crossings,
                 "in parallel to\ntransversal seg.",
