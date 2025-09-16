@@ -539,12 +539,12 @@ class sidewalkreator:
             (
                 self.dlg.min_d_label,
                 "Min Distance\nto Buildings",
-                "Distância Mínima\np. Edificaçoes",
+                "Distância Mínima\np. Edificações",
             ),
             (
                 self.dlg.min_d_label,
                 "Min Distance\nto Buildings",
-                "Dist. Min.\np. Edificaçoes",
+                "Dist. Min.\np. Edificações",
             ),
             (self.dlg.curveradius_label, "Curve\nRadius", "Raio de\nCurvatura"),
             (
