@@ -1765,7 +1765,7 @@ class sidewalkreator:
 
         # hint texts:
         self.en_hint = "Hint: check for bad crossings using attrs.\nyou can delete them,\nkerbs are autom. cleaned!"
-        self.ptbr_hint = "Dica: Você pode\ndeletar manualmente cruzamentos\nvide a tabela de atributos para filtrar!"
+        self.ptbr_hint = "Dica: você pode deletar manualmente cruzamentos.\nVide a tabela de atributos para filtrar!"
         self.set_hint_text()
 
         # adding crossing len to check for "bad" crossings:
