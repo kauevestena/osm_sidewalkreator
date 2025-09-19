@@ -95,7 +95,39 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
     DEFAULT_WIDTH = "DEFAULT_WIDTH"
     MIN_WIDTH = "MIN_WIDTH"
     MAX_WIDTH = "MAX_WIDTH"
-    STREET_CLASSES = "STREET_CLASSES"
+    
+    # Highway type checkbox parameters - one for each key in default_widths
+    HIGHWAY_MOTORWAY = "HIGHWAY_MOTORWAY"
+    HIGHWAY_TRUNK = "HIGHWAY_TRUNK"
+    HIGHWAY_PRIMARY = "HIGHWAY_PRIMARY"
+    HIGHWAY_RESIDENTIAL = "HIGHWAY_RESIDENTIAL"
+    HIGHWAY_SECONDARY = "HIGHWAY_SECONDARY"
+    HIGHWAY_TERTIARY = "HIGHWAY_TERTIARY"
+    HIGHWAY_UNCLASSIFIED = "HIGHWAY_UNCLASSIFIED"
+    HIGHWAY_ROAD = "HIGHWAY_ROAD"
+    HIGHWAY_LIVING_STREET = "HIGHWAY_LIVING_STREET"
+    HIGHWAY_TRUNK_LINK = "HIGHWAY_TRUNK_LINK"
+    HIGHWAY_MOTORWAY_LINK = "HIGHWAY_MOTORWAY_LINK"
+    HIGHWAY_SECONDARY_LINK = "HIGHWAY_SECONDARY_LINK"
+    HIGHWAY_TERTIARY_LINK = "HIGHWAY_TERTIARY_LINK"
+    HIGHWAY_PRIMARY_LINK = "HIGHWAY_PRIMARY_LINK"
+    HIGHWAY_SIDEWALK = "HIGHWAY_SIDEWALK"
+    HIGHWAY_CROSSING = "HIGHWAY_CROSSING"
+    HIGHWAY_PATH = "HIGHWAY_PATH"
+    HIGHWAY_SERVICE = "HIGHWAY_SERVICE"
+    HIGHWAY_PEDESTRIAN = "HIGHWAY_PEDESTRIAN"
+    HIGHWAY_ESCAPE = "HIGHWAY_ESCAPE"
+    HIGHWAY_RACEWAY = "HIGHWAY_RACEWAY"
+    HIGHWAY_CYCLEWAY = "HIGHWAY_CYCLEWAY"
+    HIGHWAY_PROPOSED = "HIGHWAY_PROPOSED"
+    HIGHWAY_CONSTRUCTION = "HIGHWAY_CONSTRUCTION"
+    HIGHWAY_PLATFORM = "HIGHWAY_PLATFORM"
+    HIGHWAY_SERVICES = "HIGHWAY_SERVICES"
+    HIGHWAY_FOOTWAY = "HIGHWAY_FOOTWAY"
+    HIGHWAY_TRACK = "HIGHWAY_TRACK"
+    HIGHWAY_CORRIDOR = "HIGHWAY_CORRIDOR"
+    HIGHWAY_STEPS = "HIGHWAY_STEPS"
+    HIGHWAY_STREET_LAMP = "HIGHWAY_STREET_LAMP"
 
     SAVE_PROTOBLOCKS_DEBUG = "SAVE_PROTOBLOCKS_DEBUG"
     SAVE_EXCLUSION_ZONES_DEBUG = "SAVE_EXCLUSION_ZONES_DEBUG"
@@ -163,37 +195,222 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # Street classes to process (multi-enum)
-        # Using a fixed list for now as QgsProcessingParameterEnum seems to have issues with dynamic lists from parameters.STREET_CLASSES_OPTIONS
-        street_options = [
-            "motorway",
-            "motorway_link",
-            "trunk",
-            "trunk_link",
-            "primary",
-            "primary_link",
-            "secondary",
-            "secondary_link",
-            "tertiary",
-            "tertiary_link",
-            "residential",
-            "living_street",
-            "service",
-            "unclassified",
-            "road",
-            "track",
-            "path",
-            "cycleway",
-            "footway",
-            "pedestrian",
-        ]
+        # Highway type checkboxes - motorized roads checked by default
         self.addParameter(
-            QgsProcessingParameterEnum(
-                self.STREET_CLASSES,
-                self.tr("Street Classes to Process"),
-                options=street_options,
-                allowMultiple=True,
-                defaultValue=list(range(len(street_options))),
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_MOTORWAY,
+                self.tr("Include Motorway"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_TRUNK,
+                self.tr("Include Trunk"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PRIMARY,
+                self.tr("Include Primary"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_RESIDENTIAL,
+                self.tr("Include Residential"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_SECONDARY,
+                self.tr("Include Secondary"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_TERTIARY,
+                self.tr("Include Tertiary"),
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_UNCLASSIFIED,
+                self.tr("Include Unclassified"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_ROAD,
+                self.tr("Include Road"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_LIVING_STREET,
+                self.tr("Include Living Street"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_TRUNK_LINK,
+                self.tr("Include Trunk Link"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_MOTORWAY_LINK,
+                self.tr("Include Motorway Link"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_SECONDARY_LINK,
+                self.tr("Include Secondary Link"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_TERTIARY_LINK,
+                self.tr("Include Tertiary Link"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PRIMARY_LINK,
+                self.tr("Include Primary Link"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_SIDEWALK,
+                self.tr("Include Sidewalk"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_CROSSING,
+                self.tr("Include Crossing"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PATH,
+                self.tr("Include Path"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_SERVICE,
+                self.tr("Include Service"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PEDESTRIAN,
+                self.tr("Include Pedestrian"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_ESCAPE,
+                self.tr("Include Escape"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_RACEWAY,
+                self.tr("Include Raceway"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_CYCLEWAY,
+                self.tr("Include Cycleway"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PROPOSED,
+                self.tr("Include Proposed"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_CONSTRUCTION,
+                self.tr("Include Construction"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_PLATFORM,
+                self.tr("Include Platform"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_SERVICES,
+                self.tr("Include Services"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_FOOTWAY,
+                self.tr("Include Footway"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_TRACK,
+                self.tr("Include Track"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_CORRIDOR,
+                self.tr("Include Corridor"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_STEPS,
+                self.tr("Include Steps"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.HIGHWAY_STREET_LAMP,
+                self.tr("Include Street Lamp"),
+                defaultValue=False,
             )
         )
 
@@ -779,15 +996,47 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
         min_width = self.parameterAsDouble(parameters_alg, self.MIN_WIDTH, context)
         max_width = self.parameterAsDouble(parameters_alg, self.MAX_WIDTH, context)
 
-        # Street classes (indices from QgsProcessingParameterEnum)
-        street_class_indices = self.parameterAsEnums(
-            parameters_alg, self.STREET_CLASSES, context
-        )
-        # Convert indices back to string values based on the options defined in initAlgorithm
-        street_options_list = self.parameterDefinition(self.STREET_CLASSES).options()
-        street_classes_to_process = [
-            street_options_list[i] for i in street_class_indices
-        ]
+        # Get highway type selections from checkboxes
+        allowed_highway_types = set()
+        highway_checkbox_mapping = {
+            "motorway": self.HIGHWAY_MOTORWAY,
+            "trunk": self.HIGHWAY_TRUNK,
+            "primary": self.HIGHWAY_PRIMARY,
+            "residential": self.HIGHWAY_RESIDENTIAL,
+            "secondary": self.HIGHWAY_SECONDARY,
+            "tertiary": self.HIGHWAY_TERTIARY,
+            "unclassified": self.HIGHWAY_UNCLASSIFIED,
+            "road": self.HIGHWAY_ROAD,
+            "living_street": self.HIGHWAY_LIVING_STREET,
+            "trunk_link": self.HIGHWAY_TRUNK_LINK,
+            "motorway_link": self.HIGHWAY_MOTORWAY_LINK,
+            "secondary_link": self.HIGHWAY_SECONDARY_LINK,
+            "tertiary_link": self.HIGHWAY_TERTIARY_LINK,
+            "primary_link": self.HIGHWAY_PRIMARY_LINK,
+            "sidewalk": self.HIGHWAY_SIDEWALK,
+            "crossing": self.HIGHWAY_CROSSING,
+            "path": self.HIGHWAY_PATH,
+            "service": self.HIGHWAY_SERVICE,
+            "pedestrian": self.HIGHWAY_PEDESTRIAN,
+            "escape": self.HIGHWAY_ESCAPE,
+            "raceway": self.HIGHWAY_RACEWAY,
+            "cycleway": self.HIGHWAY_CYCLEWAY,
+            "proposed": self.HIGHWAY_PROPOSED,
+            "construction": self.HIGHWAY_CONSTRUCTION,
+            "platform": self.HIGHWAY_PLATFORM,
+            "services": self.HIGHWAY_SERVICES,
+            "footway": self.HIGHWAY_FOOTWAY,
+            "track": self.HIGHWAY_TRACK,
+            "corridor": self.HIGHWAY_CORRIDOR,
+            "steps": self.HIGHWAY_STEPS,
+            "street_lamp": self.HIGHWAY_STREET_LAMP,
+        }
+        
+        for highway_type, param_name in highway_checkbox_mapping.items():
+            if self.parameterAsBoolean(parameters_alg, param_name, context):
+                allowed_highway_types.add(highway_type)
+        
+        street_classes_to_process = list(allowed_highway_types)
 
         save_protoblocks_debug = self.parameterAsBoolean(
             parameters_alg, self.SAVE_PROTOBLOCKS_DEBUG, context
@@ -1073,16 +1322,7 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
             return results
 
         # Optional: filter by selected street classes to reduce workload
-        try:
-            street_indices = self.parameterAsEnums(
-                parameters_alg, self.STREET_CLASSES, context
-            )
-            street_options_list = self.parameterDefinition(
-                self.STREET_CLASSES
-            ).options()
-            allowed_classes = set(street_options_list[i] for i in street_indices)
-        except Exception:
-            allowed_classes = set()
+        allowed_classes = allowed_highway_types  # Use the checkbox selections we already parsed
         if allowed_classes:
             highway_idx = streets_with_width.fields().lookupField(
                 parameters.highway_tag
