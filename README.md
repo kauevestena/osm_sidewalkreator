@@ -77,6 +77,44 @@ Headless runners (simpler Docker scripts) are also available — see `docker/REA
 
 - `docker/run_full_bbox.sh`, `docker/run_full_polygon.sh`
 - `docker/run_protoblocks_bbox.sh`, `docker/run_protoblocks_polygon.sh`
+- `docker/run_missing_crossings.sh` — **NEW**: detect missing pedestrian crossings
+
+### Draw Missing Crossings (BBOX)
+
+The `draw_missing_crossings_bbox` algorithm identifies and creates missing pedestrian crossings within a bounding box:
+
+```bash
+# Run via Docker helper script with default Curitiba test area
+./docker/run_missing_crossings.sh
+
+# Custom bounding box
+./docker/run_missing_crossings.sh --bbox "-49.289753,-25.466447,-49.284410,-25.462165"
+
+# Via Processing directly
+../scripts/run_qgis_processing.sh draw_missing_crossings_bbox \
+  INPUT_EXTENT="-49.3,-25.5,-49.29,-25.45" \
+  OUTPUT_CROSSINGS=/tmp/missing_crossings.geojson \
+  OUTPUT_KERBS=/tmp/missing_kerbs.geojson
+```
+
+**Algorithm Logic:**
+1. Generates protoblocks from OSM street data in the bounding box
+2. Identifies adjacent protoblock pairs with shared boundaries
+3. Checks for existing sidewalks on both sides of shared edges
+4. Searches OSM for existing pedestrian crossings in the area
+5. Creates crossing lines and kerb points where crossings are missing
+
+**Input Parameters:**
+- `INPUT_EXTENT`: Bounding box in EPSG:4326 format
+- `TIMEOUT`: Timeout for OSM data requests (default: 60 seconds)
+- `SEARCH_RADIUS_FACTOR`: Search radius multiplier for existing crossings (default: 0.5)
+
+**Outputs:**
+- `OUTPUT_CROSSINGS`: LineString layer with generated crossing lines
+- `OUTPUT_KERBS`: Point layer with kerb points at crossing ends
+- `OUTPUT_PROTOBLOCKS_DEBUG` (optional): Debug polygon layer showing protoblocks
+
+**Test Area:** The default test bbox covers a Curitiba, Brazil area with known missing crossings that can change over time as OSM data is updated.
 
 Notes:
 

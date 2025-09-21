@@ -176,7 +176,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         # Step 1: Generate protoblocks
         feedback.setCurrentStep(0)
         feedback.pushInfo("Step 1: Generating protoblocks from OSM data...")
-        protoblocks_layer = self.generate_protoblocks(extent, timeout, feedback)
+        protoblocks_layer = self.generate_protoblocks(extent, timeout, context, feedback)
         
         if feedback.isCanceled():
             return {}
@@ -192,7 +192,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         # Step 3: Check for existing sidewalks
         feedback.setCurrentStep(2)
         feedback.pushInfo("Step 3: Checking sidewalk existence...")
-        pairs_with_sidewalks = self.filter_pairs_with_sidewalks(adjacent_pairs, extent, timeout, feedback)
+        pairs_with_sidewalks = self.filter_pairs_with_sidewalks(adjacent_pairs, extent, timeout, context, feedback)
         
         if feedback.isCanceled():
             return {}
@@ -200,7 +200,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         # Step 4: Search for existing crossings
         feedback.setCurrentStep(3)
         feedback.pushInfo("Step 4: Searching for existing crossings...")
-        pairs_missing_crossings = self.find_missing_crossings(pairs_with_sidewalks, extent, timeout, search_radius_factor, feedback)
+        pairs_missing_crossings = self.find_missing_crossings(pairs_with_sidewalks, extent, timeout, search_radius_factor, context, feedback)
         
         if feedback.isCanceled():
             return {}
@@ -264,7 +264,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
             
         return results
 
-    def generate_protoblocks(self, extent, timeout, feedback):
+    def generate_protoblocks(self, extent, timeout, context, feedback):
         """Generate protoblocks by reusing existing protoblock generation logic."""
         feedback.pushInfo("Fetching OSM street data...")
         
@@ -272,7 +272,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         if extent.crs() != crs_epsg4326:
             transform = QgsCoordinateTransform(
-                extent.crs(), crs_epsg4326, QgsCoordinateTransform.context()
+                extent.crs(), crs_epsg4326, context.transformContext()
             )
             extent_4326 = transform.transform(extent)
         else:
@@ -392,7 +392,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(f"Found {len(adjacent_pairs)} adjacent protoblock pairs")
         return adjacent_pairs
 
-    def filter_pairs_with_sidewalks(self, adjacent_pairs, extent, timeout, feedback):
+    def filter_pairs_with_sidewalks(self, adjacent_pairs, extent, timeout, context, feedback):
         """Filter pairs where both blocks have sidewalks along shared edge."""
         feedback.pushInfo("Fetching sidewalk data from OSM...")
         
@@ -400,7 +400,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         if extent.crs() != crs_epsg4326:
             transform = QgsCoordinateTransform(
-                extent.crs(), crs_epsg4326, QgsCoordinateTransform.context()
+                extent.crs(), crs_epsg4326, context.transformContext()
             )
             extent_4326 = transform.transform(extent)
         else:
@@ -483,7 +483,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(f"Found {len(pairs_with_sidewalks)} pairs with sidewalks on both sides")
         return pairs_with_sidewalks
 
-    def find_missing_crossings(self, pairs_with_sidewalks, extent, timeout, search_radius_factor, feedback):
+    def find_missing_crossings(self, pairs_with_sidewalks, extent, timeout, search_radius_factor, context, feedback):
         """Search for existing crossings and identify missing ones."""
         feedback.pushInfo("Searching for existing crossings in OSM...")
         
@@ -491,7 +491,7 @@ class DrawMissingCrossingsBBoxAlgorithm(QgsProcessingAlgorithm):
         crs_epsg4326 = QgsCoordinateReferenceSystem(CRS_LATLON_4326)
         if extent.crs() != crs_epsg4326:
             transform = QgsCoordinateTransform(
-                extent.crs(), crs_epsg4326, QgsCoordinateTransform.context()
+                extent.crs(), crs_epsg4326, context.transformContext()
             )
             extent_4326 = transform.transform(extent)
         else:
