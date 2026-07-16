@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from qgis.PyQt.QtCore import QVariant
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
