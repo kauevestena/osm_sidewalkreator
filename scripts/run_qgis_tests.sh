@@ -54,8 +54,12 @@ if docker_usable; then
                 export PIP_BREAK_SYSTEM_PACKAGES=1
                 if ! command -v gdal-config >/dev/null 2>&1; then
                     if command -v apt-get >/dev/null 2>&1; then
-                        apt-get update -qq
-                        apt-get install -y gdal-bin libgdal-dev python3-gdal >/dev/null
+                        SUDO=""
+                        if command -v sudo >/dev/null 2>&1; then
+                            SUDO="sudo"
+                        fi
+                        $SUDO apt-get update -qq
+                        $SUDO apt-get install -y gdal-bin libgdal-dev python3-gdal >/dev/null
                     else
                         echo "gdal-config not found. Please install GDAL development libraries." >&2
                         exit 1
