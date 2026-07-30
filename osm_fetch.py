@@ -9,8 +9,6 @@ import requests, os, time, json, tempfile
 # from geopandas import read_file
 from osgeo import ogr
 import re  # For parsing other_tags
-from itertools import cycle
-
 # from qgis.core import QgsApplication # Keep QgsApplication for now, path logic was adjusted
 try:
     from qgis.core import QgsApplication
@@ -113,6 +111,22 @@ def osm_query_string_by_bbox(
 
 # filter_gjsonfeats_bygeomtype function removed as its functionality is integrated into get_osm_data
 
+OVERPASS_URLS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass.openstreetmap.fr/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+)
+OVERPASS_HEADERS = {
+    "User-Agent": (
+        "OSM-Sidewalkreator QGIS plugin "
+        "(https://github.com/kauevestena/osm_sidewalkreator)"
+    )
+}
+OVERPASS_RETRY_DELAY_SECONDS = 5
+
 
 def get_osm_data(
     querystring,
@@ -126,36 +140,23 @@ def get_osm_data(
     get the osmdata and stores in files or in a geojson string, also generates temporary files
     """
 
-    overpass_url_list = [
-        "http://overpass-api.de/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter",
-        "https://z.overpass-api.de/api/interpreter",
-        "https://overpass.openstreetmap.ru/api/interpreter",
-        "https://overpass.openstreetmap.fr/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter",
-    ]
-
-    # to iterate circularly, thx: https://stackoverflow.com/a/23416519/4436950
-    circular_iterator = cycle(overpass_url_list)
-
-    overpass_url = next(circular_iterator)
-
-    while True:
-        # TODO: ensure sucess
-        #   (the try statement is an improvement already)
-        # print(f"[osm_fetch DEBUG] Value of 'timeout' before requests.get: {timeout}, type: {type(timeout)}") # REMOVED DEBUG PRINT
+    response = None
+    for attempt_number, overpass_url in enumerate(OVERPASS_URLS, start=1):
         try:
-            response = requests.get(
-                overpass_url, params={"data": querystring}, timeout=timeout
+            response = requests.post(
+                overpass_url,
+                data={"data": querystring},
+                headers=OVERPASS_HEADERS,
+                timeout=timeout,
             )
 
             if response.status_code == 200:
                 print(f"Request to {overpass_url} successful (status 200).")
                 break
-            else:
-                print(
-                    f"Request to {overpass_url} failed with status: {response.status_code}, Response: {response.text[:500]}"
-                )  # Log more of response
+            print(
+                f"Request to {overpass_url} failed with status: "
+                f"{response.status_code}, Response: {response.text[:500]}"
+            )
 
         except requests.exceptions.Timeout as e_timeout:
             print(f"TIMEOUT during request to {overpass_url}: {e_timeout}")
@@ -168,26 +169,18 @@ def get_osm_data(
                 f"Request to {overpass_url} failed with generic Exception: {e_generic}"
             )
 
-        # If not successful, try next server after a delay
+        if attempt_number < len(OVERPASS_URLS):
+            next_url = OVERPASS_URLS[attempt_number]
+            print(
+                f"Request to {overpass_url} not successful, retrying in "
+                f"{OVERPASS_RETRY_DELAY_SECONDS} seconds with {next_url}..."
+            )
+            time.sleep(OVERPASS_RETRY_DELAY_SECONDS)
+    else:
         print(
-            f"Request to {overpass_url} not successful, retrying in 5 seconds..."
-        )  # Clarified message
-        time.sleep(5)
-        overpass_url = next(
-            circular_iterator
-        )  # This was outside the try-except, should be part of the loop logic for retrying
-        print("Retrying with server:", overpass_url)  # Clarified message
-
-    # Check if the loop completed due to success or exhaustion of retries (though current loop is infinite until success)
-    # This part of the code is reached ONLY if 'break' was hit (i.e. status_code == 200)
-    # If all servers failed indefinitely, this part wouldn't be reached with the current while True / break structure.
-    # A counter for retries might be good to eventually give up.
-
-    if response.status_code != 200:
-        print(
-            f"Failed to fetch data from all Overpass servers. Last attempt was to {overpass_url} with status {response.status_code}."
+            f"Failed to fetch data from all {len(OVERPASS_URLS)} Overpass servers."
         )
-        return None  # Explicitly return None if all retries failed (if we add a retry limit)
+        return None
 
     if print_response:
         print(response)
