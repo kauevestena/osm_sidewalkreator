@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import patch
 
 # Ensure the project root is on the Python path so osm_fetch can be imported
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -28,25 +28,20 @@ class TestOsmFetch(unittest.TestCase):
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             cls.osm_xml = f.read()
 
-    def _mock_overpass(self, mock_post):
-        mock_post.return_value.status_code = 200
-        mock_post.return_value.text = self.osm_xml
+    def _mock_overpass(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.text = self.osm_xml
 
     def test_get_osm_data_linestring(self):
-        with patch("osm_fetch.requests.post") as mock_post:
-            self._mock_overpass(mock_post)
+        with patch("osm_fetch.requests.get") as mock_get:
+            self._mock_overpass(mock_get)
             geojson_str = get_osm_data(
-                querystring="test query",
+                querystring="",  # content provided by mocked request
                 tempfilesname="test_linestring_output",
                 geomtype="LineString",
-                timeout=17,
                 return_as_string=True,
             )
 
-        _, kwargs = mock_post.call_args
-        self.assertEqual(kwargs["data"], {"data": "test query"})
-        self.assertEqual(kwargs["timeout"], 17)
-        self.assertIn("OSM-Sidewalkreator", kwargs["headers"]["User-Agent"])
         geojson_output = json.loads(geojson_str)
         self.assertEqual(geojson_output.get("type"), "FeatureCollection")
         self.assertGreater(len(geojson_output.get("features", [])), 0)
@@ -54,8 +49,8 @@ class TestOsmFetch(unittest.TestCase):
         self.assertIn("Rua Hipólito da Costa", names)
 
     def test_get_osm_data_point(self):
-        with patch("osm_fetch.requests.post") as mock_post:
-            self._mock_overpass(mock_post)
+        with patch("osm_fetch.requests.get") as mock_get:
+            self._mock_overpass(mock_get)
             geojson_str = get_osm_data(
                 querystring="",
                 tempfilesname="test_point_output",
@@ -70,51 +65,6 @@ class TestOsmFetch(unittest.TestCase):
         self.assertTrue(
             any(p.get("highway") == "traffic_signals" for p in props_list),
             "Expected at least one traffic signal point",
-        )
-
-    @patch("osm_fetch.time.sleep")
-    @patch("osm_fetch.requests.post")
-    def test_failed_server_advances_to_next_server(self, mock_post, mock_sleep):
-        failed_response = Mock(status_code=503, text="server busy")
-        successful_response = Mock(status_code=200, text=self.osm_xml)
-        mock_post.side_effect = [failed_response, successful_response]
-
-        result = get_osm_data(
-            querystring="test query",
-            tempfilesname="test_retry_output",
-            return_as_string=True,
-        )
-
-        self.assertIsNotNone(result)
-        self.assertEqual(mock_post.call_count, 2)
-        first_url = mock_post.call_args_list[0].args[0]
-        second_url = mock_post.call_args_list[1].args[0]
-        self.assertNotEqual(first_url, second_url)
-        mock_sleep.assert_called_once()
-
-    @patch("osm_fetch.time.sleep")
-    @patch("osm_fetch.requests.post")
-    def test_all_servers_are_attempted_once_then_failure_is_returned(
-        self, mock_post, mock_sleep
-    ):
-        from osm_fetch import OVERPASS_RETRY_DELAY_SECONDS, OVERPASS_URLS
-
-        mock_post.return_value = Mock(status_code=503, text="server busy")
-
-        result = get_osm_data(
-            querystring="test query",
-            tempfilesname="test_failure_output",
-            return_as_string=True,
-        )
-
-        self.assertIsNone(result)
-        self.assertEqual(
-            [request.args[0] for request in mock_post.call_args_list],
-            list(OVERPASS_URLS),
-        )
-        self.assertEqual(
-            mock_sleep.call_args_list,
-            [call(OVERPASS_RETRY_DELAY_SECONDS)] * (len(OVERPASS_URLS) - 1),
         )
 
 

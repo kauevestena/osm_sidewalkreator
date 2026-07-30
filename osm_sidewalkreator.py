@@ -426,19 +426,13 @@ class sidewalkreator:
             self.dlg.dump_parameters_button.clicked.connect(self.dump_parameters)
 
             # cancel means reset AND close
-            self.dlg.button_box.button(
-                QDialogButtonBox.StandardButton.Reset
-            ).clicked.connect(
+            self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(
                 self.reset_fields
             )
-            self.dlg.button_box.button(
-                QDialogButtonBox.StandardButton.Cancel
-            ).clicked.connect(
+            self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(
                 self.reset_fields
             )
-            self.dlg.button_box.button(
-                QDialogButtonBox.StandardButton.Ok
-            ).setEnabled(False)
+            self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -461,10 +455,7 @@ class sidewalkreator:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        exec_dialog = getattr(self.dlg, "exec", None)
-        if exec_dialog is None:
-            exec_dialog = self.dlg.exec_
-        result = exec_dialog()
+        result = self.dlg.exec_()
         # See if OK was pressed
         if result:
             self.ok_ready = True
@@ -533,16 +524,8 @@ class sidewalkreator:
                 "aguardando dados...",
                 self.change_input_labels,
             ),
-            (
-                self.dlg.button_box.button(QDialogButtonBox.StandardButton.Cancel),
-                "Cancel",
-                "Cancelar",
-            ),
-            (
-                self.dlg.button_box.button(QDialogButtonBox.StandardButton.Reset),
-                "Reset",
-                "Reiniciar",
-            ),
+            (self.dlg.button_box.button(QDialogButtonBox.Cancel), "Cancel", "Cancelar"),
+            (self.dlg.button_box.button(QDialogButtonBox.Reset), "Reset", "Reiniciar"),
             (
                 self.dlg.clean_data,
                 "Clean OSM Data and\nCompute Intersections",
@@ -1197,9 +1180,7 @@ class sidewalkreator:
         )
 
         # enabling for aftewards:
-        self.dlg.button_box.button(
-            QDialogButtonBox.StandardButton.Ok
-        ).setEnabled(True)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         self.dlg.output_file_label.setEnabled(True)
         self.dlg.output_folder_selector.setEnabled(True)
 
@@ -2312,9 +2293,7 @@ class sidewalkreator:
     def disable_all_because_sidewalks(self):
         # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
 
-        self.dlg.button_box.button(
-            QDialogButtonBox.StandardButton.Ok
-        ).setEnabled(False)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
@@ -2390,9 +2369,7 @@ class sidewalkreator:
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
-        self.dlg.button_box.button(
-            QDialogButtonBox.StandardButton.Ok
-        ).setEnabled(False)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
@@ -3941,9 +3918,7 @@ class sidewalkreator:
             self.reproject_and_export(key, extra_layers[key])
 
         # disabling for the next cycle:
-        self.dlg.button_box.button(
-            QDialogButtonBox.StandardButton.Ok
-        ).setEnabled(False)
+        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
         self.dlg.output_file_label.setEnabled(False)
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")

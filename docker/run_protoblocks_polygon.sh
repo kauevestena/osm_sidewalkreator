@@ -113,6 +113,7 @@ params = {
 result = processing.run(ProtoblockAlgorithm(), params)
 print("Processing completed successfully!")
 print(f"Output sink: {result.get(ProtoblockAlgorithm.OUTPUT_PROTOBLOCKS)}")
+app.exitQgis()
 PY'
 
 echo "Wrote: ${OUTPUT_PATH}"

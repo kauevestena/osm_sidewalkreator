@@ -222,6 +222,7 @@ params={
 }
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorBboxAlgorithm(), params))
+app.exitQgis()
 PY'
 
 echo "Wrote: ${OUTPUT_PATH}"
