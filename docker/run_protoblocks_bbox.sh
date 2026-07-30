@@ -119,7 +119,8 @@ params={
 result = processing.run(ProtoblockBboxAlgorithm(), params)
 print("Processing completed successfully!")
 print(f"Output sink: {result.get(ProtoblockBboxAlgorithm.OUTPUT_PROTOBLOCKS)}")
-app.exitQgis()
+import os
+os._exit(0)
 PY'
 
 echo "Wrote: ${OUTPUT_PATH}"

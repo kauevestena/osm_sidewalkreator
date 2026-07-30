@@ -172,7 +172,8 @@ params = {
 }
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorPolygonAlgorithm(), params))
-app.exitQgis()
+import os
+os._exit(0)
 PY'
 
 echo "Wrote: ${SIDEWALKS_OUT}"
