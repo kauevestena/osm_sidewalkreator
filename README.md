@@ -118,12 +118,17 @@ Create a plugin zip (written under `~/sidewalkreator_release` by default):
 python release/release_zip.py
 ```
 
-Customize inputs/outputs/excludes:
+Customize the source and output directories:
 
 ```bash
 python release/release_zip.py --plugin-dir /path/to/plugin \
-  --output-dir /tmp/build --exclude tests docs "*.pyc"
+  --output-dir /tmp/build
 ```
+
+The release builder uses a fixed runtime manifest. Development files such as
+tests, Docker helpers, shell scripts, source translations, and repository
+documentation are never copied into the plugin archive. Compiled `.qm`
+translations are included when available.
 
 ## References
 
@@ -138,4 +143,3 @@ European Journal of Geography (12/12/2023): https://eurogeojournal.eu/index.php/
 de Moraes Vestena, Kauê, Silvana Philippi Camboim, and Daniel Rodrigues dos Santos. 2023. “OSM Sidewalkreator: A QGIS Plugin for an Automated Drawing of Sidewalk Networks for OpenStreetMap”. European Journal of Geography 14 (4):66–84. https://doi.org/10.48088/ejg.k.ves.14.4.066.084
 
 Experiments repository: https://github.com/kauevestena/sidewalk_analysis
-
