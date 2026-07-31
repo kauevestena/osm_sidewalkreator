@@ -11,6 +11,11 @@ from osgeo import ogr
 import re  # For parsing other_tags
 from itertools import cycle
 
+OVERPASS_USER_AGENT = (
+    "OSM-SidewalKreator/1.6.1 "
+    "(+https://github.com/kauevestena/osm_sidewalkreator)"
+)
+
 # from qgis.core import QgsApplication # Keep QgsApplication for now, path logic was adjusted
 try:
     from qgis.core import QgsApplication
@@ -127,11 +132,9 @@ def get_osm_data(
     """
 
     overpass_url_list = [
-        "http://overpass-api.de/api/interpreter",
         "https://lz4.overpass-api.de/api/interpreter",
         "https://z.overpass-api.de/api/interpreter",
-        "https://overpass.openstreetmap.ru/api/interpreter",
-        "https://overpass.openstreetmap.fr/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
         "https://overpass.kumi.systems/api/interpreter",
     ]
 
@@ -145,8 +148,11 @@ def get_osm_data(
         #   (the try statement is an improvement already)
         # print(f"[osm_fetch DEBUG] Value of 'timeout' before requests.get: {timeout}, type: {type(timeout)}") # REMOVED DEBUG PRINT
         try:
-            response = requests.get(
-                overpass_url, params={"data": querystring}, timeout=timeout
+            response = requests.post(
+                overpass_url,
+                data={"data": querystring},
+                headers={"User-Agent": OVERPASS_USER_AGENT},
+                timeout=timeout,
             )
 
             if response.status_code == 200:

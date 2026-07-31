@@ -215,11 +215,19 @@ params={
   "INPUT_EXTENT": extent,
   "TIMEOUT": 90,
   "GET_BUILDING_DATA": os.getenv("GET_BUILDINGS", "1") in ("1","true","TRUE","yes","YES"),
-  "STREET_CLASSES": street_classes,
   "OUTPUT_SIDEWALKS": outp,
   "OUTPUT_CROSSINGS": cr_out,
   "OUTPUT_KERBS": kb_out,
 }
+legacy_highway_params = [
+  "HIGHWAY_MOTORWAY", "HIGHWAY_MOTORWAY_LINK", "HIGHWAY_TRUNK",
+  "HIGHWAY_TRUNK_LINK", "HIGHWAY_PRIMARY", "HIGHWAY_PRIMARY_LINK",
+  "HIGHWAY_SECONDARY", "HIGHWAY_SECONDARY_LINK", "HIGHWAY_TERTIARY",
+  "HIGHWAY_TERTIARY_LINK", "HIGHWAY_RESIDENTIAL", "HIGHWAY_LIVING_STREET",
+  "HIGHWAY_SERVICE", "HIGHWAY_UNCLASSIFIED", "HIGHWAY_ROAD", "HIGHWAY_TRACK",
+  "HIGHWAY_PATH", "HIGHWAY_CYCLEWAY", "HIGHWAY_FOOTWAY", "HIGHWAY_PEDESTRIAN",
+]
+params.update({name: index in street_classes for index, name in enumerate(legacy_highway_params)})
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorBboxAlgorithm(), params))
 import os
