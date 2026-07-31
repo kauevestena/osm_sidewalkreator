@@ -40,10 +40,14 @@ from qgis.core import QgsProcessingContext  # Qgis was already imported
 
 # from processing.gui.AlgorithmExecutor import execute_in_place # Not used in this file
 
+import logging
 import os, json  # , random
 from math import isclose, pi
 
 from .parameters import default_widths, highway_tag, widths_fieldname
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
@@ -986,8 +990,11 @@ def distance_geom_another_layer(
                     f"Warning: Calling distance_geom_another_layer on layer '{inputlayer.name()}' "
                     f"with {inputlayer.featureCount()} features without a spatial index. This can be slow."
                 )
-        except:
-            pass  # Ignore if featureCount fails
+        except Exception as exc:
+            LOGGER.warning(
+                "Could not inspect layer feature count before an unindexed distance scan: %s",
+                exc,
+            )
 
     for feature in inputlayer.getFeatures(feat_request):
         ret_dict[feature.id()] = inputgeom.distance(feature.geometry())
@@ -1785,7 +1792,8 @@ def assign_street_widths(source_road_layer, output_layer_name, feedback=None):
                     final_width = parsed_width
                     valid_osm_width = True
             except (ValueError, TypeError):
-                pass  # Invalid, will use default
+                # Invalid OSM width values explicitly fall back to the highway default.
+                valid_osm_width = False
 
         if not valid_osm_width:
             final_width = width_from_defaults

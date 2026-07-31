@@ -60,6 +60,21 @@ from qgis.utils import iface
 # pure Qt imports, keep at minimun =P
 from qgis.PyQt import QtWidgets  # Added for type checking
 from qgis.PyQt.QtWidgets import QTableWidgetItem, QFileDialog, QDialogButtonBox
+
+_DIALOG_BUTTONS = getattr(QDialogButtonBox, "StandardButton", QDialogButtonBox)
+DIALOG_BUTTON_CANCEL = _DIALOG_BUTTONS.Cancel
+DIALOG_BUTTON_OK = _DIALOG_BUTTONS.Ok
+DIALOG_BUTTON_RESET = _DIALOG_BUTTONS.Reset
+
+
+def _exec_dialog(dialog):
+    """Run a modal dialog with either the Qt 6 or Qt 5 method name."""
+    exec_method = getattr(dialog, "exec", None)
+    if exec_method is None:
+        exec_method = getattr(dialog, "exec_")
+    return exec_method()
+
+
 try:
     from qgis.PyQt.QtCore import QVariant
 except ImportError:
@@ -426,13 +441,13 @@ class sidewalkreator:
             self.dlg.dump_parameters_button.clicked.connect(self.dump_parameters)
 
             # cancel means reset AND close
-            self.dlg.button_box.button(QDialogButtonBox.Reset).clicked.connect(
+            self.dlg.button_box.button(DIALOG_BUTTON_RESET).clicked.connect(
                 self.reset_fields
             )
-            self.dlg.button_box.button(QDialogButtonBox.Cancel).clicked.connect(
+            self.dlg.button_box.button(DIALOG_BUTTON_CANCEL).clicked.connect(
                 self.reset_fields
             )
-            self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+            self.dlg.button_box.button(DIALOG_BUTTON_OK).setEnabled(False)
 
             # language stuff
             self.dlg.opt_ptbr.clicked.connect(self.change_language_ptbr)
@@ -455,7 +470,7 @@ class sidewalkreator:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        result = self.dlg.exec_()
+        result = _exec_dialog(self.dlg)
         # See if OK was pressed
         if result:
             self.ok_ready = True
@@ -524,8 +539,8 @@ class sidewalkreator:
                 "aguardando dados...",
                 self.change_input_labels,
             ),
-            (self.dlg.button_box.button(QDialogButtonBox.Cancel), "Cancel", "Cancelar"),
-            (self.dlg.button_box.button(QDialogButtonBox.Reset), "Reset", "Reiniciar"),
+            (self.dlg.button_box.button(DIALOG_BUTTON_CANCEL), "Cancel", "Cancelar"),
+            (self.dlg.button_box.button(DIALOG_BUTTON_RESET), "Reset", "Reiniciar"),
             (
                 self.dlg.clean_data,
                 "Clean OSM Data and\nCompute Intersections",
@@ -1180,7 +1195,7 @@ class sidewalkreator:
         )
 
         # enabling for aftewards:
-        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+        self.dlg.button_box.button(DIALOG_BUTTON_OK).setEnabled(True)
         self.dlg.output_file_label.setEnabled(True)
         self.dlg.output_folder_selector.setEnabled(True)
 
@@ -2293,7 +2308,7 @@ class sidewalkreator:
     def disable_all_because_sidewalks(self):
         # DISABLING STUFF, if there are sidewalks already drawn, one must step back!!
 
-        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.dlg.button_box.button(DIALOG_BUTTON_OK).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
@@ -2369,7 +2384,7 @@ class sidewalkreator:
         # to be activated/deactivated/changed:
         self.dlg.input_layer_selector.setLayer(None)
         self.dlg.input_layer_selector.setEnabled(True)
-        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.dlg.button_box.button(DIALOG_BUTTON_OK).setEnabled(False)
         self.dlg.datafetch.setEnabled(False)
         self.dlg.ch_ignore_buildings.setEnabled(False)
         self.dlg.ch_ignore_buildings.setChecked(False)
@@ -3918,7 +3933,7 @@ class sidewalkreator:
             self.reproject_and_export(key, extra_layers[key])
 
         # disabling for the next cycle:
-        self.dlg.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.dlg.button_box.button(DIALOG_BUTTON_OK).setEnabled(False)
         self.dlg.output_file_label.setEnabled(False)
         self.dlg.output_folder_selector.setEnabled(False)
         self.dlg.output_folder_selector.setFilePath("")

@@ -35,8 +35,12 @@ from qgis.core import (
     QgsSpatialIndex,
     QgsFeatureRequest,
 )  # Added QgsProcessingParameterExtent, Added QgsCoordinateTransform, Added QgsSpatialIndex
+import logging
 import math
 import os
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 
@@ -119,8 +123,11 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                     Qgis.Critical,
                 )
                 traceback.print_exc()
-            except Exception:
-                pass
+            except Exception as log_exc:
+                LOGGER.exception(
+                    "Could not write the algorithm creation failure to the QGIS log: %s",
+                    log_exc,
+                )
             raise
 
     def name(self):
@@ -700,7 +707,12 @@ class ProtoblockBboxAlgorithm(QgsProcessingAlgorithm):
                 try:
                     if str(f.attribute(hwy_idx)).lower() == "footway" and str(f.attribute(footway_idx)).lower() == "sidewalk":
                         existing_sidewalk_feats.append(f)
-                except Exception:
+                except Exception as exc:
+                    feedback.pushWarning(
+                        self.tr(
+                            f"Could not inspect sidewalk tags for feature {f.id()}: {exc}"
+                        )
+                    )
                     continue
 
         if existing_sidewalk_feats:

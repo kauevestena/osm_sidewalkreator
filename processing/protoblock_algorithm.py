@@ -41,7 +41,11 @@ except ImportError:
         String = QMetaType.Type.QString
         Bool = QMetaType.Type.Bool
 import math  # For math.isfinite
+import logging
 import os
+
+
+LOGGER = logging.getLogger(__name__)
 
 # Import necessary functions from other plugin modules
 from ..osm_fetch import osm_query_string_by_bbox, get_osm_data
@@ -115,8 +119,11 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
                 import traceback
 
                 traceback.print_exc()
-            except Exception:
-                pass
+            except Exception as log_exc:
+                LOGGER.exception(
+                    "Could not write the algorithm creation failure to the QGIS log: %s",
+                    log_exc,
+                )
             raise
 
     def name(self):
@@ -787,8 +794,13 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
             layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id_empty, context)
             try:
                 QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
-            except Exception:
-                pass
+            except Exception as exc:
+                feedback.pushWarning(
+                    self.tr(
+                        "Could not register the empty protoblocks output layer "
+                        f"in the project: {exc}"
+                    )
+                )
             return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id_empty}
 
         try:
@@ -1065,8 +1077,13 @@ class ProtoblockAlgorithm(QgsProcessingAlgorithm):
         layer_obj = QgsProcessingUtils.mapLayerFromString(dest_id, context)
         try:
             QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
-        except Exception:
-            pass
+        except Exception as exc:
+            feedback.pushWarning(
+                self.tr(
+                    "Could not register the protoblocks output layer in the "
+                    f"project: {exc}"
+                )
+            )
         feedback.pushInfo(self.tr("Protoblock generation complete. Sink written."))
         return {self.OUTPUT_PROTOBLOCKS: layer_obj if layer_obj else dest_id}
 

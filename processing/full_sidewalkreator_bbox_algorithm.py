@@ -68,7 +68,11 @@ from .sidewalk_generation_logic import (
     generate_sidewalk_geometries_and_zones,
 )  # Core logic
 
+import logging
 import os
+
+
+LOGGER = logging.getLogger(__name__)
 
 # Module-level compatibility helper for different osm_query_string_by_bbox signatures
 def _compat_osm_query_bbox(min_lat, min_lon, max_lat, max_lon, **kw):
@@ -979,8 +983,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                         else:
                             code = crs_part.strip().rstrip("]")
                             extent_crs = QgsCoordinateReferenceSystem(code)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    feedback.pushWarning(
+                        self.tr(
+                            "Could not parse the extent string directly; "
+                            f"using QGIS extent parsing instead: {exc}"
+                        )
+                    )
 
         # Ultra-light fast path for test harness (avoids heavy Processing calls and segfaults in some headless environments)
         try:
@@ -993,8 +1002,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 dp.addFeature(f)
                 vl.updateExtents()
                 return {self.OUTPUT_SIDEWALKS: vl}
-        except Exception:
-            pass
+        except Exception as exc:
+            feedback.pushWarning(
+                self.tr(
+                    "BBOX test fast path failed; continuing with normal "
+                    f"processing: {exc}"
+                )
+            )
         timeout = self.parameterAsInt(parameters_alg, self.TIMEOUT, context)
         get_building_data = self.parameterAsBoolean(
             parameters_alg, self.GET_BUILDING_DATA, context
@@ -1650,8 +1664,10 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 results = {self.OUTPUT_SIDEWALKS: sidewalk_lines_layer_local_tm}
                 feedback.pushInfo(self.tr("Returning provided EPSG:4326 sidewalks (short-circuit)."))
                 return results
-        except Exception:
-            pass
+        except Exception as exc:
+            feedback.pushWarning(
+                self.tr(f"Could not validate the sidewalk short-circuit layer: {exc}")
+            )
 
         if (
             not sidewalk_lines_layer_local_tm
@@ -1884,8 +1900,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                                     or QThread.currentThread() == qcore.QgsApplication.instance().thread()
                                 ):
                                     QgsProject.instance().addMapLayer(layer_obj, addToLegend=False)
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                feedback.pushWarning(
+                                    self.tr(
+                                        "Could not register the sidewalks output "
+                                        f"layer in the project: {exc}"
+                                    )
+                                )
                             results[self.OUTPUT_SIDEWALKS] = layer_obj
                         else:
                             results[self.OUTPUT_SIDEWALKS] = final_sw
@@ -1945,8 +1966,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                                     QgsProject.instance().addMapLayer(
                                         layer_obj, addToLegend=False
                                     )
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                feedback.pushWarning(
+                                    self.tr(
+                                        "Could not register the crossings output "
+                                        f"layer in the project: {exc}"
+                                    )
+                                )
                             results[self.OUTPUT_CROSSINGS] = layer_obj
                         else:
                             results[self.OUTPUT_CROSSINGS] = crossings_layer_4326
@@ -2016,8 +2042,13 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                                     QgsProject.instance().addMapLayer(
                                         layer_obj, addToLegend=False
                                     )
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                feedback.pushWarning(
+                                    self.tr(
+                                        "Could not register the kerbs output layer "
+                                        f"in the project: {exc}"
+                                    )
+                                )
                             results[self.OUTPUT_KERBS] = layer_obj
                         else:
                             results[self.OUTPUT_KERBS] = kerbs_layer_4326
@@ -2120,8 +2151,10 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 and sidewalks_layer_4326.isValid()
             ):
                 results[self.OUTPUT_SIDEWALKS] = sidewalks_layer_4326
-        except Exception:
-            pass
+        except Exception as exc:
+            feedback.pushWarning(
+                self.tr(f"Could not validate the fallback sidewalks output: {exc}")
+            )
         return results
 
     def tr(self, string):
@@ -2172,8 +2205,11 @@ class FullSidewalkreatorBboxAlgorithm(QgsProcessingAlgorithm):
                 import traceback
 
                 traceback.print_exc()
-            except Exception:
-                pass
+            except Exception as log_exc:
+                LOGGER.exception(
+                    "Could not write the algorithm creation failure to the QGIS log: %s",
+                    log_exc,
+                )
             raise
         # Helper for compatibility with both positional-only and keyword-friendly
         # osm_query_string_by_bbox implementations across environments.

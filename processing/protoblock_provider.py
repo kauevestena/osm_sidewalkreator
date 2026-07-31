@@ -3,8 +3,21 @@
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsProcessingProvider, Qgis, QgsMessageLog  # Added message log
+import logging
 import os
 import traceback
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _log_message(message, level):
+    """Write to the QGIS log, falling back to Python logging if QGIS rejects it."""
+    try:
+        QgsMessageLog.logMessage(message, "SidewalKreator", level)
+    except Exception as exc:
+        LOGGER.warning("QGIS message logging failed for %r: %s", message, exc)
+
 
 # Try to import the algorithms
 # It's cleaner to have these imports inside the provider or loadAlgorithms,
@@ -43,40 +56,18 @@ class ProtoblockProvider(QgsProcessingProvider):
             if ProtoblockAlgorithm:  # Check if class was successfully imported
                 alg = ProtoblockAlgorithm()
                 self.addAlgorithm(alg)
-                try:
-                    QgsMessageLog.logMessage(
-                        f"Loaded algorithm: {alg.id()}",
-                        "SidewalKreator",
-                        Qgis.Info,
-                    )
-                except Exception:
-                    pass
+                _log_message(f"Loaded algorithm: {alg.id()}", Qgis.Info)
         except Exception as e:
-            QgsMessageLog.logMessage(
-                f"Failed to load ProtoblockAlgorithm: {e}",
-                "SidewalKreator",
-                Qgis.Critical,
-            )
+            _log_message(f"Failed to load ProtoblockAlgorithm: {e}", Qgis.Critical)
             traceback.print_exc()
 
         try:
             if ProtoblockBboxAlgorithm:  # Check if class was successfully imported
                 alg = ProtoblockBboxAlgorithm()
                 self.addAlgorithm(alg)
-                try:
-                    QgsMessageLog.logMessage(
-                        f"Loaded algorithm: {alg.id()}",
-                        "SidewalKreator",
-                        Qgis.Info,
-                    )
-                except Exception:
-                    pass
+                _log_message(f"Loaded algorithm: {alg.id()}", Qgis.Info)
         except Exception as e:
-            QgsMessageLog.logMessage(
-                f"Failed to load ProtoblockBboxAlgorithm: {e}",
-                "SidewalKreator",
-                Qgis.Critical,
-            )
+            _log_message(f"Failed to load ProtoblockBboxAlgorithm: {e}", Qgis.Critical)
             traceback.print_exc()
 
         try:
@@ -85,18 +76,10 @@ class ProtoblockProvider(QgsProcessingProvider):
             ):  # Check if class was successfully imported
                 alg = FullSidewalkreatorPolygonAlgorithm()
                 self.addAlgorithm(alg)
-                try:
-                    QgsMessageLog.logMessage(
-                        f"Loaded algorithm: {alg.id()}",
-                        "SidewalKreator",
-                        Qgis.Info,
-                    )
-                except Exception:
-                    pass
+                _log_message(f"Loaded algorithm: {alg.id()}", Qgis.Info)
         except Exception as e:
-            QgsMessageLog.logMessage(
+            _log_message(
                 f"Failed to load FullSidewalkreatorPolygonAlgorithm: {e}",
-                "SidewalKreator",
                 Qgis.Critical,
             )
             traceback.print_exc()
@@ -107,19 +90,10 @@ class ProtoblockProvider(QgsProcessingProvider):
             ):  # Check if class was successfully imported
                 alg = FullSidewalkreatorBboxAlgorithm()
                 self.addAlgorithm(alg)
-                try:
-                    QgsMessageLog.logMessage(
-                        f"Loaded algorithm: {alg.id()}",
-                        "SidewalKreator",
-                        Qgis.Info,
-                    )
-                except Exception:
-                    pass
+                _log_message(f"Loaded algorithm: {alg.id()}", Qgis.Info)
         except Exception as e:
-            QgsMessageLog.logMessage(
-                f"Failed to load FullSidewalkreatorBboxAlgorithm: {e}",
-                "SidewalKreator",
-                Qgis.Critical,
+            _log_message(
+                f"Failed to load FullSidewalkreatorBboxAlgorithm: {e}", Qgis.Critical
             )
             traceback.print_exc()
 

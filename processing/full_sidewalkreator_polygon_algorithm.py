@@ -1271,8 +1271,10 @@ class FullSidewalkreatorPolygonAlgorithm(QgsProcessingAlgorithm):
                     timeout=self.parameterAsInt(parameters, self.TIMEOUT, context),
                     return_as_string=True,
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            feedback.pushWarning(
+                self.tr(f"Optional address-data probe failed: {exc}")
+            )
 
         feedback.pushInfo(
             self.tr("Full Sidewalkreator (Polygon) - Algorithm Finished.")
