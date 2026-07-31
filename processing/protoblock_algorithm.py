@@ -31,7 +31,15 @@ from qgis.core import (
     QgsGeometry,
     QgsProject,
 )  # Added QgsProcessingUtils and logging classes
-from qgis.PyQt.QtCore import QVariant
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 import math  # For math.isfinite
 import os
 

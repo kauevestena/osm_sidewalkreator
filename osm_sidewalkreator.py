@@ -58,10 +58,17 @@ from qgis.utils import iface
 
 
 # pure Qt imports, keep at minimun =P
-from PyQt5.QtWidgets import QTableWidgetItem, QFileDialog
 from qgis.PyQt import QtWidgets  # Added for type checking
-from PyQt5.QtWidgets import QDialogButtonBox
-from PyQt5.QtCore import QVariant
+from qgis.PyQt.QtWidgets import QTableWidgetItem, QFileDialog, QDialogButtonBox
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 
 
 # Initialize Qt resources from file resources.py

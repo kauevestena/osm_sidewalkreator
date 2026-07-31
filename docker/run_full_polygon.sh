@@ -165,13 +165,23 @@ params = {
   FullSidewalkreatorPolygonAlgorithm.TIMEOUT: 60,
   FullSidewalkreatorPolygonAlgorithm.FETCH_BUILDINGS_DATA: get_bld,
   FullSidewalkreatorPolygonAlgorithm.FETCH_ADDRESS_DATA: fetch_addr,
-  FullSidewalkreatorPolygonAlgorithm.STREET_CLASSES: street_classes,
   FullSidewalkreatorPolygonAlgorithm.OUTPUT_SIDEWALKS: sw_out,
   FullSidewalkreatorPolygonAlgorithm.OUTPUT_CROSSINGS: cr_out,
   FullSidewalkreatorPolygonAlgorithm.OUTPUT_KERBS: kb_out,
 }
+legacy_highway_params = [
+  "HIGHWAY_MOTORWAY", "HIGHWAY_MOTORWAY_LINK", "HIGHWAY_TRUNK",
+  "HIGHWAY_TRUNK_LINK", "HIGHWAY_PRIMARY", "HIGHWAY_PRIMARY_LINK",
+  "HIGHWAY_SECONDARY", "HIGHWAY_SECONDARY_LINK", "HIGHWAY_TERTIARY",
+  "HIGHWAY_TERTIARY_LINK", "HIGHWAY_RESIDENTIAL", "HIGHWAY_LIVING_STREET",
+  "HIGHWAY_SERVICE", "HIGHWAY_UNCLASSIFIED", "HIGHWAY_ROAD", "HIGHWAY_TRACK",
+  "HIGHWAY_PATH", "HIGHWAY_CYCLEWAY", "HIGHWAY_FOOTWAY", "HIGHWAY_PEDESTRIAN",
+]
+params.update({name: index in street_classes for index, name in enumerate(legacy_highway_params)})
 print("Street class indices:", street_classes)
 print(processing.run(FullSidewalkreatorPolygonAlgorithm(), params))
+import os
+os._exit(0)
 PY'
 
 echo "Wrote: ${SIDEWALKS_OUT}"

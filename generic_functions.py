@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtCore import QVariant
-
-# from qgis.PyQt.QtCore import QVariant
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 from qgis import processing
 
 # from processing.tools import dataobjects # Moved into function

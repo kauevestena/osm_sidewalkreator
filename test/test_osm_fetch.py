@@ -28,19 +28,24 @@ class TestOsmFetch(unittest.TestCase):
         with open(DATA_PATH, "r", encoding="utf-8") as f:
             cls.osm_xml = f.read()
 
-    def _mock_overpass(self, mock_get):
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.text = self.osm_xml
+    def _mock_overpass(self, mock_post):
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.text = self.osm_xml
 
     def test_get_osm_data_linestring(self):
-        with patch("osm_fetch.requests.get") as mock_get:
-            self._mock_overpass(mock_get)
+        with patch("osm_fetch.requests.post") as mock_post:
+            self._mock_overpass(mock_post)
             geojson_str = get_osm_data(
                 querystring="",  # content provided by mocked request
                 tempfilesname="test_linestring_output",
                 geomtype="LineString",
                 return_as_string=True,
             )
+
+        request = mock_post.call_args
+        self.assertTrue(request.args[0].startswith("https://"))
+        self.assertEqual(request.kwargs["data"], {"data": ""})
+        self.assertIn("OSM-SidewalKreator", request.kwargs["headers"]["User-Agent"])
 
         geojson_output = json.loads(geojson_str)
         self.assertEqual(geojson_output.get("type"), "FeatureCollection")
@@ -49,8 +54,8 @@ class TestOsmFetch(unittest.TestCase):
         self.assertIn("Rua Hipólito da Costa", names)
 
     def test_get_osm_data_point(self):
-        with patch("osm_fetch.requests.get") as mock_get:
-            self._mock_overpass(mock_get)
+        with patch("osm_fetch.requests.post") as mock_post:
+            self._mock_overpass(mock_post)
             geojson_str = get_osm_data(
                 querystring="",
                 tempfilesname="test_point_output",
@@ -85,4 +90,3 @@ class TestJoinToAOutfolder(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover - manual execution
     unittest.main()
-

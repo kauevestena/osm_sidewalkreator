@@ -10,7 +10,15 @@ from qgis.core import (
     QgsVectorLayer,
     NULL,
 )
-from qgis.PyQt.QtCore import QVariant
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 
 from .utilities import get_qgis_app
 from osm_sidewalkreator.generic_functions import assign_street_widths

@@ -28,7 +28,16 @@ from qgis.core import (
     QgsProject,
 )
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import QCoreApplication, QVariant, QThread
+from qgis.PyQt.QtCore import QCoreApplication, QThread
+try:
+    from qgis.PyQt.QtCore import QVariant
+except ImportError:
+    from qgis.PyQt.QtCore import QMetaType
+    class QVariant:
+        Int = QMetaType.Type.Int
+        Double = QMetaType.Type.Double
+        String = QMetaType.Type.QString
+        Bool = QMetaType.Type.Bool
 import qgis.core as qcore
 
 # Utility functions from the plugin
